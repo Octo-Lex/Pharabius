@@ -1,0 +1,52 @@
+# Changelog
+
+All notable changes to Pharabius are documented in this file.
+
+## v0.1.0 — 2026-05-16
+
+### Added
+
+- **`ai-debt init`** — Create `.ai-debt/` workspace with config and README.
+- **`ai-debt profile`** — Detect repository languages, frameworks, package managers, build tools, test frameworks, entry points, deployment files, infrastructure files, documentation, risk areas, and monorepo structure.
+- **`ai-debt scan`** — Collect normalized evidence: file tree, manifests, lockfiles, configuration, tests, CI/CD, Docker, IaC, documentation, imports, git metadata, risk keywords, and build/test scripts.
+- **`ai-debt analyze --no-ai`** — Generate deterministic debt findings from evidence using 6 analysis rules:
+  - Missing tests (TD-TEST)
+  - Risk-sensitive areas without tests (TD-SEC)
+  - Missing CI/CD (TD-BUILD)
+  - Missing documentation (TD-DOC)
+  - Missing dependency lockfile (TD-DEP)
+  - Environment config without example (TD-CONFIG)
+- **`ai-debt report`** — Generate 6 Markdown domain reports:
+  - Architecture map
+  - Dependency health
+  - Test health
+  - Security exposure
+  - Business risk proxy
+  - Foundation audit report
+- **`ai-debt plan`** — Generate remediation roadmap, work packages (WP-*.md), and engineering handoff summary from the debt register.
+- **`ai-debt run`** — Execute the full deterministic pipeline in order and write run metadata to `.ai-debt/runs/RUN-YYYYMMDD-HHMMSS.json`.
+- **Run metadata** — Structured JSON capturing run ID, timestamp, repository, git info, commands run, files written, limitations, and summary statistics.
+- **Validation matrix** — 8 repository types defined for pre-release testing.
+- **Validation script** — `scripts/validate_repo.py` for repeatable validation.
+- **Release checklist** — Comprehensive pre-release verification checklist.
+- **Governance** — Import layer contract (`cli → core → schemas`), CI workflow, ruff/mypy/pytest-cov/import-linter configuration.
+
+### Changed
+
+- **Step 7.4 — Release hardening**:
+  - Ecosystem-specific lockfile detection — each ecosystem (Node.js, Python, Go, Rust, Java, PHP, Ruby, .NET) checked independently.
+  - Package-root-aware manifest/lockfile matching — lockfiles must exist in the same directory as the manifest. Nested manifests are no longer masked by root lockfiles.
+  - Shared exclusion module (`core/exclusions.py`) — scanner and profiler use identical directory exclusion logic.
+  - Bun lockfile support — `bun.lock` and `bun.lockb` recognized as Node.js lockfiles.
+  - Go `*_test.go` detection — Go test files recognized in scanner and profiler.
+  - Rust Cargo.lock caution — Rust lockfile findings use Medium severity with library crate caution in description, risks, and verification recommendations.
+
+- **Step 7.5 — Node workspace lockfile policy**:
+  - Node workspace satisfaction rule — nested `package.json` files are considered lockfile-satisfied when workspace evidence exists and a root Node lockfile is present.
+  - Workspace markers detected: `pnpm-workspace.yaml`, `turbo.json`, `nx.json`, `lerna.json`, `rush.json`, root `package.json` with `"workspaces"` field.
+  - Root-only enforcement — only root `package.json` is inspected for workspaces field.
+  - Non-Node ecosystems remain strictly package-root-aware.
+
+### Known Limitations
+
+See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for the full list.

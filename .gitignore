@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Type checking
+.mypy_cache/
+.ruff_cache/
+
+# Build artifacts
+*.whl
+*.tar.gz
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Validation repos (cloned for testing, not committed)
+.validation-repos/
+
+# Pharabius output (local analysis artifacts)
+.ai-debt/
+
+# OS
+Thumbs.db
+.DS_Store
+nul

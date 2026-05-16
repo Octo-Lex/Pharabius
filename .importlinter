@@ -1,0 +1,11 @@
+[importlinter]
+root_package = pharabius
+
+[importlinter:contract:layers]
+name = Pharabius modular-monolith layers
+type = layers
+layers =
+    pharabius.cli
+    pharabius.core
+    (pharabius.writers)
+    pharabius.schemas
