@@ -4,6 +4,8 @@ All notable changes to Pharabius are documented in this file.
 
 ## [Unreleased]
 
+## v0.3.0 — 2026-05-17
+
 ### Added
 
 - `ai-debt verify` — Verify existing findings against current repository evidence
@@ -12,6 +14,8 @@ All notable changes to Pharabius are documented in this file.
 - 6 verification statuses: `still_detected`, `likely_remediated`, `evidence_missing`, `partially_supported`, `stale`, `uncertain`
 - Location verification (checks if finding file paths still exist)
 - Structured work package verification with `valid`/`stale`/`orphaned`/`needs_review` statuses
+
+## v0.2.1 — 2026-05-17
 
 ### Changed
 
