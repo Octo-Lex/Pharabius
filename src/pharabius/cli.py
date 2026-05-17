@@ -294,6 +294,26 @@ def verify(
 
 
 @app.command()
+def status(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to show workspace status for.",
+        ),
+    ] = None,
+) -> None:
+    """
+    Show current workspace status. Read-only.
+    """
+    from pharabius.core.status_reader import read_status
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    console.print(read_status(resolved_root))
+
+
+@app.command()
 def run(
     repository_root: Annotated[
         Path | None,

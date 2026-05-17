@@ -216,3 +216,36 @@ Completed 2026-05-17.
 - [ ] pyproject.toml version set to `0.2.1`
 - [ ] All 7 release gates green
 - [ ] CI passes on PR
+
+---
+
+## 17. Step 10 — ai-debt verify
+
+Completed 2026-05-17.
+
+- [x] `ai-debt verify` command added
+- [x] Verification schemas (VerificationResult, WorkPackageVerificationResult, VerificationReport)
+- [x] Deterministic matching (category+evidence, locations, title, ID fallback)
+- [x] 6 verification statuses implemented
+- [x] Location verification (file path existence)
+- [x] Structured work package verification
+- [x] Runs analyze_evidence() in memory, does not write debt-register.json
+- [x] Writes verification-report.json and verification-report.md
+- [x] Standalone command, not added to ai-debt run
+- [x] 145 tests passing, all 7 release gates green
+- [x] Tagged v0.3.0
+
+---
+
+## 18. Step 11 — v0.3.1 Stabilization & Verification UX
+
+- [ ] Verification report readability improved
+- [ ] All 6 verification statuses covered by explicit edge-case tests
+- [ ] `ai-debt status` read-only workspace summary command
+- [ ] Lifecycle documentation added to ARCHITECTURE.md
+- [ ] ROADMAP cleaned up (duplicate headings fixed)
+- [ ] RELEASE_CHECKLIST updated
+- [ ] KNOWN_LIMITATIONS updated
+- [ ] pyproject.toml version set to `0.3.1`
+- [ ] All 7 release gates green
+- [ ] CI passes on PR
