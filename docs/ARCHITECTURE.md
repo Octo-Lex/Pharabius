@@ -52,3 +52,74 @@ lint-imports
 ```
 
 The CI pipeline must fail if forbidden imports are introduced.
+
+---
+
+## Analysis Unit IR
+
+**Layer:** Between Evidence IR and Finding IR.
+
+**Schema:** `schemas/analysis_unit.py`
+**Engine:** `core/mapper.py`
+**Output:** `.ai-debt/analysis-units.json`
+**Command:** `ai-debt map`
+
+Analysis Units group raw evidence into engineering-meaningful areas:
+packages, services, test suites, CI workflows, infrastructure, config surfaces,
+documentation areas, and security-sensitive areas.
+
+Each unit has a stable deterministic ID (`AU-{TYPE}-{HEX8}`) enabling cross-run comparison.
+
+### Package vs Service distinction
+
+A directory under `services/api` with `pyproject.toml` may create both:
+- **package unit** — represents the dependency/build boundary (has a manifest)
+- **service unit** — represents the deployable/operational/domain boundary (lives in a service directory)
+
+These are intentionally separate concerns:
+- package = "what dependencies does this code declare?"
+- service = "what deployable component does this code belong to?"
+
+### Evidence attachment specificity
+
+Each unit type only claims evidence matching its type allowlist:
+
+| Unit type | Allowed evidence types |
+|---|---|
+| package | manifest_detected, package_script_detected |
+| service | manifest_detected, package_script_detected |
+| cli | package_script_detected |
+| test_suite | test_file_detected |
+| documentation_area | documentation_file_detected |
+| config_surface | configuration_file_detected |
+| security_sensitive_area | risk_sensitive_path_detected, risk_sensitive_keyword_detected |
+| ci_workflow | deployment_file_detected (CI paths) |
+| infra_area | infrastructure_file_detected, deployment_file_detected |
+
+### Security-sensitive area grouping
+
+Security evidence is grouped by the nearest meaningful parent directory:
+1. Package root (directory with a manifest)
+2. Service root (directory under apps/, services/, etc.)
+3. Top-level source directory (src/, lib/, cmd/, etc.)
+4. Root (fallback)
+
+Risk evidence under docs/, tests/, or cache directories is excluded from
+security-sensitive unit creation.
+
+### Zero-evidence filtering
+
+Units with zero evidence IDs are removed from output after evidence attachment.
+
+### Import contract
+
+```
+mapper imports from: schemas.analysis_unit, schemas.evidence, schemas.repository
+mapper does NOT import from: analyzer, reporter, planner
+```
+
+### Pipeline order
+
+```
+init → profile → scan → map → analyze → report → plan
+```
