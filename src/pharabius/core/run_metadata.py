@@ -6,6 +6,7 @@ from typing import Any
 
 from pharabius.core.analyzer import write_debt_register
 from pharabius.core.init_workspace import initialize_workspace
+from pharabius.core.mapper import write_analysis_units
 from pharabius.core.planner import write_plan
 from pharabius.core.profiler import write_repository_profile
 from pharabius.core.reporter import write_reports
@@ -100,10 +101,16 @@ def _load_debt_summary(root: Path) -> RunSummary:
     if not isinstance(summary_data, dict):
         return RunSummary()
 
+    # Count analysis units
+    units_path = root / ".ai-debt" / "analysis-units.json"
+    units_data = _load_json(units_path)
+    unit_count = len(units_data.get("units", [])) if isinstance(units_data, dict) else 0
+
     return RunSummary(
         evidence_count=_load_evidence_count(root),
         finding_count=summary_data.get("total_findings", 0),
         work_package_count=len(list((root / ".ai-debt" / "work-packages").glob("WP-*.md"))),
+        analysis_unit_count=unit_count,
         critical_findings=summary_data.get("critical", 0),
         high_findings=summary_data.get("high", 0),
         medium_findings=summary_data.get("medium", 0),
@@ -119,6 +126,7 @@ def execute_run(repository_root: Path) -> RunMetadata:
         "init",
         "profile",
         "scan",
+        "map",
         "analyze --no-ai",
         "report",
         "plan",
@@ -127,6 +135,7 @@ def execute_run(repository_root: Path) -> RunMetadata:
     initialize_workspace(root, force=True)
     write_repository_profile(root)
     write_evidence_store(root)
+    write_analysis_units(root)
     write_debt_register(root)
     write_reports(root)
     write_plan(root)

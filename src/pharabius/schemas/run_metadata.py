@@ -18,6 +18,7 @@ class RunSummary(BaseModel):
     evidence_count: int = 0
     finding_count: int = 0
     work_package_count: int = 0
+    analysis_unit_count: int = 0
     critical_findings: int = 0
     high_findings: int = 0
     medium_findings: int = 0

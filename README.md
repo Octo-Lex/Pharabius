@@ -12,6 +12,7 @@ It does not modify production code by default.
 ai-debt init              # Create .ai-debt workspace
 ai-debt profile           # Detect repository stack and structure
 ai-debt scan              # Collect normalized evidence
+ai-debt map               # Map evidence into analysis units
 ai-debt analyze --no-ai   # Generate deterministic debt findings
 ai-debt report            # Generate domain reports
 ai-debt plan              # Generate roadmap, work packages, and handoff

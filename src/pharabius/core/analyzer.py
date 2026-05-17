@@ -801,6 +801,12 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
         reverse=True,
     )
 
+    # Attach analysis unit IDs if available
+    unit_store = _load_analysis_units_if_exists(root)
+    if unit_store is not None:
+        for finding in findings:
+            _attach_units_to_finding(finding, unit_store)
+
     return DebtRegister(
         project_name=_load_project_name(root),
         repository=str(root),
@@ -881,6 +887,31 @@ def render_debt_register_markdown(register: DebtRegister) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _load_analysis_units_if_exists(root: Path) -> object | None:
+    """Load AnalysisUnitStore if analysis-units.json exists, else None."""
+    path = root / ".ai-debt" / "analysis-units.json"
+    if not path.exists():
+        return None
+    try:
+        from pharabius.schemas.analysis_unit import AnalysisUnitStore
+
+        return AnalysisUnitStore.model_validate_json(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _attach_units_to_finding(finding: DebtFinding, unit_store: object) -> None:
+    """Attach analysis unit IDs to a finding based on evidence overlap."""
+    unit_ids: list[str] = []
+    for unit in getattr(unit_store, "units", []):
+        unit_eids = getattr(unit, "evidence_ids", [])
+        for eid in finding.evidence_ids:
+            if eid in unit_eids:
+                unit_ids.append(getattr(unit, "analysis_unit_id", ""))
+                break
+    finding.analysis_unit_ids = sorted(set(unit_ids))
 
 
 def write_debt_register(repository_root: Path) -> DebtRegister:
