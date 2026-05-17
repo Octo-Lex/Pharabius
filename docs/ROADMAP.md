@@ -1,14 +1,13 @@
 # Pharabius Roadmap
 
-## v0.1.1 — Polish & Validation-Driven Fixes
+## v0.2.1 — Maintenance
 
-- Validation-driven false positive tuning
-- Dependency policy refinements (per-package-root exclusions, workspace-aware Python monorepos)
-- Runtime performance improvements (large repo optimization, streaming evidence)
-- Additional repository test cases (Java, .NET, IaC-only)
-- P2 backlog from validation summary: profile boolean fields, Go test framework, pnpm workspace lockfile per-package check
+- Documentation correctness (phantom limitations, version metadata)
+- GitHub Actions maintenance (Node.js 24 compatibility)
+- Validation gap documentation (Java/JVM, .NET, IaC-only)
+- Developer audit helper for analysis units
 
-## v0.2.0 — Export & Connectors
+## v0.3.0 — Export & Connectors
 
 - `ai-debt export --format sarif` — SARIF output for GitHub Security tab integration
 - `ai-debt export --format csv` — CSV output for spreadsheet analysis and reporting

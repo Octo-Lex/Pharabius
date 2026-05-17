@@ -1,6 +1,6 @@
-# Release Checklist — Pharabius v0.1.0
+# Release Checklist — Pharabius
 
-This checklist must be completed before tagging v0.1.0.
+This checklist must be completed before tagging any release.
 
 ---
 
@@ -184,3 +184,35 @@ Completed 2026-05-16.
 - [x] No license metadata added (no LICENSE file exists — deferred)
 - [x] Tagging prepared but not executed (requires separate approval)
 - [x] All 7 release gates green
+
+---
+
+## 15. Step 8 — Analysis Unit IR
+
+Completed 2026-05-17.
+
+- [x] `ai-debt map` command added
+- [x] `.ai-debt/analysis-units.json` output with deterministic AU-* IDs
+- [x] 9 unit types implemented (package, service, cli, test_suite, ci_workflow, infra_area, config_surface, documentation_area, security_sensitive_area)
+- [x] Finding-to-unit linkage via `analysis_unit_ids`
+- [x] Run metadata includes `analysis_unit_count`
+- [x] Report sections for analysis units in 4 domain reports
+- [x] Noise reduction: type-specific evidence, security grouping, cache filtering, zero-evidence filtering
+- [x] 113 tests, 86.72% coverage
+- [x] All 7 release gates green
+- [x] Tagged v0.2.0
+
+---
+
+## 16. Step 9 — v0.2.1 Maintenance
+
+- [ ] Remove phantom limitation #13 (profile boolean fields — fields never existed)
+- [ ] Renumber remaining known limitations
+- [ ] CHANGELOG.md: proper v0.2.0 heading + new [Unreleased]
+- [ ] ROADMAP.md: v0.1.1 → v0.2.1, maintenance-focused
+- [ ] RELEASE_CHECKLIST.md: v0.2.1 section added
+- [ ] GitHub Actions: update to checkout@v6 + setup-python@v6
+- [ ] Audit helper: `scripts/audit_analysis_units.py`
+- [ ] pyproject.toml version set to `0.2.1`
+- [ ] All 7 release gates green
+- [ ] CI passes on PR
