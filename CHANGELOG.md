@@ -2,6 +2,28 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- `ai-debt map` — Map repository evidence into analysis units
+- `.ai-debt/analysis-units.json` — Structured analysis unit output
+- Analysis Unit IR with 9 initial unit types: package, service, cli, test_suite, ci_workflow, infra_area, config_surface, documentation_area, security_sensitive_area
+- Stable deterministic analysis unit IDs (AU-{TYPE}-{HEX8})
+- Trust-boundary tags for security-sensitive areas
+- Evidence-to-unit linkage
+- Finding-to-unit linkage (`analysis_unit_ids` on DebtFinding)
+- Report sections for analysis units (foundation, architecture, security, test)
+- Run metadata includes `analysis_unit_count`
+
+### Changed
+
+- Analysis unit evidence attachment is now type-specific (reduces collateral linkage)
+- Security-sensitive areas are grouped by nearest package/service root (reduces explosion)
+- Risk evidence in docs/ and tests/ no longer creates security-sensitive units
+- Tool/cache directories (.importlinter_cache, .pytest_cache, etc.) no longer produce units
+- Zero-evidence units are filtered from output
+
 ## v0.1.0 — 2026-05-16
 
 ### Added

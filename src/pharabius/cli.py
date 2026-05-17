@@ -8,6 +8,7 @@ from rich.console import Console
 
 from pharabius.core.analyzer import write_debt_register
 from pharabius.core.init_workspace import initialize_workspace
+from pharabius.core.mapper import write_analysis_units
 from pharabius.core.planner import write_plan
 from pharabius.core.profiler import write_repository_profile
 from pharabius.core.reporter import write_reports
@@ -112,6 +113,35 @@ def scan(
     console.print(f"Repository: {repository_root}")
     console.print(f"Output:     {repository_root / '.ai-debt' / 'evidence.json'}")
     console.print(f"Evidence:   {len(evidence_store.evidence)} items")
+
+
+@app.command()
+def map_units(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to map analysis units for.",
+        ),
+    ] = None,
+) -> None:
+    """Map repository evidence into analysis units."""
+    resolved_root = (repository_root or Path.cwd()).resolve()
+
+    unit_store = write_analysis_units(resolved_root)
+
+    console.print("[bold green]Generated analysis units[/bold green]")
+    console.print(f"Repository: {resolved_root}")
+    console.print(f"Output:     {resolved_root / '.ai-debt' / 'analysis-units.json'}")
+    console.print(f"Units:      {len(unit_store.units)}")
+
+    # Print type breakdown
+    type_counts: dict[str, int] = {}
+    for u in unit_store.units:
+        type_counts[u.unit_type] = type_counts.get(u.unit_type, 0) + 1
+    for ut in sorted(type_counts):
+        console.print(f"  {ut:.<30s} {type_counts[ut]}")
 
 
 @app.command()

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from pharabius.schemas.analysis_unit import AnalysisUnitStore
 from pharabius.schemas.evidence import EvidenceItem, EvidenceStore
 from pharabius.schemas.finding import DebtFinding, DebtRegister
 from pharabius.schemas.repository import RepositoryProfile
@@ -69,6 +71,17 @@ def _load_debt_register(root: Path) -> DebtRegister:
     return DebtRegister.model_validate(data)
 
 
+def _load_units_if_exists(root: Path) -> AnalysisUnitStore | None:
+    """Load AnalysisUnitStore if file exists, else None."""
+    path = root / ".ai-debt" / "analysis-units.json"
+    if not path.exists():
+        return None
+    try:
+        return AnalysisUnitStore.model_validate_json(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
 def _context(repository_root: Path) -> ReportContext:
     root = repository_root.resolve()
 
@@ -100,6 +113,50 @@ def _bullet_list(values: list[str], empty: str = "None detected.") -> list[str]:
         return [f"- {empty}"]
 
     return [f"- `{value}`" for value in values]
+
+
+def _unit_summary_table(units: Sequence[object], unit_type: str | None = None) -> list[str]:
+    """Render a markdown table of analysis units."""
+    filtered = units
+    if unit_type:
+        filtered = [u for u in units if getattr(u, "unit_type", "") == unit_type]
+    if not filtered:
+        return ["None detected."]
+    lines = [
+        "| ID | Name | Files | Evidence |",
+        "|---|---|---:|---:|",
+    ]
+    for u in filtered:
+        uid = getattr(u, "analysis_unit_id", "")
+        name = getattr(u, "name", "")
+        files = len(getattr(u, "files", []))
+        evcount = len(getattr(u, "evidence_ids", []))
+        lines.append(f"| `{uid}` | {name} | {files} | {evcount} |")
+    return lines
+
+
+def _units_by_type_section(units: Sequence[object]) -> list[str]:
+    """Render a type-grouped analysis units summary."""
+    if not units:
+        return []
+    lines: list[str] = []
+    by_type: dict[str, list[object]] = {}
+    for u in units:
+        ut = getattr(u, "unit_type", "unknown")
+        by_type.setdefault(ut, []).append(u)
+    for ut in sorted(by_type):
+        lines.append(f"### {ut.replace('_', ' ').title()}")
+        lines.append("")
+        for u in by_type[ut]:
+            uid = getattr(u, "analysis_unit_id", "")
+            name = getattr(u, "name", "")
+            primary = getattr(u, "primary_files", [])
+            primary_str = primary[0] if primary else "N/A"
+            lines.append(f"- **{name}** (`{uid}`)")
+            lines.append(f"  - Primary: `{primary_str}`")
+            lines.append(f"  - Evidence: {len(getattr(u, 'evidence_ids', []))} items")
+        lines.append("")
+    return lines
 
 
 def _evidence_table(items: list[EvidenceItem], limit: int = 20) -> list[str]:
@@ -235,6 +292,18 @@ def render_architecture_map(ctx: ReportContext) -> str:
             ]
         )
 
+    # Analysis Units
+    unit_store = _load_units_if_exists(ctx.repository_root)
+    if unit_store is not None and unit_store.units:
+        lines.extend(
+            [
+                "",
+                "## Detected Analysis Units",
+                "",
+                *_units_by_type_section(unit_store.units),
+            ]
+        )
+
     lines.append("")
     return "\n".join(lines)
 
@@ -354,6 +423,27 @@ def render_test_health(ctx: ReportContext) -> str:
             ]
         )
 
+    # Test suite analysis units
+    unit_store = _load_units_if_exists(ctx.repository_root)
+    if unit_store is not None:
+        test_units = [u for u in unit_store.units if getattr(u, "unit_type", "") == "test_suite"]
+        if test_units:
+            lines.extend(
+                [
+                    "",
+                    "## Test Suite Analysis Units",
+                    "",
+                    "| ID | Files | Evidence | Confidence |",
+                    "|---|---:|---:|---|",
+                ]
+            )
+            for u in test_units:
+                uid = getattr(u, "analysis_unit_id", "")
+                files = len(getattr(u, "files", []))
+                evcount = len(getattr(u, "evidence_ids", []))
+                conf = getattr(u, "confidence", "N/A")
+                lines.append(f"| `{uid}` | {files} | {evcount} | {conf} |")
+
     lines.append("")
     return "\n".join(lines)
 
@@ -439,6 +529,29 @@ def render_security_exposure(ctx: ReportContext) -> str:
                 "This does not replace security review or dependency vulnerability scanning.",
             ]
         )
+
+    # Security-sensitive analysis units
+    unit_store = _load_units_if_exists(ctx.repository_root)
+    if unit_store is not None:
+        sec_units = [
+            u for u in unit_store.units if getattr(u, "unit_type", "") == "security_sensitive_area"
+        ]
+        if sec_units:
+            lines.extend(
+                [
+                    "",
+                    "## Security-Sensitive Analysis Units",
+                    "",
+                    "| ID | Tags | Files | Evidence |",
+                    "|---|---|---:|---:|",
+                ]
+            )
+            for u in sec_units:
+                uid = getattr(u, "analysis_unit_id", "")
+                tags = ", ".join(getattr(u, "trust_boundary_tags", []))
+                files = len(getattr(u, "files", []))
+                evcount = len(getattr(u, "evidence_ids", []))
+                lines.append(f"| `{uid}` | {tags} | {files} | {evcount} |")
 
     lines.append("")
     return "\n".join(lines)
@@ -624,15 +737,29 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
     else:
         lines.append("- No profile limitations recorded.")
 
-    lines.extend(
-        [
-            "",
-            "## 13. Product Engineering Handoff",
-            "",
-            "Recommended next action:",
-            "",
-        ]
-    )
+    # Analysis Units Summary (if available)
+    unit_store = _load_units_if_exists(ctx.repository_root)
+    if unit_store is not None and unit_store.units:
+        lines.extend(
+            [
+                "",
+                "## 13. Analysis Units Summary",
+                "",
+                f"Total analysis units: **{len(unit_store.units)}**",
+                "",
+                *_unit_summary_table(unit_store.units),
+                "",
+            ]
+        )
+        # Renumber remaining section
+        lines.extend(
+            [
+                "## 14. Product Engineering Handoff",
+                "",
+                "Recommended next action:",
+                "",
+            ]
+        )
 
     if findings:
         lines.extend(
