@@ -253,6 +253,47 @@ def plan(
 
 
 @app.command()
+def verify(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to verify findings against current evidence.",
+        ),
+    ] = None,
+) -> None:
+    """
+    Verify existing findings against current repository evidence.
+    """
+    from pharabius.core.verifier import write_verification_report
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+
+    try:
+        report = write_verification_report(resolved_root)
+    except FileNotFoundError as exc:
+        console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Generated verification report[/bold green]")
+    console.print(f"Repository: {resolved_root}")
+    console.print(f"Findings checked: {report.total_findings_checked}")
+    console.print(f"  Still detected:     {report.still_detected_count}")
+    console.print(f"  Likely remediated:  {report.likely_remediated_count}")
+    console.print(f"  Evidence missing:   {report.evidence_missing_count}")
+    console.print(f"  Partially supported: {report.partially_supported_count}")
+    console.print(f"  Stale:              {report.stale_count}")
+    console.print(f"  Uncertain:          {report.uncertain_count}")
+    if report.work_package_results:
+        console.print(
+            f"Work packages: {report.work_packages_valid} valid, "
+            f"{report.work_packages_stale} stale, "
+            f"{report.work_packages_orphaned} orphaned"
+        )
+
+
+@app.command()
 def run(
     repository_root: Annotated[
         Path | None,

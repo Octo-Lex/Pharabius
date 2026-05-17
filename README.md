@@ -16,6 +16,7 @@ ai-debt map               # Map evidence into analysis units
 ai-debt analyze --no-ai   # Generate deterministic debt findings
 ai-debt report            # Generate domain reports
 ai-debt plan              # Generate roadmap, work packages, and handoff
+ai-debt verify            # Verify findings against current evidence
 ai-debt run               # Run full pipeline + write run metadata
 ```
 

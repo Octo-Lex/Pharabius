@@ -111,6 +111,24 @@ security-sensitive unit creation.
 
 Units with zero evidence IDs are removed from output after evidence attachment.
 
+### Verifier module
+
+`core/verifier.py` provides `ai-debt verify`:
+
+1. Loads existing `debt-register.json` (source findings)
+2. Loads current `evidence.json`
+3. Optionally loads `analysis-units.json`
+4. Runs `analyze_evidence()` in memory (no disk write)
+5. Matches original findings to current findings using multi-criteria matching
+6. Checks evidence, unit, and location existence
+7. Assigns one of 6 verification statuses
+8. Verifies work package linkage
+9. Writes `verification-report.json` and `verification-report.md`
+
+Matching priority: category + evidence overlap \u2192 category + locations \u2192 category + title \u2192 finding ID (weak)
+
+Does NOT modify `debt-register.json` or any existing artifact.
+
 ### Import contract
 
 ```
