@@ -9,6 +9,7 @@
 
 ## v0.3.0 — Export & Connectors
 
+- `ai-debt verify` — Verify existing findings against current evidence (implemented, pending review)
 - `ai-debt export --format sarif` — SARIF output for GitHub Security tab integration
 - `ai-debt export --format csv` — CSV output for spreadsheet analysis and reporting
 - Coverage report ingestion (pytest-cov XML, Istanbul/NYC JSON, Go coverage)
