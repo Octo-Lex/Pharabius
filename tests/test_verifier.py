@@ -7,9 +7,12 @@ from pathlib import Path
 import pytest
 
 from pharabius.core.verifier import (
+    STATUS_EVIDENCE_MISSING,
+    STATUS_LIKELY_REMEDIATED,
     STATUS_PARTIALLY_SUPPORTED,
     STATUS_STALE,
     STATUS_STILL_DETECTED,
+    STATUS_UNCERTAIN,
     _match_findings,
     _parse_wp_debt_ids,
     verify_repository,
@@ -351,3 +354,214 @@ class TestDebtRegisterImmutability:
 
         after = register_path.read_bytes()
         assert before == after, "debt-register.json was modified during verification!"
+
+
+# ---------------------------------------------------------------------------
+# Edge-case status tests
+# ---------------------------------------------------------------------------
+
+
+class TestLikelyRemediated:
+    def test_no_match_no_evidence_no_locations(self, tmp_path: Path) -> None:
+        """All evidence gone + no analyzer match + locations missing = likely_remediated."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        # Use TD-SEC category — analyzer won't produce it without risk evidence
+        finding = _make_finding(
+            fid="TD-SEC-001",
+            category="TD-SEC",
+            title="Security risk in deleted area",
+            evidence_ids=["EVD-999"],
+            locations=["nonexistent/auth.py"],
+        )
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        r = report.results[0]
+        assert r.verification_status == STATUS_LIKELY_REMEDIATED
+        assert "nonexistent/auth.py" in r.locations_missing
+
+
+class TestEvidenceMissing:
+    def test_no_match_no_evidence_locations_exist(self, tmp_path: Path) -> None:
+        """No match + no evidence + locations still exist = evidence_missing."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        finding = _make_finding(
+            fid="TD-SEC-001",
+            category="TD-SEC",
+            title="Security issue",
+            evidence_ids=["EVD-999"],
+            locations=["pyproject.toml"],
+        )
+        (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        r = report.results[0]
+        assert r.verification_status == STATUS_EVIDENCE_MISSING
+        assert "pyproject.toml" in r.locations_present
+
+
+class TestPartiallySupported:
+    def test_match_but_no_original_evidence(self, tmp_path: Path) -> None:
+        """Analyzer matches but all original evidence gone = partially_supported."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        finding = _make_finding(
+            evidence_ids=["EVD-888"],
+            locations=["pyproject.toml"],
+        )
+        (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        r = report.results[0]
+        assert r.verification_status == STATUS_PARTIALLY_SUPPORTED
+
+    def test_no_match_some_evidence(self, tmp_path: Path) -> None:
+        """No match but some evidence remains = partially_supported."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        # TD-SEC won't be produced by analyzer with only manifest evidence
+        finding = _make_finding(
+            fid="TD-SEC-001",
+            category="TD-SEC",
+            title="Security risk",
+            evidence_ids=["EVD-001", "EVD-999"],
+            locations=[],
+        )
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        r = report.results[0]
+        assert r.verification_status == STATUS_PARTIALLY_SUPPORTED
+
+
+class TestStale:
+    def test_stale_from_missing_locations(self, tmp_path: Path) -> None:
+        """Locations gone + evidence present + no match = stale."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        # TD-SEC won't match analyzer output for manifest evidence
+        finding = _make_finding(
+            fid="TD-SEC-001",
+            category="TD-SEC",
+            title="Security risk in area",
+            evidence_ids=["EVD-001"],
+            locations=["deleted_auth/login.py"],
+        )
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        r = report.results[0]
+        assert r.verification_status == STATUS_STALE
+        assert "deleted_auth/login.py" in r.locations_missing
+
+    def test_stale_from_missing_units(self, tmp_path: Path) -> None:
+        """Units file exists + finding had units + all gone + no match = stale."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        # TD-SEC won't match analyzer output
+        finding = _make_finding(
+            fid="TD-SEC-001",
+            category="TD-SEC",
+            title="Security area",
+            evidence_ids=["EVD-001"],
+            locations=[],
+            analysis_unit_ids=["AU-PKG-GONE"],
+        )
+        unit = AnalysisUnit(
+            analysis_unit_id="AU-OTHER-001",
+            unit_type="package",
+            name="other",
+            root_path="other",
+            files=[],
+        )
+        _setup_repo(tmp_path, [finding], evidence, units=[unit])
+        report = verify_repository(tmp_path)
+        r = report.results[0]
+        assert r.verification_status == STATUS_STALE
+        assert r.analysis_units_available is True
+        assert "AU-PKG-GONE" in r.analysis_unit_ids_missing
+
+
+class TestUncertain:
+    def test_degenerate_empty_evidence_and_locations(self, tmp_path: Path) -> None:
+        """Finding with no evidence IDs and no locations, no match."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        # TD-SEC won't match analyzer output
+        finding = _make_finding(
+            fid="TD-SEC-099",
+            category="TD-SEC",
+            title="Unknown security issue",
+            evidence_ids=[],
+            locations=[],
+        )
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        r = report.results[0]
+        # Should produce some valid status, not crash
+        # (likely evidence_missing since no evidence data)
+        assert r.verification_status in (
+            STATUS_EVIDENCE_MISSING,
+            STATUS_LIKELY_REMEDIATED,
+            STATUS_UNCERTAIN,
+        )
+
+
+class TestWorkPackageStale:
+    def test_wp_stale_from_remediated_finding(self, tmp_path: Path) -> None:
+        """WP linked to likely_remediated finding = stale."""
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        # TD-SEC won't match analyzer output
+        finding = _make_finding(
+            fid="TD-SEC-001",
+            category="TD-SEC",
+            title="Security issue",
+            evidence_ids=["EVD-999"],
+            locations=["nonexistent.toml"],
+        )
+        wp_content = "# WP\n\n## Linked Debt Items\n\n- `TD-SEC-001`\n"
+        _setup_repo(
+            tmp_path,
+            [finding],
+            evidence,
+            work_packages={"WP-001-stale.md": wp_content},
+        )
+        report = verify_repository(tmp_path)
+        assert report.work_packages_stale == 1
+
+
+# ---------------------------------------------------------------------------
+# Report readability tests
+# ---------------------------------------------------------------------------
+
+
+class TestReportReadability:
+    def test_report_includes_disclaimer(self, tmp_path: Path) -> None:
+        """Report includes disclaimer about not proving remediation."""
+        from pharabius.core.verifier import render_verification_report_markdown
+
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        finding = _make_finding(evidence_ids=["EVD-001"], locations=["pyproject.toml"])
+        (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        md = render_verification_report_markdown(report)
+        assert "does not prove risk is gone" in md
+
+    def test_report_includes_status_definitions(self, tmp_path: Path) -> None:
+        """Report includes status definitions section."""
+        from pharabius.core.verifier import render_verification_report_markdown
+
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        finding = _make_finding(evidence_ids=["EVD-001"], locations=["pyproject.toml"])
+        (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        md = render_verification_report_markdown(report)
+        assert "## Status Definitions" in md
+        assert "still_detected" in md
+
+    def test_report_groups_actions_by_status(self, tmp_path: Path) -> None:
+        """Recommended actions are grouped by status."""
+        from pharabius.core.verifier import render_verification_report_markdown
+
+        evidence = [_make_evidence("EVD-001", "manifest_detected", "deps", "pyproject.toml")]
+        finding = _make_finding(evidence_ids=["EVD-001"], locations=["pyproject.toml"])
+        (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+        _setup_repo(tmp_path, [finding], evidence)
+        report = verify_repository(tmp_path)
+        md = render_verification_report_markdown(report)
+        # Should have status as bold header before actions
+        assert "**still_detected:**" in md

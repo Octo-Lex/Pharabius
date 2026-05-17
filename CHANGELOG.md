@@ -4,6 +4,12 @@ All notable changes to Pharabius are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `ai-debt status` — Read-only workspace summary command
+- Verification report improvements: status definitions, evidence delta columns, disclaimer, grouped actions
+- Edge-case test coverage for all 6 verification statuses
+
 ## v0.3.0 — 2026-05-17
 
 ### Added

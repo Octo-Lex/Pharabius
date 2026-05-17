@@ -89,3 +89,9 @@ It does not modify `debt-register.json`, `evidence.json`, or any existing artifa
 
 `ai-debt verify` is a standalone command. It is not included in `ai-debt run` and
 must be invoked explicitly when verification is desired.
+
+## 20. ai-debt status is read-only and does not verify findings
+
+`ai-debt status` reads existing `.ai-debt/` artifacts and prints a summary.
+It does not run scan, analyze, or verify. Status information may be stale
+if the workspace has not been recently updated.
