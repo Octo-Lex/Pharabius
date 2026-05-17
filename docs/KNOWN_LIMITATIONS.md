@@ -73,3 +73,19 @@ that don't align with package/service structure.
 Risk-sensitive keyword matches in documentation and test directories do not create
 security-sensitive analysis units. This reduces noise but may miss legitimate
 security concerns documented in those directories.
+
+## 17. Verification is evidence-based, not proof of remediation
+
+`ai-debt verify` checks whether repository evidence still supports prior findings.
+It does not prove risk has been eliminated. A `likely_remediated` status means the
+deterministic analyzer no longer detects the condition \u2014 manual review is recommended.
+
+## 18. verify does not modify the debt register
+
+`ai-debt verify` writes `verification-report.json` and `verification-report.md` only.
+It does not modify `debt-register.json`, `evidence.json`, or any existing artifact.
+
+## 19. verify is not part of ai-debt run
+
+`ai-debt verify` is a standalone command. It is not included in `ai-debt run` and
+must be invoked explicitly when verification is desired.
