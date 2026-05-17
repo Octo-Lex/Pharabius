@@ -4,6 +4,13 @@ All notable changes to Pharabius are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Remove phantom "profile boolean fields return None" limitation (fields never existed)
+- Update GitHub Actions to Node.js 24-compatible versions (checkout@v6, setup-python@v6)
+
+## v0.2.0 — 2026-05-17
+
 ### Added
 
 - `ai-debt map` — Map repository evidence into analysis units

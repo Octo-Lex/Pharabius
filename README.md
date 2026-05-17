@@ -34,8 +34,8 @@ See `docs/VALIDATION_MATRIX.md` for the full test plan and `docs/RELEASE_CHECKLI
 | Document | Description |
 |---|---|
 | [CHANGELOG.md](CHANGELOG.md) | Release notes for each version |
-| [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Honest constraints of v0.1.0 |
-| [ROADMAP.md](docs/ROADMAP.md) | Planned v0.1.1, v0.2.0, v0.3.0 work |
+| [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Honest constraints of current version |
+| [ROADMAP.md](docs/ROADMAP.md) | Planned v0.2.1, v0.3.0, and future work |
 | [VALIDATION_SUMMARY.md](docs/VALIDATION_SUMMARY.md) | 8-repository validation results |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module structure and import contract |
 | [ENGINEERING_POLICY.md](docs/ENGINEERING_POLICY.md) | Quality gates and coding standards |

@@ -1,4 +1,4 @@
-# Known Limitations — Pharabius v0.1.0
+# Known Limitations — Pharabius v0.2.1
 
 This document lists known limitations of Pharabius v0.1.0. These are honest constraints, not bugs.
 
@@ -52,27 +52,23 @@ Python, Go, Rust, Java, PHP, Ruby, and .NET lockfile checks require the lockfile
 
 v0.1.0 does not include a `LICENSE` file or `license` field in `pyproject.toml`. License metadata is deferred to a future release. Users should not redistribute without clarifying licensing terms.
 
-## 13. Profile boolean fields return None
-
-The `has_tests`, `has_ci`, `has_docs`, and `has_lockfile` fields in `project-profile.json` return `None` instead of `true`/`false`. The analyzer does not rely on these fields — it checks evidence directly — but consumers of the profile JSON should not treat `None` as `false`.
-
-## 14. Analysis Units are directory-convention-based
+## 13. Analysis Units are directory-convention-based
 
 Service detection relies on directory conventions (apps/, services/, packages/, crates/, modules/, cmd/).
 Repositories that don't follow these conventions may not produce service units.
 
-## 15. Trust-boundary tags are keyword-inferred
+## 14. Trust-boundary tags are keyword-inferred
 
 Security-sensitive area tags are inferred from file path and content keywords.
 They do not represent verified security boundaries.
 
-## 16. Security-sensitive units use heuristic grouping
+## 15. Security-sensitive units use heuristic grouping
 
 Security-sensitive analysis units are grouped by the nearest package or service root.
 This may merge distinct security boundaries into a single unit or miss boundaries
 that don't align with package/service structure.
 
-## 17. Risk evidence in docs and tests is excluded from security units
+## 16. Risk evidence in docs and tests is excluded from security units
 
 Risk-sensitive keyword matches in documentation and test directories do not create
 security-sensitive analysis units. This reduces noise but may miss legitimate
