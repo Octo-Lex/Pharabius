@@ -507,8 +507,24 @@ def _recommended_action(status: str) -> str:
 
 def render_verification_report_markdown(report: VerificationReport) -> str:
     """Render verification report as human-readable Markdown."""
+    # Collect statuses that appear in results
+    active_statuses = {r.verification_status for r in report.results}
+
+    status_defs = {
+        STATUS_STILL_DETECTED: "Current analyzer confirms with supporting evidence.",
+        STATUS_LIKELY_REMEDIATED: (
+            "No match, evidence gone, locations gone. Review before closing."
+        ),
+        STATUS_EVIDENCE_MISSING: "Supporting evidence missing. Cannot confirm remediation.",
+        STATUS_PARTIALLY_SUPPORTED: "Some evidence remains. Support incomplete. Review required.",
+        STATUS_STALE: "Structural mismatch: units, locations, or links no longer align.",
+        STATUS_UNCERTAIN: "Insufficient inputs for a defensible verification result.",
+    }
+
     lines: list[str] = [
         "# Verification Report",
+        "",
+        "> **Note:** Verification checks evidence support. It does not prove risk is gone.",
         "",
         f"**Repository:** {report.repository}",
         f"**Generated:** {report.generated_at}",
@@ -528,6 +544,14 @@ def render_verification_report_markdown(report: VerificationReport) -> str:
         "",
     ]
 
+    # Status definitions (only for statuses that appear)
+    if active_statuses:
+        lines.extend(["## Status Definitions", ""])
+        for sv, defn in status_defs.items():
+            if sv in active_statuses:
+                lines.append(f"- **{sv}:** {defn}")
+        lines.append("")
+
     # Sections by status
     status_sections = [
         ("Still Detected", STATUS_STILL_DETECTED),
@@ -543,15 +567,13 @@ def render_verification_report_markdown(report: VerificationReport) -> str:
         if not matching:
             continue
         lines.extend([f"## {section_title}", ""])
-        lines.extend(
-            ["| Finding | Category | Evidence Present | Evidence Missing | Locations Missing |"]
-        )
-        lines.extend(["|---|---|---:|---:|---:|"])
+        lines.extend(["| Finding | Evidence | Locations Missing |"])
+        lines.extend(["|---|---:|---:|"])
         for r in matching:
-            lines.append(
-                f"| {r.finding_id} | — | {len(r.evidence_ids_present)} "
-                f"| {len(r.evidence_ids_missing)} | {len(r.locations_missing)} |"
-            )
+            ev_total = len(r.evidence_ids_checked)
+            ev_present = len(r.evidence_ids_present)
+            ev_str = f"{ev_present}/{ev_total}" if ev_total > 0 else "\u2014"
+            lines.append(f"| {r.finding_id} | {ev_str} | {len(r.locations_missing)} |")
         lines.append("")
 
     # Work package review
@@ -560,18 +582,29 @@ def render_verification_report_markdown(report: VerificationReport) -> str:
         lines.extend(["| Work Package | Status | Linked Findings | Notes |"])
         lines.extend(["|---|---|---|---|"])
         for wp in report.work_package_results:
-            notes_str = "; ".join(wp.notes) if wp.notes else "—"
-            lines.append(
-                f"| {wp.work_package_path} | {wp.status} "
-                f"| {', '.join(wp.linked_debt_ids) or '—'} | {notes_str} |"
-            )
+            wp_name = Path(wp.work_package_path).name
+            notes_str = "; ".join(wp.notes) if wp.notes else "\u2014"
+            linked = ", ".join(wp.linked_debt_ids) if wp.linked_debt_ids else "\u2014"
+            lines.append(f"| {wp_name} | {wp.status} | {linked} | {notes_str} |")
         lines.append("")
 
-    # Recommended actions
+    # Recommended actions grouped by status
     lines.extend(["## Recommended Actions", ""])
-    for r in report.results:
-        lines.append(f"- **{r.finding_id}** ({r.verification_status}): {r.recommended_action}")
-    lines.append("")
+    for status_val in [
+        STATUS_STILL_DETECTED,
+        STATUS_LIKELY_REMEDIATED,
+        STATUS_PARTIALLY_SUPPORTED,
+        STATUS_EVIDENCE_MISSING,
+        STATUS_STALE,
+        STATUS_UNCERTAIN,
+    ]:
+        matching = [r for r in report.results if r.verification_status == status_val]
+        if not matching:
+            continue
+        lines.append(f"**{status_val}:**")
+        for r in matching:
+            lines.append(f"- {r.finding_id}: {r.recommended_action}")
+        lines.append("")
 
     return "\n".join(lines)
 

@@ -129,6 +129,46 @@ Matching priority: category + evidence overlap \u2192 category + locations \u219
 
 Does NOT modify `debt-register.json` or any existing artifact.
 
+### Status reader
+
+`core/status_reader.py` provides `ai-debt status`:
+
+- Read-only summary of `.ai-debt/` workspace state
+- Does NOT run scan/analyze/verify
+- Does NOT modify files
+- Tolerates missing and corrupted artifacts
+
+### Finding lifecycle
+
+**Artifact roles:**
+
+- `debt-register.json` = immutable snapshot of deterministic analyzer output
+- `verification-report.json` = revalidation result against current repository state
+- Work packages may become stale as findings evolve
+
+**Finding states (current):**
+
+- `Detected` (in `debt-register.json`)
+
+**Verification statuses (in `verification-report.json`):**
+
+| Status | Meaning |
+|---|---|
+| `still_detected` | Current analyzer confirms with supporting evidence |
+| `likely_remediated` | No match, evidence gone, locations gone |
+| `evidence_missing` | Evidence gone, cannot confirm remediation |
+| `partially_supported` | Some evidence remains, support incomplete |
+| `stale` | Structural mismatch (units, locations, or links drifted) |
+| `uncertain` | Insufficient inputs for defensible result |
+
+**Future concepts (NOT implemented):** `confirmed`, `accepted_risk`, `deferred`, `planned`, `false_positive`
+
+**Key invariants:**
+
+- `verify` does NOT mutate `debt-register.json`
+- `verify` is NOT part of `ai-debt run`
+- Verification is evidence-based, not proof of remediation
+
 ### Import contract
 
 ```
