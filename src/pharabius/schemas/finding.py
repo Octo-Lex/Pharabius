@@ -35,6 +35,7 @@ class DebtFinding(BaseModel):
     risks_and_cautions: list[str] = Field(default_factory=list)
     suggested_owner_area: str = ""
     related_findings: list[str] = Field(default_factory=list)
+    analysis_unit_ids: list[str] = Field(default_factory=list)
     created_at: str = Field(default_factory=utc_now_iso)
     updated_at: str = Field(default_factory=utc_now_iso)
 
