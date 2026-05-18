@@ -195,7 +195,27 @@ Coupling metrics (fan-in, fan-out, instability) are included in `architecture-gr
 but do not generate TD-ARCH findings in v0.5.1. Thresholds for coupling-based findings
 require further field validation.
 
-## 38. TD-ARCH findings capped at 20 per type
+## 38. Monorepo node collapse
+
+`ai-debt graph` groups source files by the first directory level under `src/` (or repository
+root for flat layouts). For monorepos using `packages/*` or `apps/*` layouts, all files within
+a single top-level directory are collapsed into one node. This means:
+- TypeScript/JS monorepos: `packages/bot`, `packages/core` become a single `packages` node
+- Python sub-packages: `src/myapp/cli`, `src/myapp/core` become a single `myapp` node
+- All inter-package imports become self-imports and are skipped
+- No edges, cycles, or boundary violations are detected within the collapsed node
+
+This affects Ghostwire, Craft-Agents, and any monorepo using first-level directory grouping.
+Planned fix in v0.6.0.
+
+## 39. Rust import detection not implemented
+
+The scanner detects imports for Python, JavaScript/TypeScript, Java, C#, Go, PHP, and Ruby.
+Rust `use` statements (e.g., `use crate::module::item`) are not matched by any import
+pattern. Rust repositories produce zero `imports_detected` evidence and zero graph edges.
+Planned fix in v0.6.0.
+
+## 40. TD-ARCH findings capped at 20 per type
 
 At most 20 cycle findings and 20 boundary violation findings are generated per analysis run.
 If more exist in the graph, a note is added to the last finding's risks_and_cautions.
