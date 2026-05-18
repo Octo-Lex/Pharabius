@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -553,7 +554,45 @@ def _analyze_missing_docs(store: EvidenceStore, builder: FindingBuilder) -> None
     )
 
 
-def _analyze_missing_lockfile(store: EvidenceStore, builder: FindingBuilder) -> None:
+def _classify_pom_role(manifest_item: EvidenceItem, root: Path) -> str:
+    """Classify a pom.xml as 'parent', 'application', 'library', or 'unknown'.
+
+    Uses whitespace-tolerant regex matching. No XML parser dependency.
+    Falls back to 'unknown' on any read error.
+    """
+    pom_path = root / manifest_item.location.file
+    try:
+        text = pom_path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return "unknown"
+
+    # Parent/aggregator: <packaging>pom</packaging> and <modules>
+    has_pom_packaging = bool(re.search(r"<\s*packaging\s*>\s*pom\s*<\s*/packaging\s*>", text))
+    has_modules = bool(re.search(r"<\s*modules?\s*>", text))
+    if has_pom_packaging and has_modules:
+        return "parent"
+
+    # Application signals
+    app_signals = [
+        r"spring-boot-maven-plugin",
+        r"spring-boot-starter-web",
+        r"spring-boot-starter-actuator",
+        r"<\s*mainClass\s*>",
+        r"maven-shade-plugin",
+        r"maven-assembly-plugin",
+    ]
+    if any(re.search(sig, text, re.IGNORECASE) for sig in app_signals):
+        return "application"
+
+    return "library"
+
+
+def _analyze_missing_lockfile(
+    store: EvidenceStore,
+    builder: FindingBuilder,
+    *,
+    repository_root: Path,
+) -> None:
     """Check each ecosystem/package-root independently for missing lockfiles.
 
     Generates one TD-DEP finding per (ecosystem, package_root) pair that is
@@ -585,6 +624,18 @@ def _analyze_missing_lockfile(store: EvidenceStore, builder: FindingBuilder) -> 
             ):
                 continue
 
+            # Java: skip parent/aggregator and library POMs
+            if ecosystem.name == "Java":
+                classified = []
+                for item in items_in_root:
+                    role = _classify_pom_role(item, repository_root)
+                    if role in ("parent", "library", "unknown"):
+                        continue
+                    classified.append(item)
+                if not classified:
+                    continue
+                items_in_root = classified
+
             # One finding per (ecosystem, package_root)
             _emit_lockfile_finding(
                 builder,
@@ -593,12 +644,11 @@ def _analyze_missing_lockfile(store: EvidenceStore, builder: FindingBuilder) -> 
                 package_root=root,
             )
 
-    # .NET special case: manifests identified by path suffix
+    # .NET: manifests identified by metadata manifest_type
     dotnet_items = [
         item
         for item in _evidence_by_type(store, "manifest_detected")
-        if item.location.file
-        and (item.location.file.endswith(".csproj") or item.location.file.endswith(".sln"))
+        if item.metadata and item.metadata.get("manifest_type") == "dotnet_manifest"
     ]
     if dotnet_items:
         dotnet_lockfile_names = frozenset({"packages.lock.json"})
@@ -792,7 +842,7 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
     _analyze_risk_sensitive_without_tests(store, builder)
     _analyze_missing_ci(store, builder)
     _analyze_missing_docs(store, builder)
-    _analyze_missing_lockfile(store, builder)
+    _analyze_missing_lockfile(store, builder, repository_root=repository_root)
     _analyze_env_without_example(store, builder)
 
     findings = sorted(
