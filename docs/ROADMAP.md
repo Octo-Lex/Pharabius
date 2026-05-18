@@ -1,5 +1,14 @@
 # Pharabius Roadmap
 
+## v0.5.1 — TD-ARCH Finding Integration (released 2026-05-18)
+
+- TD-ARCH findings from architecture-graph.json cycles and boundary violations
+- `ai-debt analyze --no-ai` reads graph when present, skips gracefully when absent
+- Circular dependency findings with graph cycle IDs
+- Boundary policy violation findings with policy context
+- Cap at 20 findings per type
+- 317 tests passing, 84% coverage
+
 ## v0.5.0 — Architecture Graph IR (released 2026-05-18)
 
 - `ai-debt graph` — Build import dependency graph from existing evidence

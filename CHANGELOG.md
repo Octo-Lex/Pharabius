@@ -6,17 +6,14 @@ All notable changes to Pharabius are documented in this file.
 
 ### Added
 
-- `ai-debt graph` — Build import dependency graph from existing evidence
-- `architecture-graph.json` IR output with nodes, edges, cycles, violations, coupling metrics
-- Package/module node derivation from Python and TypeScript/JavaScript imports
-- Analysis-unit node derivation when analysis-units.json is present
-- Tarjan SCC cycle detection (no new dependencies)
-- Optional boundary policy checking via `.ai-debt/architecture-policy.yaml`
-- Coupling metrics: fan-in, fan-out, instability per node
-- Graceful degradation for missing optional artifacts
-- Deterministic stable node/cycle/violation IDs
+- TD-ARCH findings from `architecture-graph.json` cycles and boundary violations
+- `ai-debt analyze --no-ai` reads architecture-graph.json when present
+- Circular dependency findings with evidence-backed graph cycle IDs
+- Boundary policy violation findings with policy rule and layer context
+- Cap at 20 findings per type (cycles/violations) with limitation note
+- Graceful skip when architecture-graph.json is absent
 
-## v0.4.0 — 2026-05-18
+## v0.5.0 — 2026-05-18
 
 ### Added
 

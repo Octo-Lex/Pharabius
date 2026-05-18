@@ -182,3 +182,20 @@ best-effort node derivation based on directory structure and manifest locations.
 
 `ai-debt graph` only creates `internal_import` edges. External dependencies and standard library
 imports are filtered out. Unresolved internal-looking imports are recorded as limitations.
+
+## 36. TD-ARCH findings require pre-existing architecture-graph.json
+
+TD-ARCH findings are only generated when `ai-debt graph` has been run before
+`ai-debt analyze --no-ai`. Without the graph file, no TD-ARCH findings are created.
+`ai-debt run` does not include the graph step.
+
+## 37. High-coupling metrics are not findings
+
+Coupling metrics (fan-in, fan-out, instability) are included in `architecture-graph.json`
+but do not generate TD-ARCH findings in v0.5.1. Thresholds for coupling-based findings
+require further field validation.
+
+## 38. TD-ARCH findings capped at 20 per type
+
+At most 20 cycle findings and 20 boundary violation findings are generated per analysis run.
+If more exist in the graph, a note is added to the last finding's risks_and_cautions.
