@@ -18,6 +18,7 @@ ai-debt report            # Generate domain reports
 ai-debt plan              # Generate roadmap, work packages, and handoff
 ai-debt verify            # Verify findings against current evidence
 ai-debt status            # Show workspace status (read-only)
+ai-debt export            # Export findings to SARIF, CSV, JSONL
 ai-debt run               # Run full pipeline + write run metadata
 ```
 

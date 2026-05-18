@@ -123,3 +123,20 @@ payment keyword "checkout" are excluded from risk-sensitive evidence when detect
 in CI/deployment workflow files. This prevents false security signals from
 standard CI tooling like `actions/checkout`. These keywords remain active as risk
 signals in application source files and configuration.
+
+## 25. Export is a point-in-time snapshot
+
+`ai-debt export` reads the current state of `.ai-debt/` artifacts. It does not
+track changes over time or produce incremental exports. Re-run `ai-debt run`
+before export to ensure fresh data.
+
+## 26. SARIF upload is not automated
+
+`ai-debt export` generates SARIF files but does not upload them to GitHub Code
+Scanning or any other service. Use `gh code-scanning` or your CI pipeline to
+upload the SARIF file.
+
+## 27. Export does not create new findings
+
+Export formats contain only findings already present in `debt-register.json`.
+No new analysis or findings are generated during export.

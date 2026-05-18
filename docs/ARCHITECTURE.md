@@ -146,6 +146,15 @@ Does NOT modify `debt-register.json` or any existing artifact.
 - `verification-report.json` = revalidation result against current repository state
 - Work packages may become stale as findings evolve
 
+### Export layer
+
+`core/exporter.py` provides `ai-debt export`:
+
+- Reads `debt-register.json` (required) and optional verification/units artifacts
+- Writes SARIF v2.1.0, CSV, and JSONL to `.ai-debt/exports/`
+- Does not create new findings or modify source artifacts
+- Enriches exports with verification status and work package linkage when available
+
 **Finding states (current):**
 
 - `Detected` (in `debt-register.json`)
