@@ -1,5 +1,14 @@
 # Pharabius Roadmap
 
+## v0.4.0 — Export Formats (released 2026-05-18)
+
+- `ai-debt export` — SARIF v2.1.0, CSV, JSONL output formats
+- SARIF for GitHub Security / VS Code integration
+- CSV for spreadsheet triage
+- JSONL for CI/CD gates and custom tooling
+- Verification status and work package enrichment
+- 219 tests passing, 86% coverage
+
 ## v0.3.2 — Field-Validation Bug Fixes (released 2026-05-18)
 
 - .NET manifest detection: `.csproj`, `.fsproj`, `.vbproj` produce evidence

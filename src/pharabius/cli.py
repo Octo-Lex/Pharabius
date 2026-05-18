@@ -314,6 +314,64 @@ def status(
 
 
 @app.command()
+def export(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to export findings from.",
+        ),
+    ] = None,
+    export_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Export format: sarif, csv, jsonl, or all.",
+        ),
+    ] = "all",
+    output_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-dir",
+            "-o",
+            help="Output directory for export files.",
+        ),
+    ] = None,
+) -> None:
+    """
+    Export findings to SARIF, CSV, or JSONL format.
+    """
+    from pharabius.core.exporter import export_findings
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+
+    formats = ["sarif", "csv", "jsonl"] if export_format == "all" else [export_format]
+    for fmt in formats:
+        if fmt not in ("sarif", "csv", "jsonl"):
+            console.print(f"[bold red]Error:[/bold red] Unknown format: {fmt}")
+            raise typer.Exit(code=1)
+
+    try:
+        result = export_findings(
+            resolved_root,
+            formats=formats,
+            output_dir=output_dir,
+        )
+    except FileNotFoundError as exc:
+        console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print("[bold green]Export complete[/bold green]")
+    console.print(f"Findings: {result.finding_count}")
+    for f in result.files_written:
+        console.print(f"  Written: {f}")
+    for w in result.warnings:
+        console.print(f"  [dim]Warning: {w}[/dim]")
+
+
+@app.command()
 def run(
     repository_root: Annotated[
         Path | None,

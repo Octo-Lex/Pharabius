@@ -264,3 +264,18 @@ Completed 2026-05-17.
 - [x] 195 tests passing, 87% coverage
 - [x] All 7 release gates green
 - [x] CI passes on PR
+
+---
+
+## 20. Step 15 — v0.4.0 Export Formats
+
+- [x] `ai-debt export` command added
+- [x] SARIF v2.1.0 export
+- [x] CSV export (UTF-8 BOM)
+- [x] JSONL export
+- [x] Verification status enrichment
+- [x] Work package linkage
+- [x] Source artifact immutability verified
+- [x] 219 tests passing, 86% coverage
+- [x] All 7 release gates green
+- [x] CI passes on PR
