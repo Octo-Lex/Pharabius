@@ -20,18 +20,19 @@ Repository-local Output Contract
 
 ## Allowed Dependencies
 
-| Layer               | May Import                                      |
-| ------------------- | ----------------------------------------------- |
-| `pharabius.cli`     | `pharabius.core`                                |
-| `pharabius.core`    | `pharabius.schemas`, future `pharabius.writers` |
-| `pharabius.writers` | `pharabius.schemas`                             |
-| `pharabius.schemas` | Standard library, Pydantic                      |
+| Layer               | May Import                                                        |
+| ------------------- | ----------------------------------------------------------------- |
+| `pharabius.cli`     | `pharabius.core`, `pharabius.ai`                                  |
+| `pharabius.core`    | `pharabius.schemas`, future `pharabius.writers`                   |
+| `pharabius.ai`      | `pharabius.schemas`                                               |
+| `pharabius.writers` | `pharabius.schemas`                                               |
+| `pharabius.schemas` | Standard library, Pydantic                                        |
 
 ## Forbidden Dependencies
 
-| Source              | Forbidden Target |
-| ------------------- | ---------------- |
-| `pharabius.schemas` | `pharabius.cli`  |
+| Source              | Forbidden Target            |
+| ------------------- | --------------------------- |
+| `pharabius.schemas` | `pharabius.cli`             |
 | `pharabius.schemas` | `pharabius.core` |
 | `pharabius.core`    | `pharabius.cli`  |
 | `pharabius.writers` | `pharabius.cli`  |
@@ -52,6 +53,36 @@ lint-imports
 ```
 
 The CI pipeline must fail if forbidden imports are introduced.
+
+---
+
+## AI Adapter Layer
+
+**Layer:** Peer of `core/`, reads `.ai-debt/` artifacts, writes sidecar enrichment.
+
+**Package:** `src/pharabius/ai/`
+**Schemas:** `schemas/ai_enrichment.py`
+**Command:** `ai-debt enrich`
+**Output:** `.ai-debt/ai/` (sidecar only, not read by other commands)
+
+### Modules
+
+| Module | Responsibility |
+|---|---|
+| `ai/adapter.py` | `AIAdapter` interface, `AIResponse`, `DisabledAdapter` |
+| `ai/mock_provider.py` | Deterministic mock provider for testing |
+| `ai/context.py` | Bounded context assembly from `.ai-debt/` artifacts |
+| `ai/validator.py` | Schema + ID validation, rejection records |
+| `ai/enricher.py` | Orchestration: context → adapter → validation → sidecar |
+
+### Key invariants
+
+- AI enrichments are **sidecar records** — never mutate canonical artifacts
+- AI output must reference **existing** finding IDs and evidence IDs
+- Provider is **disabled by default** — no automatic data processing
+- **No network calls** in v0.7.0 (mock provider only)
+- Context assembly is **bounded** with budget controls
+- `ai-debt enrich` is **NOT part of `ai-debt run`**
 
 ---
 

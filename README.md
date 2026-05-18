@@ -20,6 +20,7 @@ ai-debt verify            # Verify findings against current evidence
 ai-debt status            # Show workspace status (read-only)
 ai-debt graph             # Build architecture dependency graph
 ai-debt export            # Export findings to SARIF, CSV, JSONL
+ai-debt enrich            # AI enrichment (disabled by default, mock for testing)
 ai-debt run               # Run full pipeline + write run metadata
 ```
 
