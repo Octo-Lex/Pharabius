@@ -94,19 +94,30 @@
 - Synthetic target nodes for imports matching discovered crates
 - FN-003 completed: Symbiot now produces cross-crate edges
 
-## v0.7.0 — Graph Polish + AI Adapter Preparation (planned)
+## v0.7.0 — Evidence-Constrained AI Adapter (upcoming)
 
-- Rust monorepo `crates/*` node splitting
+- `ai-debt enrich` command — provider-neutral AI enrichment
+- Provider interface with mock and disabled modes
+- Strict schema validation (Pydantic, extra fields forbidden)
+- Bounded context assembly with budget controls
+- Evidence ID and finding ID validation
+- Sidecar output contract: `.ai-debt/ai/`
+- No canonical artifact mutation
+- No real network provider in v0.7.0
+- AI disabled by default
+
+## v0.7.1 — AI Adapter Polish (planned)
+
+- Real provider integration (OpenAI, Claude, or local model)
+- Report integration for AI enrichments
+- Configuration file for AI settings
+- `--apply-enrichment` flag for merging validated enrichments
+
+## v0.8.0 — Graph Polish (planned)
+
 - Block-comment filtering for Rust imports
 - Test-scope edge confidence reduction
 - Non-standard monorepo layout support
-- AI Adapter preparation (evidence-constrained)
-
-- AI adapter interface behind `--ai` flag
-- Evidence-constrained: AI may only comment on evidence IDs already collected by the deterministic scanner
-- No hallucinated findings, no fabricated evidence
-- Human-readable narrative reports from AI analysis
-- Risk narrative generation for handoff summaries
 
 ## Future Considerations
 

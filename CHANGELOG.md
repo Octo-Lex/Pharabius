@@ -6,9 +6,30 @@ All notable changes to Pharabius are documented in this file.
 
 ### Added
 
-- Rust workspace `crates/*` node splitting — map `.rs` files to discovered Cargo.toml crate nodes
-- Rust kebab→snake crate name normalization — `symbiot-core` Cargo.toml matches `symbiot_core::*` imports
-- Synthetic target nodes for Rust imports that match discovered crates but have no evidence files
+- `ai-debt enrich` command — provider-neutral, schema-validated, evidence-constrained AI enrichment
+- `src/pharabius/ai/` package with adapter interface, mock provider, context assembly, and validation
+- `src/pharabius/schemas/ai_enrichment.py` — strict Pydantic schemas for AI output
+- Sidecar output contract: `.ai-debt/ai/` directory with enrichment-report.json/md, finding-enrichments.json, rejected-ai-output.json
+- Provider modes: `disabled` (default), `mock` (deterministic testing)
+- CLI options: `--provider`, `--max-findings`, `--finding-id`, `--dry-run`, `--strict`
+- Bounded context assembly with budget controls
+- Evidence ID validation — AI output must reference existing evidence IDs
+- Finding ID validation — AI output must reference existing findings
+- Rejection records for invalid AI output with reasons and field names
+- Import-linter AI layer contract (`cli → core → ai → schemas`)
+- New documentation: `docs/AI_ADAPTER.md`
+
+### Security
+
+- AI disabled by default (`--provider disabled`)
+- No real network provider in v0.7.0
+- No credentials in repository files
+- No secrets in logs
+
+### Tests
+
+- 437 tests (46 new), 82.38% coverage
+- New test file: `tests/test_ai_adapter.py` covering adapter, context, validation, enricher, immutability, report format
 
 ### Fixed
 

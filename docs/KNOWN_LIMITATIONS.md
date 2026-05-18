@@ -221,3 +221,43 @@ with kebab→snake name normalization.
 
 At most 20 cycle findings and 20 boundary violation findings are generated per analysis run.
 If more exist in the graph, a note is added to the last finding's risks_and_cautions.
+
+## 41. AI enrichment is optional and disabled by default
+
+`ai-debt enrich` requires `--provider mock` to produce output.
+Without an explicit provider, the command prints a disabled message and exits.
+AI enrichment is not part of `ai-debt run`.
+
+## 42. No real AI provider in v0.7.0
+
+Only `mock` and `disabled` providers are available. No OpenAI, Claude, local model,
+or any network-based provider is included. Real providers are planned for future releases.
+
+## 43. AI enrichments are sidecar records, not canonical findings
+
+AI output is written to `.ai-debt/ai/` and is not read by `ai-debt status`,
+`ai-debt verify`, `ai-debt export`, `ai-debt report`, or `ai-debt run`.
+Deterministic findings in `debt-register.json` remain canonical.
+
+## 44. AI does not mutate canonical artifacts
+
+`ai-debt enrich` never modifies `debt-register.json`, `evidence.json`,
+`analysis-units.json`, `architecture-graph.json`, `verification-report.json`,
+work packages, reports, or source files. All AI output is sidecar-only.
+
+## 45. Context assembly is bounded
+
+AI context includes only evidence linked to the selected finding(s), subject to budget
+controls (max evidence items, max context chars, max graph records).
+Evidence exceeding the budget is omitted and recorded in the context summary.
+
+## 46. AI output validation rejects claims without evidence IDs
+
+Every enrichment must reference existing finding IDs and evidence IDs.
+Output with unknown IDs, invalid confidence values, or empty limitations is rejected
+and recorded in `rejected-ai-output.json`.
+
+## 47. No report integration for AI enrichments in v0.7.0
+
+AI enrichments are not included in deterministic reports. Reports render normally
+when `.ai-debt/ai/` is absent or present. Report integration is planned for a future release.
