@@ -220,9 +220,13 @@ init → profile → scan → map → analyze → report → plan
 
 `ai-debt graph` creates architecture nodes from source files using this strategy:
 
-1. **Python (src layout)**: Files under `src/<top_package>/` are grouped into a single package node named after the top-level package directory.
-2. **Python (flat layout)**: Files are grouped by the first directory level under the repository root.
-3. **TypeScript/JS**: Files are grouped by the first directory level (e.g., `packages/`, `apps/`, `scripts/`).
-4. **Other ecosystems**: Same first-level directory grouping.
+1. **Python (src layout, no policy)**: Files under `src/<top_package>/` are grouped into a single package node named after the top-level package directory.
+2. **Python (src layout, with policy)**: When `architecture-policy.yaml` targets subdirectory layers under `src/<pkg>/`, files are split into sub-package nodes (e.g., `myapp.api`, `myapp.infra`).
+3. **TypeScript/JS monorepo**: When `package.json` files exist under `packages/*`, `apps/*`, `services/*`, `libs/*`, or `modules/*`, each becomes a separate package node named from the `package.json` `name` field.
+4. **TypeScript/JS non-monorepo**: Files are grouped by the first directory level.
+5. **Rust**: Files are grouped by first directory level. Cross-crate imports resolved via `Cargo.toml` discovery.
+6. **Other ecosystems**: First-level directory grouping.
 
-**Known limitation**: Monorepo layouts using `packages/*` or `apps/*` collapse all sub-packages into a single node. See KNOWN_LIMITATIONS.md item 38.
+**Synthetic target nodes**: When a Python import targets a sub-package that matches a policy layer path but has no source evidence, a synthetic node is created to enable boundary violation detection.
+
+**Remaining limitations**: See KNOWN_LIMITATIONS.md items 38–39.

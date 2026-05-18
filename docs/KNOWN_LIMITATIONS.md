@@ -195,25 +195,30 @@ Coupling metrics (fan-in, fan-out, instability) are included in `architecture-gr
 but do not generate TD-ARCH findings in v0.5.1. Thresholds for coupling-based findings
 require further field validation.
 
-## 38. Monorepo node collapse
+## 38. Monorepo node splitting — partially resolved
 
-`ai-debt graph` groups source files by the first directory level under `src/` (or repository
-root for flat layouts). For monorepos using `packages/*` or `apps/*` layouts, all files within
-a single top-level directory are collapsed into one node. This means:
-- TypeScript/JS monorepos: `packages/bot`, `packages/core` become a single `packages` node
-- Python sub-packages: `src/myapp/cli`, `src/myapp/core` become a single `myapp` node
-- All inter-package imports become self-imports and are skipped
-- No edges, cycles, or boundary violations are detected within the collapsed node
+v0.6.0 adds package-level node splitting for TS/JS monorepos using `package.json` detection
+under `packages/*`, `apps/*`, `services/*`, `libs/*`, `modules/*`. Python sub-package splitting
+is enabled when `architecture-policy.yaml` targets subdirectory layers.
 
-This affects Ghostwire, Craft-Agents, and any monorepo using first-level directory grouping.
-Planned fix in v0.6.0.
+**Remaining limitations:**
+- Rust monorepos using `crates/*` layout: files still group by first directory level (no
+  `Cargo.toml`-based node splitting equivalent to `package.json` splitting)
+- Non-standard monorepo layouts not using the recognized root directories
+- Python sub-packages only split when a policy exists; no automatic detection without policy
 
-## 39. Rust import detection not implemented
+## 39. Rust import detection — partially resolved
 
-The scanner detects imports for Python, JavaScript/TypeScript, Java, C#, Go, PHP, and Ruby.
-Rust `use` statements (e.g., `use crate::module::item`) are not matched by any import
-pattern. Rust repositories produce zero `imports_detected` evidence and zero graph edges.
-Planned fix in v0.6.0.
+v0.6.0 adds Rust `use` statement extraction including grouped import expansion
+(`use crate::{foo, bar::baz}`).
+
+**Remaining limitations:**
+- Block comments (`/* use crate::fake; */`) are not filtered; `use` inside block comments may
+  be captured as false positives
+- Rust monorepo `crates/*` node splitting not implemented (see item 38)
+- `super::` and `crate::` intra-crate imports resolve to same node (no sub-crate granularity)
+
+Planned improvement in v0.7.0.
 
 ## 40. TD-ARCH findings capped at 20 per type
 
