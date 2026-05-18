@@ -569,6 +569,30 @@ def _discover_rust_crates(root: Path) -> dict[str, dict[str, str]]:
     return crates
 
 
+def _normalize_rust_crate_name(name: str) -> str:
+    """Normalize Rust crate name for matching.
+
+    Rust converts kebab-case to snake_case in use statements:
+    symbiot-core -> symbiot_core
+    """
+    return name.replace("-", "_")
+
+
+def _derive_rust_node_path(
+    file_path: str,
+    rust_crates: dict[str, dict[str, str]],
+) -> tuple[str, str] | None:
+    """Derive (name, node_path) for a Rust file in a workspace.
+
+    Returns None if file doesn't belong to any discovered crate.
+    """
+    for _key, crate_info in rust_crates.items():
+        crate_path = crate_info["path"]  # e.g. "crates/symbiot-cli"
+        if file_path.startswith(crate_path + "/"):
+            return crate_info["name"], crate_path
+    return None
+
+
 def _resolve_rust_import_to_node_id(
     import_name: str,
     rust_crates: dict[str, dict[str, str]],
@@ -704,13 +728,15 @@ def _resolve_rust_import(
 
     # External or workspace crate
     top = imp.split("::")[0]
+    top_normalized = _normalize_rust_crate_name(top)
     for _key, crate_info in rust_crates.items():
-        if crate_info["name"] == top:
+        crate_name_normalized = _normalize_rust_crate_name(crate_info["name"])
+        if crate_name_normalized == top_normalized or crate_info["name"] == top:
             # Find the node for this crate's directory
             for _nkey, node in nodes.items():
                 if node.node_type == "analysis_unit":
                     continue
-                if node.path == crate_info["path"] or node.name == top:
+                if node.path == crate_info["path"] or node.name == crate_info["name"]:
                     return node.node_id
     return None  # External crate
 
@@ -724,6 +750,7 @@ def _build_package_nodes(
     *,
     root: Path | None = None,
     enable_python_subpackages: bool = False,
+    rust_crates: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, ArchitectureNode]:
     """Build package/module nodes from imports evidence.
 
@@ -751,6 +778,13 @@ def _build_package_nodes(
 
         if lang == "typescript" and is_ts_monorepo:
             result = _derive_ts_node_path(file_path, ts_packages)
+            if result:
+                name, node_path = result
+                node_type = "module"
+            # else: falls through to default
+
+        if lang == "rust" and rust_crates:
+            result = _derive_rust_node_path(file_path, rust_crates)
             if result:
                 name, node_path = result
                 node_type = "module"
@@ -1459,6 +1493,7 @@ def build_graph(
             analysis_units,
             root=root,
             enable_python_subpackages=enable_python_subpackages,
+            rust_crates=rust_crates,
         )
         all_nodes.update(pkg_nodes)
 
@@ -1519,6 +1554,46 @@ def build_graph(
                                         )
                                         existing_names.add(sub_name)
                                     break
+
+    # Create synthetic nodes for Rust import targets matching discovered crates
+    if rust_crates:
+        existing_names = {n.name for n in all_nodes.values() if n.node_type != "analysis_unit"}
+        existing_paths = {n.path for n in all_nodes.values() if n.node_type != "analysis_unit"}
+        for item in imports_evidence:
+            file_path = item.get("location", {}).get("file", "")
+            if not file_path or _detect_file_language(file_path) != "rust":
+                continue
+            imports = _extract_imports_from_evidence(item)
+            for imp in imports:
+                if (
+                    imp.startswith("crate::")
+                    or imp.startswith("super::")
+                    or imp.startswith("self::")
+                ):
+                    continue
+                top = imp.split("::")[0]
+                top_normalized = _normalize_rust_crate_name(top)
+                for _key, crate_info in rust_crates.items():
+                    crate_name_normalized = _normalize_rust_crate_name(crate_info["name"])
+                    if (crate_name_normalized == top_normalized or crate_info["name"] == top) and (
+                        crate_info["name"] not in existing_names
+                        and crate_info["path"] not in existing_paths
+                    ):
+                        node_path = crate_info["path"]
+                        nid = stable_node_id("module", crate_info["name"], node_path)
+                        key = f"module:{crate_info['name']}:{node_path}"
+                        if key not in all_nodes:
+                            all_nodes[key] = ArchitectureNode(
+                                node_id=nid,
+                                node_type="module",
+                                name=crate_info["name"],
+                                path=node_path,
+                                analysis_unit_id="",
+                                files=[],
+                            )
+                            existing_names.add(crate_info["name"])
+                            existing_paths.add(node_path)
+                        break
 
     # Only package/module nodes participate in import edges
     pkg_node_ids = {k: v for k, v in all_nodes.items() if v.node_type != "analysis_unit"}

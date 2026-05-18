@@ -195,30 +195,27 @@ Coupling metrics (fan-in, fan-out, instability) are included in `architecture-gr
 but do not generate TD-ARCH findings in v0.5.1. Thresholds for coupling-based findings
 require further field validation.
 
-## 38. Monorepo node splitting — partially resolved
+## 38. Monorepo node splitting — mostly resolved
 
-v0.6.0 adds package-level node splitting for TS/JS monorepos using `package.json` detection
-under `packages/*`, `apps/*`, `services/*`, `libs/*`, `modules/*`. Python sub-package splitting
-is enabled when `architecture-policy.yaml` targets subdirectory layers.
+v0.6.0 adds package-level node splitting for TS/JS monorepos using `package.json` detection.
+v0.6.1 adds Rust `crates/*` node splitting using `Cargo.toml` `[package]` discovery.
+Python sub-package splitting is enabled when `architecture-policy.yaml` targets subdirectory layers.
 
 **Remaining limitations:**
-- Rust monorepos using `crates/*` layout: files still group by first directory level (no
-  `Cargo.toml`-based node splitting equivalent to `package.json` splitting)
 - Non-standard monorepo layouts not using the recognized root directories
 - Python sub-packages only split when a policy exists; no automatic detection without policy
 
-## 39. Rust import detection — partially resolved
+## 39. Rust import detection — mostly resolved
 
-v0.6.0 adds Rust `use` statement extraction including grouped import expansion
-(`use crate::{foo, bar::baz}`).
+v0.6.0 adds Rust `use` statement extraction including grouped import expansion.
+v0.6.1 adds `crates/*` node splitting and workspace-local cross-crate import resolution
+with kebab→snake name normalization.
 
 **Remaining limitations:**
 - Block comments (`/* use crate::fake; */`) are not filtered; `use` inside block comments may
   be captured as false positives
-- Rust monorepo `crates/*` node splitting not implemented (see item 38)
-- `super::` and `crate::` intra-crate imports resolve to same node (no sub-crate granularity)
-
-Planned improvement in v0.7.0.
+- `super::` and `crate::` intra-crate imports do not create module-level graph edges (crate-level only)
+- Rust module-level graph remains deferred
 
 ## 40. TD-ARCH findings capped at 20 per type
 

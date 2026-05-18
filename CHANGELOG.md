@@ -6,6 +6,22 @@ All notable changes to Pharabius are documented in this file.
 
 ### Added
 
+- Rust workspace `crates/*` node splitting — map `.rs` files to discovered Cargo.toml crate nodes
+- Rust kebab→snake crate name normalization — `symbiot-core` Cargo.toml matches `symbiot_core::*` imports
+- Synthetic target nodes for Rust imports that match discovered crates but have no evidence files
+
+### Fixed
+
+- FN-003 completed: Symbiot now produces 3 distinct crate nodes and 1 cross-crate edge (symbiot-cli -> symbiot-core) instead of 1 collapsed node with 0 edges
+- AIF graph unchanged (16 edges maintained)
+
+### Tests
+
+- 391 tests (22 new), 82.85% coverage
+- New tests: workspace node derivation, kebab→snake normalization, cross-crate edges, intra-crate skip, edge aggregation
+
+### Added
+
 - **TS/JS monorepo node splitting** — Detect `package.json` in `packages/*`, `apps/*`, `services/*`, `libs/*`, `modules/*` and create individual package nodes instead of collapsing into a single directory node
 - **TS/JS workspace import resolution** — Match imports like `@repo/core` to local package nodes using longest-prefix matching with exact-first rules
 - **Python policy-driven sub-package splitting** — Enable sub-package nodes (e.g., `myapp.api`, `myapp.infra`) only when `architecture-policy.yaml` targets subdirectory layers

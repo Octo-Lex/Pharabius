@@ -224,7 +224,7 @@ init → profile → scan → map → analyze → report → plan
 2. **Python (src layout, with policy)**: When `architecture-policy.yaml` targets subdirectory layers under `src/<pkg>/`, files are split into sub-package nodes (e.g., `myapp.api`, `myapp.infra`).
 3. **TypeScript/JS monorepo**: When `package.json` files exist under `packages/*`, `apps/*`, `services/*`, `libs/*`, or `modules/*`, each becomes a separate package node named from the `package.json` `name` field.
 4. **TypeScript/JS non-monorepo**: Files are grouped by the first directory level.
-5. **Rust**: Files are grouped by first directory level. Cross-crate imports resolved via `Cargo.toml` discovery.
+5. **Rust workspace**: When `Cargo.toml` files with `[package]` exist under `crates/*`, each becomes a separate module node named from the package name. Cross-crate imports resolved via kebab-to-snake name normalization.
 6. **Other ecosystems**: First-level directory grouping.
 
 **Synthetic target nodes**: When a Python import targets a sub-package that matches a policy layer path but has no source evidence, a synthetic node is created to enable boundary violation detection.
