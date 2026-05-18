@@ -172,6 +172,11 @@ IMPORT_PATTERNS = [
     re.compile(r"^\s*const\s+.*?=\s+require\(['\"]([^'\"]+)['\"]\)", re.MULTILINE),
 ]
 
+# Rust-specific patterns (handled separately for grouped expansion)
+_RUST_SIMPLE_USE = re.compile(r"^\s*use\s+([\w:]+)\s*;", re.MULTILINE)
+_RUST_GROUPED_USE = re.compile(r"^\s*use\s+([\w:]+)::\{([^}]+)\}\s*;", re.MULTILINE)
+_RUST_LINE_COMMENT = re.compile(r"^\s*//")
+
 
 def _relative(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
@@ -369,6 +374,47 @@ def _risk_keywords_for_text(text: str) -> list[str]:
     return sorted(keyword for keyword in RISK_KEYWORDS if keyword in lowered)
 
 
+def _extract_rust_imports(text: str) -> list[str]:
+    """Extract Rust use imports with grouped expansion and comment filtering.
+
+    Handles:
+    - Simple: use crate::foo::bar;
+    - Grouped: use crate::{foo, bar::baz}; -> crate::foo, crate::bar::baz
+    - Skips line comments: // use crate::fake;
+    - Never emits bare crate/super/self from grouped imports.
+    """
+    imports: set[str] = set()
+
+    # Filter out line-commented lines
+    clean_lines: list[str] = []
+    for line in text.splitlines():
+        if not _RUST_LINE_COMMENT.match(line):
+            clean_lines.append(line)
+    clean_text = "\n".join(clean_lines)
+
+    # Extract grouped imports first (they also match simple pattern)
+    grouped_prefixes: set[str] = set()
+    for match in _RUST_GROUPED_USE.finditer(clean_text):
+        prefix = match.group(1)  # e.g. crate, super, crate::module
+        items_str = match.group(2)  # e.g. foo, bar::baz
+        grouped_prefixes.add(prefix)
+        for item in items_str.split(","):
+            item = item.strip()
+            if item:
+                full = f"{prefix}::{item}"
+                imports.add(full)
+
+    # Extract simple imports, skip those already handled as grouped
+    for match in _RUST_SIMPLE_USE.finditer(clean_text):
+        imported = match.group(1)
+        # Skip if this was the prefix of a grouped import
+        if imported in grouped_prefixes:
+            continue
+        imports.add(imported)
+
+    return sorted(imports)
+
+
 def _extract_imports(path: Path) -> list[str]:
     if path.suffix not in SOURCE_EXTENSIONS:
         return []
@@ -376,6 +422,10 @@ def _extract_imports(path: Path) -> list[str]:
     text = _read_text(path)
     if not text:
         return []
+
+    # Rust uses separate extraction with grouped import expansion
+    if path.suffix == ".rs":
+        return _extract_rust_imports(text)
 
     imports: set[str] = set()
 

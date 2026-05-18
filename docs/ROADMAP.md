@@ -78,15 +78,22 @@
 - Node derivation strategy documented
 - Backlog created for v0.6.0 graph improvements
 
-## v0.6.0 — Architecture Graph Enhancements (planned)
+## v0.6.0 — Architecture Graph Enhancements (upcoming)
 
-- Monorepo node splitting (packages/*, apps/*) — fixes FN-001, FN-002, FN-004
-- Rust import detection (use statements) — fixes FN-003
-- Sub-package node derivation for Python src layouts
+- TS/JS monorepo package-node splitting (`packages/*`, `apps/*`) — fixes FN-001, FN-002
+- Python policy-driven sub-package granularity — fixes FN-004
+- Rust `use` import detection with grouped expansion — fixes FN-003
+- TS workspace import longest-prefix matching
+- Synthetic target nodes for policy-matched imports
+- Path-based layer matching for boundary violations
+
+## v0.7.0 — Graph Polish + AI Adapter Preparation (planned)
+
+- Rust monorepo `crates/*` node splitting
+- Block-comment filtering for Rust imports
 - Test-scope edge confidence reduction
-- Architecture policy matching improvement
-
-## v0.7.0 — AI Adapter (Evidence-Constrained) (planned)
+- Non-standard monorepo layout support
+- AI Adapter preparation (evidence-constrained)
 
 - AI adapter interface behind `--ai` flag
 - Evidence-constrained: AI may only comment on evidence IDs already collected by the deterministic scanner

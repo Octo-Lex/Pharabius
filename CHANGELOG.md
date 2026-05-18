@@ -6,13 +6,35 @@ All notable changes to Pharabius are documented in this file.
 
 ### Added
 
-- Architecture graph field validation results (11 repos, 9 real + 2 synthetic)
-- `docs/ARCHITECTURE_GRAPH_VALIDATION_SUMMARY.md` — Cross-repo validation summary
-- `docs/ARCHITECTURE_GRAPH_BACKLOG.md` — Prioritized improvement backlog
-- `docs/templates/architecture-graph-validation-result.md` — Validation result template
-- 11 validation result files in `docs/validation-results/agv-*`
-- Node derivation strategy documented in `docs/ARCHITECTURE.md`
-- KNOWN_LIMITATIONS items 38 (monorepo node collapse) and 39 (Rust import detection)
+- **TS/JS monorepo node splitting** — Detect `package.json` in `packages/*`, `apps/*`, `services/*`, `libs/*`, `modules/*` and create individual package nodes instead of collapsing into a single directory node
+- **TS/JS workspace import resolution** — Match imports like `@repo/core` to local package nodes using longest-prefix matching with exact-first rules
+- **Python policy-driven sub-package splitting** — Enable sub-package nodes (e.g., `myapp.api`, `myapp.infra`) only when `architecture-policy.yaml` targets subdirectory layers
+- **Rust `use` import detection** — Extract `use crate::foo`, `use super::bar`, and grouped `use crate::{foo, bar::baz}` (expanded, no bare prefixes)
+- **Rust graph resolution** — Best-effort crate discovery from `Cargo.toml` files, resolve cross-crate imports to local nodes
+- **Synthetic target nodes** — Create nodes for unresolved import targets that match policy layer paths
+- **Path-based layer matching** — Boundary violation detection now also matches nodes by path against policy patterns
+- Line-comment filtering for Rust imports (`// use` not captured)
+
+### Changed
+
+- `_build_package_nodes` is language-aware: dispatches to TS/Rust/Python-specific node derivation
+- `_build_edges` is language-aware: dispatches to TS/Rust/Python-specific import resolution
+- `build_graph` precomputes TS packages, Rust crates, and policy state for node/edge construction
+
+### Fixed
+
+- FN-001: Ghostwire (314 imports, 0 edges -> 4 meaningful edges)
+- FN-002: Craft-Agents (1162 imports, 0 edges -> 22 meaningful edges)
+- FN-003: Symbiot/AIF (91 .rs files, 0 imports -> 51+ imports detected, 16+ edges in AIF)
+- FN-004: validation-policy (boundary violation now correctly detected with policy-driven sub-package splitting)
+
+### Tests
+
+- 369 tests (52 new), 82.64% coverage
+- New: `tests/test_scanner_rust.py` (Rust extraction, grouped expansion, comment filtering)
+- New: `tests/test_grapher_ts.py` (TS monorepo nodes, workspace matching, prefix collision)
+- New: `tests/test_grapher_rust.py` (Rust crate discovery, graph resolution)
+- Updated: `tests/test_grapher.py` (Python sub-package policy tests)
 
 ## v0.5.1 — 2026-05-18
 

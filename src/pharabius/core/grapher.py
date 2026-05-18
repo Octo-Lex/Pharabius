@@ -371,39 +371,409 @@ def _resolve_ts_relative(
     return None
 
 
+# ── Language detection ─────────────────────────────────────────────
+
+
+def _detect_file_language(file_path: str) -> str:
+    ext = Path(file_path).suffix
+    if ext in (".py",):
+        return "python"
+    if ext in (".ts", ".tsx", ".js", ".jsx"):
+        return "typescript"
+    if ext == ".rs":
+        return "rust"
+    if ext == ".go":
+        return "go"
+    if ext == ".java":
+        return "java"
+    return "unknown"
+
+
+# ── TypeScript monorepo helpers ──────────────────────────────────────
+
+_MONOREPO_ROOTS: frozenset[str] = frozenset({"packages", "apps", "services", "libs", "modules"})
+
+
+def _discover_ts_packages(root: Path) -> dict[str, dict[str, str]]:
+    """Discover TS/JS packages in monorepo structure.
+
+    Returns dict of package_key -> {"name": str, "path": str, "dir": str}.
+    Only discovers packages under known monorepo root directories
+    (packages/*, apps/*, services/*, libs/*, modules/*).
+    """
+    packages: dict[str, dict[str, str]] = {}
+
+    for monorepo_dir in _MONOREPO_ROOTS:
+        monorepo_path = root / monorepo_dir
+        if not monorepo_path.is_dir():
+            continue
+
+        for child in sorted(monorepo_path.iterdir()):
+            if not child.is_dir():
+                continue
+            pkg_json = child / "package.json"
+            if not pkg_json.exists():
+                continue
+
+            # Read package name
+            pkg_name = child.name  # fallback
+            try:
+                data = json.loads(pkg_json.read_text(encoding="utf-8"))
+                if isinstance(data.get("name"), str) and data["name"]:
+                    pkg_name = data["name"]
+            except (json.JSONDecodeError, OSError):
+                pass
+
+            rel_dir = str(child.relative_to(root)).replace("\\", "/")
+            key = f"ts:{pkg_name}:{rel_dir}"
+            packages[key] = {
+                "name": pkg_name,
+                "path": rel_dir,
+                "dir": child.name,
+            }
+
+    return packages
+
+
+def _is_ts_monorepo(root: Path, ts_packages: dict[str, dict[str, str]]) -> bool:
+    """Check if repo has a TS monorepo structure."""
+    return len(ts_packages) >= 1
+
+
+def _derive_ts_node_path(
+    file_path: str, ts_packages: dict[str, dict[str, str]]
+) -> tuple[str, str] | None:
+    """Derive (name, node_path) for a TS/JS file in a monorepo.
+
+    Returns None if the file doesn't belong to any discovered package.
+    """
+    for _key, pkg in ts_packages.items():
+        pkg_path = pkg["path"]
+        if file_path.startswith(pkg_path + "/"):
+            return pkg["name"], pkg_path
+    return None
+
+
+def _match_ts_workspace_import(import_name: str, package_names: set[str]) -> str | None:
+    """Match a TS import against local package names using longest-prefix.
+
+    Rules:
+    1. Exact match first.
+    2. Longest valid prefix only if followed by '/'.
+    3. @repo/core-extra does NOT match @repo/core.
+    """
+    # Exact match
+    if import_name in package_names:
+        return import_name
+
+    # Longest prefix match with / separator
+    best: str | None = None
+    for pkg_name in package_names:
+        if import_name.startswith(pkg_name + "/") and (best is None or len(pkg_name) > len(best)):
+            best = pkg_name
+    return best
+
+
+# ── Python sub-package helpers ──────────────────────────────────────
+
+
+def _policy_has_subdirectory_layers(policy: ArchitecturePolicy | None, root: Path) -> bool:
+    """Check if policy layers target subdirectories under src/<pkg>/."""
+    if not policy or not policy.layers:
+        return False
+
+    # Collect all src/<pkg>/ prefixes from policy paths
+    pkg_subdirs: dict[str, set[str]] = {}  # top_pkg -> set of subdirectories
+    for layer in policy.layers:
+        for path_pattern in layer.paths:
+            norm = path_pattern.replace("\\", "/")
+            # Match src/<pkg>/<sub>/... pattern
+            parts = norm.split("/")
+            if len(parts) >= 3 and parts[0] == "src" and parts[-1] == "**":
+                top_pkg = parts[1]
+                subdir = parts[2] if len(parts) >= 4 else None
+                if subdir and subdir != "**":
+                    if top_pkg not in pkg_subdirs:
+                        pkg_subdirs[top_pkg] = set()
+                    pkg_subdirs[top_pkg].add(subdir)
+
+    return any(len(subs) >= 2 for _pkg, subs in pkg_subdirs.items())
+
+
+def _derive_python_subpackage_path(file_path: str) -> tuple[str, str]:
+    """Derive sub-package node from Python file path.
+
+    src/myapp/api/routes.py -> name=myapp.api, path=src/myapp/api
+    src/myapp/__init__.py -> name=myapp, path=src/myapp
+    """
+    parts = Path(file_path).parts
+    if len(parts) >= 4 and parts[0] == "src":
+        top_pkg = parts[1]
+        sub_pkg = parts[2]
+        if parts[3] == "__init__.py":
+            # Root package init
+            return top_pkg, "src/" + top_pkg
+        # Sub-package
+        name = f"{top_pkg}.{sub_pkg}"
+        path = f"src/{top_pkg}/{sub_pkg}"
+        return name, path
+    # Fallback to default
+    return _derive_python_node_path(file_path)
+
+
+# ── Rust crate helpers ───────────────────────────────────────────────
+
+
+def _discover_rust_crates(root: Path) -> dict[str, dict[str, str]]:
+    """Discover Rust crates from Cargo.toml files.
+
+    Returns dict of crate_key -> {"name": str, "path": str}.
+    """
+    crates: dict[str, dict[str, str]] = {}
+
+    for cargo_toml in root.rglob("Cargo.toml"):
+        try:
+            text = cargo_toml.read_text(encoding="utf-8")
+        except OSError:
+            continue
+
+        # Simple [package] name extraction
+        in_package = False
+        crate_name: str | None = None
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped == "[package]":
+                in_package = True
+                continue
+            if stripped.startswith("[") and stripped.endswith("]"):
+                in_package = False
+                continue
+            if in_package and stripped.startswith("name"):
+                val = stripped.split("=", 1)[1].strip().strip('"').strip("'")
+                if val:
+                    crate_name = val
+                    break
+
+        if not crate_name:
+            continue
+
+        rel_dir = str(cargo_toml.parent.relative_to(root)).replace("\\", "/")
+
+        # Skip workspace root (path ".") if it's a workspace aggregator
+        if rel_dir == "." and "[workspace]" in text:
+            continue
+
+        key = f"rust:{crate_name}:{rel_dir}"
+        crates[key] = {"name": crate_name, "path": rel_dir}
+
+    return crates
+
+
+def _resolve_rust_import_to_node_id(
+    import_name: str,
+    rust_crates: dict[str, dict[str, str]],
+    source_file: str,
+    nodes: dict[str, ArchitectureNode],
+) -> str | None:
+    """Resolve a Rust import to a target node ID.
+
+    Handles:
+    - crate::foo -> match crate "foo" to node
+    - crate::foo::bar -> match crate "foo" to node
+    - super::module -> best-effort relative resolution
+    """
+    if import_name.startswith("crate::"):
+        # crate::foo::bar -> extract crate-local module name
+        parts = import_name[7:].split("::")  # strip 'crate::'
+        if not parts:
+            return None
+        # The first component is a module name; try to match to containing node
+        # For workspace crates, 'crate' refers to the current crate
+        # We resolve by finding the source file's node and looking for sibling modules
+        source_node_id = _file_to_node_id(source_file, nodes)
+        if source_node_id:
+            return source_node_id  # Intra-crate; maps to same node with current granularity
+        return None
+
+    if import_name.startswith("super::"):
+        # super::module -> relative to parent directory
+        # Best-effort: map to containing node
+        source_node_id = _file_to_node_id(source_file, nodes)
+        if source_node_id:
+            return source_node_id  # Same node for current granularity
+        return None
+
+    if import_name.startswith("self::"):
+        return None  # Intra-module, not a cross-node edge
+
+    # External or workspace-external crate: check if it matches a local crate name
+    top = import_name.split("::")[0]
+    for _key, crate_info in rust_crates.items():
+        if crate_info["name"] == top:
+            # Find the node for this crate's directory
+            for _nkey, node in nodes.items():
+                if node.node_type == "analysis_unit":
+                    continue
+                if node.path == crate_info["path"] or node.name == top:
+                    return node.node_id
+            # Node doesn't exist yet; find by path prefix
+            for _nkey, node in nodes.items():
+                if node.node_type == "analysis_unit":
+                    continue
+                crate_dir = crate_info["path"]
+                if crate_dir and node.path and crate_dir.startswith(node.path):
+                    return node.node_id
+    return None
+
+
+def _resolve_ts_import(
+    imp: str,
+    file_path: str,
+    nodes: dict[str, ArchitectureNode],
+    root: Path | None,
+    ts_package_names: set[str],
+    ts_name_to_path: dict[str, str],
+    internal_prefixes: set[str],
+    limitations: list[str],
+) -> str | None:
+    """Resolve a TS/JS import to a target node ID."""
+    # Relative import
+    if imp.startswith("."):
+        if root is None:
+            return None
+        resolved = _resolve_ts_relative(imp, file_path, root)
+        if resolved:
+            return _file_to_node_id(resolved, nodes)
+        return None
+
+    # Workspace/bare import
+    if ts_package_names:
+        matched = _match_ts_workspace_import(imp, ts_package_names)
+        if matched:
+            # Find the node for this package
+            pkg_path = ts_name_to_path.get(matched, "")
+            for _key, node in nodes.items():
+                if node.node_type == "analysis_unit":
+                    continue
+                if node.path == pkg_path or node.name == matched:
+                    return node.node_id
+        return None  # No workspace match → external
+
+    # No monorepo packages → use default resolution
+    return _resolve_import_to_node_id(imp, nodes, internal_prefixes)
+
+
+def _resolve_python_import(
+    imp: str,
+    nodes: dict[str, ArchitectureNode],
+    internal_prefixes: set[str],
+    limitations: list[str],
+) -> str | None:
+    """Resolve a Python import with sub-package support."""
+    if _is_python_stdlib(imp):
+        return None
+    if _is_external_import(imp, internal_prefixes):
+        return None
+
+    # Try sub-package name match first (e.g., myapp.api)
+    parts = imp.split(".")
+    if len(parts) >= 2:
+        sub_name = f"{parts[0]}.{parts[1]}"
+        for _key, node in nodes.items():
+            if node.node_type == "analysis_unit":
+                continue
+            if node.name == sub_name:
+                return node.node_id
+
+    # Fallback to top-level match
+    return _resolve_import_to_node_id(imp, nodes, internal_prefixes)
+
+
+def _resolve_rust_import(
+    imp: str,
+    file_path: str,
+    nodes: dict[str, ArchitectureNode],
+    rust_crates: dict[str, dict[str, str]],
+    internal_prefixes: set[str],
+    limitations: list[str],
+) -> str | None:
+    """Resolve a Rust import to a target node ID (edge-level)."""
+    # Intra-crate references (crate::, super::, self::) → same node
+    if imp.startswith("crate::") or imp.startswith("super::") or imp.startswith("self::"):
+        return None  # No cross-node edge for intra-crate refs
+
+    # External or workspace crate
+    top = imp.split("::")[0]
+    for _key, crate_info in rust_crates.items():
+        if crate_info["name"] == top:
+            # Find the node for this crate's directory
+            for _nkey, node in nodes.items():
+                if node.node_type == "analysis_unit":
+                    continue
+                if node.path == crate_info["path"] or node.name == top:
+                    return node.node_id
+    return None  # External crate
+
+
 # ── Node construction ────────────────────────────────────────────────
 
 
 def _build_package_nodes(
     imports_evidence: list[dict[str, Any]],
     analysis_units: list[dict[str, Any]] | None,
+    *,
+    root: Path | None = None,
+    enable_python_subpackages: bool = False,
 ) -> dict[str, ArchitectureNode]:
     """Build package/module nodes from imports evidence.
 
     Returns dict of node_key -> ArchitectureNode.
+    Language-aware: dispatches to appropriate derivation per file type.
     """
     nodes: dict[str, ArchitectureNode] = {}
+
+    # Precompute TS monorepo packages
+    ts_packages: dict[str, dict[str, str]] = {}
+    is_ts_monorepo = False
+    if root:
+        ts_packages = _discover_ts_packages(root)
+        is_ts_monorepo = _is_ts_monorepo(root, ts_packages)
 
     for item in imports_evidence:
         file_path = item.get("location", {}).get("file", "")
         if not file_path:
             continue
 
-        name, node_path = _derive_python_node_path(file_path)
+        lang = _detect_file_language(file_path)
+        name: str | None = None
+        node_path: str | None = None
+        node_type = "module"
 
-        # Determine node type
-        suffix = Path(file_path).suffix
-        if suffix in _SOURCE_EXTENSIONS:
-            # Check if this looks like a package directory
+        if lang == "typescript" and is_ts_monorepo:
+            result = _derive_ts_node_path(file_path, ts_packages)
+            if result:
+                name, node_path = result
+                node_type = "module"
+            # else: falls through to default
+
+        if lang == "python" and enable_python_subpackages:
+            name, node_path = _derive_python_subpackage_path(file_path)
             parts = Path(file_path).parts
             node_type = "package" if len(parts) >= 3 and parts[0] == "src" else "module"
-        else:
-            node_type = "module"
+
+        if name is None or node_path is None:
+            # Default: Python-style derivation
+            name, node_path = _derive_python_node_path(file_path)
+            suffix = Path(file_path).suffix
+            if suffix in _SOURCE_EXTENSIONS:
+                parts = Path(file_path).parts
+                node_type = "package" if len(parts) >= 3 and parts[0] == "src" else "module"
+            else:
+                node_type = "module"
 
         key = f"{node_type}:{name}:{node_path}"
 
         if key not in nodes:
-            # Find matching analysis unit
             au_id = ""
             if analysis_units:
                 for unit in analysis_units:
@@ -423,7 +793,6 @@ def _build_package_nodes(
                 files=[],
             )
 
-        # Add file to node
         if file_path not in nodes[key].files:
             nodes[key].files.append(file_path)
 
@@ -517,10 +886,21 @@ def _build_edges(
     nodes: dict[str, ArchitectureNode],
     internal_prefixes: set[str],
     limitations: list[str],
+    *,
+    root: Path | None = None,
+    ts_packages: dict[str, dict[str, str]] | None = None,
+    rust_crates: dict[str, dict[str, str]] | None = None,
 ) -> list[ArchitectureEdge]:
     """Build internal import edges from evidence."""
-    # Aggregate edges by (source_node_id, target_node_id)
     agg: dict[tuple[str, str], dict[str, Any]] = {}
+
+    # Precompute TS package names for workspace matching
+    ts_package_names: set[str] = set()
+    ts_name_to_path: dict[str, str] = {}
+    if ts_packages:
+        for _key, pkg in ts_packages.items():
+            ts_package_names.add(pkg["name"])
+            ts_name_to_path[pkg["name"]] = pkg["path"]
 
     for item in imports_evidence:
         file_path = item.get("location", {}).get("file", "")
@@ -535,16 +915,66 @@ def _build_edges(
             limitations.append(f"No import data in {evidence_id} ({file_path}); skipped.")
             continue
 
+        lang = _detect_file_language(file_path)
+
         for imp in imports:
-            target_node_id = _resolve_import_to_node_id(imp, nodes, internal_prefixes)
+            target_node_id: str | None = None
+
+            if lang == "typescript":
+                target_node_id = _resolve_ts_import(
+                    imp,
+                    file_path,
+                    nodes,
+                    root,
+                    ts_package_names,
+                    ts_name_to_path,
+                    internal_prefixes,
+                    limitations,
+                )
+            elif lang == "rust":
+                target_node_id = _resolve_rust_import(
+                    imp,
+                    file_path,
+                    nodes,
+                    rust_crates or {},
+                    internal_prefixes,
+                    limitations,
+                )
+            elif lang == "python" and "." in imp:
+                # Python with possible sub-package resolution
+                target_node_id = _resolve_python_import(
+                    imp,
+                    nodes,
+                    internal_prefixes,
+                    limitations,
+                )
+            else:
+                # Default resolution
+                target_node_id = _resolve_import_to_node_id(
+                    imp,
+                    nodes,
+                    internal_prefixes,
+                )
 
             if target_node_id is None:
-                # Could be stdlib, external, or unresolved internal
                 if _is_python_stdlib(imp) or _is_js_ts_stdlib(imp):
                     continue
                 if _is_external_import(imp, internal_prefixes):
                     continue
-                # Looks internal but unresolved
+                # Rust external crates
+                if lang == "rust" and "::" in imp:
+                    top = imp.split("::")[0]
+                    if top in ("crate", "super", "self"):
+                        continue  # Intra-crate, not a cross-node edge
+                    # Check if it's a known local crate
+                    is_local = False
+                    if rust_crates:
+                        for _ck, ci in rust_crates.items():
+                            if ci["name"] == top:
+                                is_local = True
+                                break
+                    if not is_local:
+                        continue  # External crate
                 limitations.append(f"Unresolved internal-looking import '{imp}' in {file_path}.")
                 continue
 
@@ -875,6 +1305,18 @@ def _check_boundary_violations(
                 if layer.name == target_node.name:
                     target_layer = layer.name
                     break
+        if not target_layer:
+            # Try matching by node path against policy layer paths
+            for layer in policy.layers:
+                for pattern in layer.paths:
+                    norm = pattern.replace("\\", "/")
+                    if norm.endswith("/**"):
+                        prefix = norm[:-3]
+                        if target_node.path and target_node.path.startswith(prefix):
+                            target_layer = layer.name
+                            break
+                if target_layer:
+                    break
 
         # Skip if either not in policy
         if not source_layer or not target_layer:
@@ -999,11 +1441,25 @@ def build_graph(
     # ── Detect internal prefixes ─────────────────────────────────
     internal_prefixes = _discover_python_internal_prefixes(root, analysis_units)
 
+    # ── Discover TS packages and Rust crates ──────────────────────
+    ts_packages = _discover_ts_packages(root)
+    rust_crates = _discover_rust_crates(root)
+
+    # ── Load policy for sub-package decision ───────────────────────
+    resolved_policy_path = policy_path or (ai_debt / "architecture-policy.yaml")
+    policy = _load_policy(resolved_policy_path)
+    enable_python_subpackages = _policy_has_subdirectory_layers(policy, root)
+
     # ── Build nodes ───────────────────────────────────────────────
     all_nodes: dict[str, ArchitectureNode] = {}
 
     if include_pkg:
-        pkg_nodes = _build_package_nodes(imports_evidence, analysis_units)
+        pkg_nodes = _build_package_nodes(
+            imports_evidence,
+            analysis_units,
+            root=root,
+            enable_python_subpackages=enable_python_subpackages,
+        )
         all_nodes.update(pkg_nodes)
 
     if include_au and analysis_units:
@@ -1013,18 +1469,74 @@ def build_graph(
             all_nodes[f"au:{au_id}"] = node
 
     # ── Build edges ───────────────────────────────────────────────
+    # Augment internal prefixes with discovered sub-package prefixes
+    if enable_python_subpackages:
+        for _key, node in all_nodes.items():
+            if node.node_type == "analysis_unit":
+                continue
+            if "." in node.name:
+                top = node.name.split(".")[0]
+                internal_prefixes.add(top)
+            else:
+                internal_prefixes.add(node.name)
+
+    # Create synthetic nodes for unresolved policy layer targets
+    if enable_python_subpackages and policy:
+        existing_names = {n.name for n in all_nodes.values() if n.node_type != "analysis_unit"}
+        for item in imports_evidence:
+            file_path = item.get("location", {}).get("file", "")
+            if not file_path or _detect_file_language(file_path) != "python":
+                continue
+            imports = _extract_imports_from_evidence(item)
+            for imp in imports:
+                parts = imp.split(".")
+                if len(parts) >= 2:
+                    sub_name = f"{parts[0]}.{parts[1]}"
+                    if sub_name not in existing_names:
+                        # Check if this matches a policy layer
+                        for layer in policy.layers:
+                            for path_pattern in layer.paths:
+                                norm = path_pattern.replace("\\", "/")
+                                pat_parts = norm.split("/")
+                                if (
+                                    len(pat_parts) >= 4
+                                    and pat_parts[0] == "src"
+                                    and pat_parts[-1] == "**"
+                                    and pat_parts[2] == parts[1]
+                                    and pat_parts[1] == parts[0]
+                                ):
+                                    node_path = f"src/{parts[0]}/{parts[1]}"
+                                    nid = stable_node_id("package", sub_name, node_path)
+                                    key = f"package:{sub_name}:{node_path}"
+                                    if key not in all_nodes:
+                                        all_nodes[key] = ArchitectureNode(
+                                            node_id=nid,
+                                            node_type="package",
+                                            name=sub_name,
+                                            path=node_path,
+                                            analysis_unit_id="",
+                                            files=[],
+                                        )
+                                        existing_names.add(sub_name)
+                                    break
+
     # Only package/module nodes participate in import edges
     pkg_node_ids = {k: v for k, v in all_nodes.items() if v.node_type != "analysis_unit"}
-    edges = _build_edges(imports_evidence, pkg_node_ids, internal_prefixes, limitations)
+    edges = _build_edges(
+        imports_evidence,
+        pkg_node_ids,
+        internal_prefixes,
+        limitations,
+        root=root,
+        ts_packages=ts_packages,
+        rust_crates=rust_crates,
+    )
 
     # ── Detect cycles ─────────────────────────────────────────────
     cycles = _detect_cycles(list(all_nodes.values()), edges)
 
-    # ── Load policy and check boundaries ──────────────────────────
+    # ── Check boundaries ──────────────────────────────────────────
     violations: list[BoundaryViolation] = []
-
-    resolved_policy_path = policy_path or (ai_debt / "architecture-policy.yaml")
-    policy = _load_policy(resolved_policy_path)
 
     if policy:
         violations = _check_boundary_violations(edges, list(all_nodes.values()), policy)
