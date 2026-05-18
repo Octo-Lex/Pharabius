@@ -1,6 +1,6 @@
 [project]
 name = "pharabius"
-version = "0.7.0"
+version = "0.7.1"
 description = "Repository-first technical debt intelligence platform"
 readme = "README.md"
 requires-python = ">=3.11"

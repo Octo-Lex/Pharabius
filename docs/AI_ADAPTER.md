@@ -108,14 +108,31 @@ AI output goes through these checks:
 
 1. JSON parse check
 2. Schema validation (Pydantic, extra fields forbidden)
-3. Finding ID existence
-4. Evidence ID existence
-5. Analysis unit ID existence (if provided)
-6. Graph ID existence (if provided)
-7. Confidence format (High/Medium/Low)
-8. Limitations non-empty
+3. `enrichments` array must exist
+4. Finding ID existence
+5. Evidence IDs must be non-empty and all exist
+6. Analysis unit ID existence (if provided)
+7. Graph ID existence (if provided)
+8. Confidence format (High/Medium/Low)
+9. Limitations non-empty
 
 Invalid output is written to `rejected-ai-output.json` with reasons.
+
+### Strict vs non-strict mode
+
+- **Non-strict** (default): Valid enrichments are kept; invalid ones are recorded as rejections.
+- **Strict** (`--strict`): If any enrichment fails validation, the entire batch is rejected.
+
+### Empty evidence_ids
+
+Enrichments with empty `evidence_ids` are always rejected. The evidence-constrained contract requires at least one valid evidence ID per enrichment.
+
+### Unknown --finding-id
+
+Running `ai-debt enrich --finding-id NONEXISTENT` exits with code 1:
+```
+Finding ID 'NONEXISTENT' was not found in debt-register.json.
+```
 
 ## Architecture
 

@@ -106,7 +106,18 @@
 - No real network provider in v0.7.0
 - AI disabled by default
 
-## v0.7.1 — AI Adapter Polish (planned)
+## v0.7.1 — AI Adapter Stabilization (upcoming)
+
+- Rejection test hardening (54 new tests)
+- Empty evidence_ids rejected
+- Unknown --finding-id fails clearly
+- Sidecar markdown privacy caution and timestamp
+- Context assembly stress tests
+- Canonical immutability across all modes
+- CLI integration tests for enrich
+- Import boundary and privacy checks
+
+## v0.7.2 — AI Adapter Polish (planned)
 
 - Real provider integration (OpenAI, Claude, or local model)
 - Report integration for AI enrichments

@@ -186,3 +186,128 @@ def test_run_command_creates_run_metadata(tmp_path: Path) -> None:
     metadata = json.loads(run_files[0].read_text(encoding="utf-8"))
     assert metadata["analysis_mode"] == "deterministic-no-ai"
     assert metadata["summary"]["evidence_count"] > 0
+
+
+class TestEnrichCLI:
+    """CLI integration tests for ai-debt enrich command."""
+
+    def _setup_repo(self, tmp_path: Path) -> Path:
+        """Create minimal repo with deterministic artifacts."""
+        import json
+
+        ai_debt = tmp_path / ".ai-debt"
+        ai_debt.mkdir(exist_ok=True)
+
+        (ai_debt / "evidence.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "evidence": [
+                        {
+                            "evidence_id": "EVD-001",
+                            "type": "manifest_detected",
+                            "location": {"file": "pyproject.toml"},
+                            "raw_observation": "test",
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        (ai_debt / "debt-register.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "findings": [
+                        {
+                            "id": "TD-DEP-001",
+                            "category": "TD-DEP",
+                            "title": "Test",
+                            "severity": "Medium",
+                            "evidence_ids": ["EVD-001"],
+                            "analysis_unit_ids": [],
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        (ai_debt / "project-profile.json").write_text("{}", encoding="utf-8")
+        return tmp_path
+
+    def test_default_disabled_writes_nothing(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        result = runner.invoke(app, ["enrich", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert "disabled" in result.output.lower()
+        assert not (repo / ".ai-debt" / "ai").exists()
+
+    def test_mock_writes_sidecars(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        result = runner.invoke(app, ["enrich", "--provider", "mock", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert "AI enrichment complete" in result.output
+        assert (repo / ".ai-debt" / "ai" / "enrichment-report.json").exists()
+        assert (repo / ".ai-debt" / "ai" / "enrichment-report.md").exists()
+        assert (repo / ".ai-debt" / "ai" / "finding-enrichments.json").exists()
+        assert (repo / ".ai-debt" / "ai" / "rejected-ai-output.json").exists()
+
+    def test_dry_run_writes_nothing(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        result = runner.invoke(app, ["enrich", "--provider", "mock", "--dry-run", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert not (repo / ".ai-debt" / "ai").exists()
+
+    def test_finding_id_limits_output(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        result = runner.invoke(
+            app, ["enrich", "--provider", "mock", "--finding-id", "TD-DEP-001", "-r", str(repo)]
+        )
+        assert result.exit_code == 0
+        assert "Enriched:   1 finding(s)" in result.output
+
+    def test_unknown_finding_id_fails_clear(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        result = runner.invoke(
+            app, ["enrich", "--provider", "mock", "--finding-id", "NONEXISTENT", "-r", str(repo)]
+        )
+        assert result.exit_code == 1
+        assert "NONEXISTENT" in result.output
+        assert "not found" in result.output.lower()
+
+    def test_missing_debt_register_fails(self, tmp_path: Path):
+        repo = tmp_path  # No .ai-debt at all
+        result = runner.invoke(app, ["enrich", "-r", str(repo)])
+        assert result.exit_code == 1
+        assert "debt-register.json" in result.output
+
+    def test_missing_evidence_fails(self, tmp_path: Path):
+        import json
+
+        repo = tmp_path
+        ai_debt = repo / ".ai-debt"
+        ai_debt.mkdir(exist_ok=True)
+        (ai_debt / "debt-register.json").write_text(json.dumps({"findings": []}), encoding="utf-8")
+        result = runner.invoke(app, ["enrich", "-r", str(repo)])
+        assert result.exit_code == 1
+        assert "evidence.json" in result.output
+
+    def test_invalid_provider_fails(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        result = runner.invoke(app, ["enrich", "--provider", "openai", "-r", str(repo)])
+        assert result.exit_code == 1
+        assert "not available" in result.output
+
+    def test_strict_mock_exits_0(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        result = runner.invoke(app, ["enrich", "--provider", "mock", "--strict", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert "Enriched:   1 finding(s)" in result.output
+
+    def test_max_findings_lower_bound(self, tmp_path: Path):
+        repo = self._setup_repo(tmp_path)
+        # max_findings=0 should be rejected by Typer min=1
+        result = runner.invoke(
+            app, ["enrich", "--provider", "mock", "--max-findings", "0", "-r", str(repo)]
+        )
+        assert result.exit_code != 0
