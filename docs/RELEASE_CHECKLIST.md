@@ -297,3 +297,21 @@ Completed 2026-05-17.
 - [x] 282 tests passing, 84% coverage
 - [x] All 7 release gates green
 - [x] CI passes on PR
+
+---
+
+## 22. Step 18 — v0.5.1 TD-ARCH Finding Integration
+
+- [x] `core/architecture_analyzer.py` helper module added
+- [x] `core/analyzer.py` integration (+30 lines)
+- [x] TD-ARCH findings from cycles and boundary violations
+- [x] No findings from high-coupling, unresolved, or external imports
+- [x] Graceful skip when graph absent
+- [x] Cap at 20 findings per type
+- [x] No circular imports (architecture_analyzer returns specs, analyzer owns builder)
+- [x] No scanner/mapper/verifier/exporter changes
+- [x] `ai-debt run` unchanged
+- [x] `ai-debt export` includes TD-ARCH automatically
+- [x] 317 tests passing, 84% coverage
+- [x] All 7 release gates green
+- [x] CI passes on PR

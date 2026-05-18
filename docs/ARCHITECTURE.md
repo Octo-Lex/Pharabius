@@ -165,10 +165,20 @@ Does NOT modify `debt-register.json` or any existing artifact.
 - Checks boundary violations against optional `architecture-policy.yaml`
 - Computes coupling metrics (fan-in, fan-out, instability)
 - Writes `.ai-debt/architecture-graph.json`
-- Does not create TD-ARCH findings, modify `debt-register.json`, or modify source artifacts
 - Not part of `ai-debt run` pipeline (standalone command)
 - Not exported by `ai-debt export`
 - Does not parse `.importlinter`
+
+### Architecture analyzer layer
+
+`core/architecture_analyzer.py` generates TD-ARCH findings from graph IR:
+
+- Reads `architecture-graph.json` (optional — gracefully skips if absent)
+- Creates TD-ARCH findings for cycles with evidence (cap at 20)
+- Creates TD-ARCH findings for boundary violations with evidence (cap at 20)
+- Does not create findings from high-coupling metrics, unresolved, or external imports
+- Integrated into `ai-debt analyze` via `analyzer.py`
+- Returns finding specs; `analyzer.py` owns `FindingBuilder` (no circular imports)
 
 **Finding states (current):**
 

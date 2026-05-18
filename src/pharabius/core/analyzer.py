@@ -6,6 +6,9 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from pharabius.core.architecture_analyzer import (
+    analyze_architecture_graph as _analyze_architecture_graph,
+)
 from pharabius.schemas.evidence import EvidenceItem, EvidenceStore
 from pharabius.schemas.finding import DebtFinding, DebtRegister, DebtRegisterSummary
 
@@ -832,6 +835,32 @@ def _summarize(findings: list[DebtFinding]) -> DebtRegisterSummary:
     )
 
 
+def _add_architecture_findings(
+    repository_root: Path,
+    builder: FindingBuilder,
+) -> None:
+    """Convert architecture graph specs into DebtFinding entries."""
+
+    specs = _analyze_architecture_graph(repository_root)
+    for spec in specs:
+        builder.add(
+            category=spec.category,
+            title=spec.title,
+            description=spec.description,
+            evidence_ids=spec.evidence_ids,
+            locations=spec.locations,
+            technical_impact=spec.technical_impact,
+            business_impact=spec.business_impact,
+            risk_breakdown=spec.risk_breakdown,
+            remediation_effort=spec.remediation_effort,
+            recommended_action=spec.recommended_action,
+            verification_recommendations=spec.verification_recommendations,
+            risks_and_cautions=spec.risks_and_cautions,
+            confidence=spec.confidence,
+            suggested_owner_area=spec.suggested_owner_area,
+        )
+
+
 def analyze_evidence(repository_root: Path) -> DebtRegister:
     root = repository_root.resolve()
     store = _load_evidence_store(root)
@@ -844,6 +873,9 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
     _analyze_missing_docs(store, builder)
     _analyze_missing_lockfile(store, builder, repository_root=repository_root)
     _analyze_env_without_example(store, builder)
+
+    # Architecture graph analysis (TD-ARCH findings)
+    _add_architecture_findings(repository_root, builder)
 
     findings = sorted(
         builder.findings,
