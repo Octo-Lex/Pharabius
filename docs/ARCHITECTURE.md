@@ -155,6 +155,21 @@ Does NOT modify `debt-register.json` or any existing artifact.
 - Does not create new findings or modify source artifacts
 - Enriches exports with verification status and work package linkage when available
 
+### Architecture graph layer
+
+`core/grapher.py` provides `ai-debt graph`:
+
+- Reads `evidence.json` (required) and optional analysis-units, project-profile, policy
+- Builds package/module and analysis-unit dependency graph
+- Detects cycles via Tarjan SCC (no new dependencies)
+- Checks boundary violations against optional `architecture-policy.yaml`
+- Computes coupling metrics (fan-in, fan-out, instability)
+- Writes `.ai-debt/architecture-graph.json`
+- Does not create TD-ARCH findings, modify `debt-register.json`, or modify source artifacts
+- Not part of `ai-debt run` pipeline (standalone command)
+- Not exported by `ai-debt export`
+- Does not parse `.importlinter`
+
 **Finding states (current):**
 
 - `Detected` (in `debt-register.json`)
