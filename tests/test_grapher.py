@@ -703,3 +703,221 @@ class TestImmutability:
         build_graph(tmp_path)
         after = _sha256(profile_path)
         assert before == after
+
+
+# ── v0.6.0 Python sub-package tests ─────────────────────────────────
+
+
+class TestPythonSubPackageGraph:
+    def _setup_policy_repo(self, tmp_path: Path) -> None:
+        """Create a Python repo with architecture policy for sub-package splitting."""
+        ai_debt = tmp_path / ".ai-debt"
+        ai_debt.mkdir()
+
+        (ai_debt / "project-profile.json").write_text(
+            json.dumps({"project_name": "myapp", "languages": ["Python"]}),
+            encoding="utf-8",
+        )
+
+        evidence = {
+            "schema_version": "1.0",
+            "evidence": [
+                {
+                    "evidence_id": "EVD-001",
+                    "type": "imports_detected",
+                    "location": {"file": "src/myapp/api/routes.py"},
+                    "raw_observation": "myapp.infra.db",
+                    "metadata": {"imports": ["myapp.infra.db"]},
+                },
+                {
+                    "evidence_id": "EVD-002",
+                    "type": "imports_detected",
+                    "location": {"file": "src/myapp/infra/db.py"},
+                    "raw_observation": "myapp.api.routes",
+                    "metadata": {"imports": ["myapp.api.routes"]},
+                },
+                {
+                    "evidence_id": "EVD-003",
+                    "type": "imports_detected",
+                    "location": {"file": "src/myapp/api/routes.py"},
+                    "raw_observation": "myapp.api.utils",
+                    "metadata": {"imports": ["myapp.api.utils"]},
+                },
+            ],
+        }
+        (ai_debt / "evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
+
+        # Architecture policy with subdirectory layers
+        policy = """schema_version: "1.0"
+layers:
+  - name: api
+    paths:
+      - src/myapp/api/**
+    may_import:
+      - infra
+  - name: infra
+    paths:
+      - src/myapp/infra/**
+    may_import:
+      - api
+"""
+        (ai_debt / "architecture-policy.yaml").write_text(policy, encoding="utf-8")
+
+    def test_subpackage_nodes_with_policy(self, tmp_path):
+        self._setup_policy_repo(tmp_path)
+        result = build_graph(tmp_path, scope="package")
+        graph = result.graph
+
+        node_names = {n.name for n in graph.nodes if n.node_type != "analysis_unit"}
+        # With policy targeting subdirectories, should have sub-package nodes
+        assert "myapp.api" in node_names
+        assert "myapp.infra" in node_names
+
+    def test_subpackage_edge_with_policy(self, tmp_path):
+        self._setup_policy_repo(tmp_path)
+        result = build_graph(tmp_path, scope="package")
+        graph = result.graph
+
+        assert len(graph.edges) >= 1
+        node_map = {n.node_id: n.name for n in graph.nodes}
+        edge_pairs = {(node_map[e.source_node_id], node_map[e.target_node_id]) for e in graph.edges}
+        assert ("myapp.api", "myapp.infra") in edge_pairs
+
+    def test_same_layer_import_allowed(self, tmp_path):
+        self._setup_policy_repo(tmp_path)
+        result = build_graph(tmp_path, scope="package")
+        graph = result.graph
+
+        # myapp.api importing myapp.api.utils is same-layer
+        node_map = {n.node_id: n.name for n in graph.nodes}
+        for edge in graph.edges:
+            src = node_map[edge.source_node_id]
+            tgt = node_map[edge.target_node_id]
+            if src == "myapp.api" and tgt == "myapp.api":
+                # Self-edge from same-layer import should not exist
+                pytest.fail("Same-layer self-edge should be skipped")
+
+    def test_boundary_violation_detected(self, tmp_path):
+        """Policy allows api→infra, so no violation. Create a forbidden import."""
+        ai_debt = tmp_path / ".ai-debt"
+        ai_debt.mkdir()
+
+        (ai_debt / "project-profile.json").write_text(
+            json.dumps({"project_name": "myapp", "languages": ["Python"]}),
+            encoding="utf-8",
+        )
+
+        evidence = {
+            "schema_version": "1.0",
+            "evidence": [
+                {
+                    "evidence_id": "EVD-001",
+                    "type": "imports_detected",
+                    "location": {"file": "src/myapp/infra/db.py"},
+                    "raw_observation": "myapp.api.routes",
+                    "metadata": {"imports": ["myapp.api.routes"]},
+                },
+                {
+                    "evidence_id": "EVD-002",
+                    "type": "imports_detected",
+                    "location": {"file": "src/myapp/api/routes.py"},
+                    "raw_observation": "",
+                    "metadata": {"imports": []},
+                },
+            ],
+        }
+        (ai_debt / "evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
+
+        # Policy: infra may NOT import api
+        policy = """schema_version: "1.0"
+layers:
+  - name: api
+    paths:
+      - src/myapp/api/**
+    may_import: []
+  - name: infra
+    paths:
+      - src/myapp/infra/**
+    may_import: []
+"""
+        (ai_debt / "architecture-policy.yaml").write_text(policy, encoding="utf-8")
+
+        result = build_graph(tmp_path, scope="package")
+        graph = result.graph
+        # Should detect boundary violation: infra imports api
+        assert len(graph.boundary_violations) >= 1
+
+    def test_no_policy_no_splitting(self, tmp_path):
+        """Without policy, Python grouping should be current behavior."""
+        ai_debt = tmp_path / ".ai-debt"
+        ai_debt.mkdir()
+
+        (ai_debt / "project-profile.json").write_text(
+            json.dumps({"project_name": "myapp", "languages": ["Python"]}),
+            encoding="utf-8",
+        )
+
+        evidence = {
+            "schema_version": "1.0",
+            "evidence": [
+                {
+                    "evidence_id": "EVD-001",
+                    "type": "imports_detected",
+                    "location": {"file": "src/myapp/api/routes.py"},
+                    "raw_observation": "myapp.infra.db",
+                    "metadata": {"imports": ["myapp.infra.db"]},
+                },
+            ],
+        }
+        (ai_debt / "evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
+        # No architecture policy
+
+        result = build_graph(tmp_path, scope="package")
+        graph = result.graph
+
+        # Should NOT have sub-package nodes
+        node_names = {n.name for n in graph.nodes if n.node_type != "analysis_unit"}
+        assert "myapp.api" not in node_names
+        # Should have top-level "myapp" node
+        assert "myapp" in node_names
+
+    def test_policy_without_subdirs_no_splitting(self, tmp_path):
+        """Policy with only top-level paths should not trigger splitting."""
+        ai_debt = tmp_path / ".ai-debt"
+        ai_debt.mkdir()
+
+        (ai_debt / "project-profile.json").write_text(
+            json.dumps({"project_name": "myapp", "languages": ["Python"]}),
+            encoding="utf-8",
+        )
+
+        evidence = {
+            "schema_version": "1.0",
+            "evidence": [
+                {
+                    "evidence_id": "EVD-001",
+                    "type": "imports_detected",
+                    "location": {"file": "src/myapp/api/routes.py"},
+                    "raw_observation": "myapp.infra.db",
+                    "metadata": {"imports": ["myapp.infra.db"]},
+                },
+            ],
+        }
+        (ai_debt / "evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
+
+        # Policy with only top-level paths
+        policy = """schema_version: "1.0"
+layers:
+  - name: myapp
+    paths:
+      - src/myapp/**
+    may_import: []
+"""
+        (ai_debt / "architecture-policy.yaml").write_text(policy, encoding="utf-8")
+
+        result = build_graph(tmp_path, scope="package")
+        graph = result.graph
+
+        node_names = {n.name for n in graph.nodes if n.node_type != "analysis_unit"}
+        assert "myapp.api" not in node_names
+        assert "myapp" in node_names
