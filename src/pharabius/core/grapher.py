@@ -665,7 +665,7 @@ def _detect_cycles(
 
         cycle_id = stable_cycle_id(scc)
         names = [node_name_map.get(nid, nid) for nid in sorted(scc)]
-        desc = " → ".join([*names, names[0]]) + f" ({len(scc)} nodes, {scc_edge_count} edges)"
+        desc = " -> ".join([*names, names[0]]) + f" ({len(scc)} nodes, {scc_edge_count} edges)"
 
         cycles.append(
             ArchitectureCycle(
