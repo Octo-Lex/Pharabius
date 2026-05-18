@@ -279,3 +279,21 @@ Completed 2026-05-17.
 - [x] 219 tests passing, 86% coverage
 - [x] All 7 release gates green
 - [x] CI passes on PR
+
+---
+
+## 21. Step 17 — v0.5.0 Architecture Graph IR
+
+- [x] `ai-debt graph` command added
+- [x] `schemas/architecture_graph.py` (Pydantic models + policy schema)
+- [x] `core/grapher.py` (graph construction, cycles, coupling, boundary)
+- [x] Deterministic stable IDs (node, cycle, violation)
+- [x] Tarjan SCC cycle detection (no new dependencies)
+- [x] Optional boundary policy via architecture-policy.yaml
+- [x] No TD-ARCH findings created
+- [x] No changes to ai-debt run
+- [x] No changes to ai-debt export
+- [x] No .importlinter parsing
+- [x] 282 tests passing, 84% coverage
+- [x] All 7 release gates green
+- [x] CI passes on PR

@@ -140,3 +140,45 @@ upload the SARIF file.
 
 Export formats contain only findings already present in `debt-register.json`.
 No new analysis or findings are generated during export.
+
+## 28. Architecture graph is IR only
+
+`ai-debt graph` produces `architecture-graph.json` as an intermediate representation.
+It does not create TD-ARCH findings in `debt-register.json`. Graph IR is separate from the finding pipeline.
+
+## 29. Architecture graph is not part of `ai-debt run`
+
+`ai-debt graph` is a standalone command. It is not included in the `ai-debt run` pipeline.
+Users must run it separately.
+
+## 30. Architecture graph is not exported by `ai-debt export`
+
+`ai-debt export` only exports `debt-register.json` findings. Architecture graph data is not
+included in SARIF, CSV, or JSONL exports.
+
+## 31. Import resolution is regex-based
+
+`ai-debt graph` uses regex-based import extraction from `imports_detected` evidence.
+No AST parsing is performed. Dynamic imports (`importlib.import_module()`) are not detected.
+Re-export chains (`from x import y`) resolve to `x`, not to `y`'s origin.
+
+## 32. TypeScript/JavaScript path aliases not supported
+
+`tsconfig.json` path aliases are not resolved in v0.5.0. Relative imports are resolved by
+probing file extensions (`.ts`, `.tsx`, `.js`, `.jsx`, `index.*`).
+
+## 33. `.importlinter` is not parsed
+
+Pharabius detects the presence of `.importlinter` but does not parse it for layer boundaries.
+Users must translate their import-linter configuration into `.ai-debt/architecture-policy.yaml`
+for boundary checking.
+
+## 34. Go/Rust/Java/.NET node derivation is best-effort
+
+Python and TypeScript/JavaScript have full import resolution. Other languages use
+best-effort node derivation based on directory structure and manifest locations.
+
+## 35. No external import edges
+
+`ai-debt graph` only creates `internal_import` edges. External dependencies and standard library
+imports are filtered out. Unresolved internal-looking imports are recorded as limitations.

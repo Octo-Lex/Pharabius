@@ -1,5 +1,16 @@
 # Pharabius Roadmap
 
+## v0.5.0 — Architecture Graph IR (released 2026-05-18)
+
+- `ai-debt graph` — Build import dependency graph from existing evidence
+- Package/module and analysis-unit node derivation
+- Tarjan SCC cycle detection (no new dependencies)
+- Optional boundary policy via `.ai-debt/architecture-policy.yaml`
+- Coupling metrics: fan-in, fan-out, instability
+- Deterministic stable IDs
+- Graph IR only — no TD-ARCH findings
+- 282 tests passing, 84% coverage
+
 ## v0.4.0 — Export Formats (released 2026-05-18)
 
 - `ai-debt export` — SARIF v2.1.0, CSV, JSONL output formats

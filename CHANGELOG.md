@@ -6,14 +6,17 @@ All notable changes to Pharabius are documented in this file.
 
 ### Added
 
-- `ai-debt export` — Export findings to SARIF v2.1.0, CSV, and JSONL formats
-- SARIF output for GitHub Security / VS Code integration
-- CSV output for spreadsheet triage
-- JSONL output for CI/CD gates and custom tooling
-- Verification status enrichment in exports
-- Work package linkage in exports
+- `ai-debt graph` — Build import dependency graph from existing evidence
+- `architecture-graph.json` IR output with nodes, edges, cycles, violations, coupling metrics
+- Package/module node derivation from Python and TypeScript/JavaScript imports
+- Analysis-unit node derivation when analysis-units.json is present
+- Tarjan SCC cycle detection (no new dependencies)
+- Optional boundary policy checking via `.ai-debt/architecture-policy.yaml`
+- Coupling metrics: fan-in, fan-out, instability per node
+- Graceful degradation for missing optional artifacts
+- Deterministic stable node/cycle/violation IDs
 
-## v0.3.2 — 2026-05-18
+## v0.4.0 — 2026-05-18
 
 ### Added
 

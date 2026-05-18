@@ -314,6 +314,131 @@ def status(
 
 
 @app.command()
+def graph(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to build architecture graph for.",
+        ),
+    ] = None,
+    scope: Annotated[
+        str,
+        typer.Option(
+            "--scope",
+            "-s",
+            help="Graph scope: package, analysis_unit, or both.",
+        ),
+    ] = "both",
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output path for architecture-graph.json.",
+        ),
+    ] = None,
+    policy: Annotated[
+        Path | None,
+        typer.Option(
+            "--policy",
+            help="Path to architecture-policy.yaml.",
+        ),
+    ] = None,
+) -> None:
+    """
+    Build import dependency graph from existing evidence.
+    """
+    from pharabius.core.grapher import build_graph
+
+    if scope not in ("package", "analysis_unit", "both"):
+        console.print(
+            f"[bold red]Error:[/bold red] Invalid scope: {scope}. "
+            "Use package, analysis_unit, or both."
+        )
+        raise typer.Exit(code=1)
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+
+    try:
+        result = build_graph(
+            resolved_root,
+            scope=scope,
+            policy_path=policy,
+        )
+    except FileNotFoundError as exc:
+        console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+    except ValueError as exc:
+        console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    graph = result.graph
+
+    # Determine output path
+    if output is not None:
+        out_path = Path(output).resolve()
+    else:
+        out_path = resolved_root / ".ai-debt" / "architecture-graph.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write graph
+    out_path.write_text(
+        graph.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    # Print summary
+    console.print("[bold green]Graph built[/bold green]")
+    console.print(
+        f"Nodes: {len(graph.nodes)}, "
+        f"Edges: {len(graph.edges)}, "
+        f"Cycles: {len(graph.cycles)}, "
+        f"Violations: {len(graph.boundary_violations)}"
+    )
+
+    # Nodes by type
+    type_counts: dict[str, int] = {}
+    for n in graph.nodes:
+        type_counts[n.node_type] = type_counts.get(n.node_type, 0) + 1
+    if type_counts:
+        console.print("\nNodes by type:")
+        for t, c in sorted(type_counts.items()):
+            console.print(f"  {t}: {c}")
+
+    # Cycles
+    if graph.cycles:
+        console.print("\nCycles:")
+        for cycle in graph.cycles:
+            console.print(f"  {cycle.cycle_id}: {cycle.description}")
+
+    # Top coupling
+    sorted_metrics = sorted(
+        graph.coupling_metrics,
+        key=lambda m: m.fan_in + m.fan_out,
+        reverse=True,
+    )
+    top = sorted_metrics[:3]
+    if top:
+        console.print("\nHigh-coupling nodes (top 3):")
+        node_name_map = {n.node_id: n.name for n in graph.nodes}
+        for m in top:
+            name = node_name_map.get(m.node_id, m.node_id)
+            console.print(
+                f"  {name}: fan_in={m.fan_in}, fan_out={m.fan_out}, instability={m.instability}"
+            )
+
+    # Limitations
+    if graph.limitations:
+        console.print(f"\nLimitations: {len(graph.limitations)}")
+        for lim in graph.limitations:
+            console.print(f"  - {lim}")
+
+    console.print(f"\nWritten: {out_path}")
+
+
+@app.command()
 def export(
     repository_root: Annotated[
         Path | None,
