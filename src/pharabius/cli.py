@@ -497,6 +497,121 @@ def export(
 
 
 @app.command()
+def enrich(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to enrich.",
+        ),
+    ] = None,
+    provider: Annotated[
+        str,
+        typer.Option(
+            "--provider",
+            help="AI provider: disabled or mock.",
+        ),
+    ] = "disabled",
+    max_findings: Annotated[
+        int,
+        typer.Option(
+            "--max-findings",
+            help="Maximum findings to enrich.",
+            min=1,
+        ),
+    ] = 10,
+    finding_id: Annotated[
+        str | None,
+        typer.Option(
+            "--finding-id",
+            help="Enrich a single finding by ID.",
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Assemble context and validate without writing files.",
+        ),
+    ] = False,
+    strict: Annotated[
+        bool,
+        typer.Option(
+            "--strict",
+            help="Reject entire batch if any enrichment fails validation.",
+        ),
+    ] = False,
+) -> None:
+    """Enrich findings with AI-generated explanations and rationale."""
+    from pharabius.ai.enricher import enrich_findings
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+
+    # Prerequisite checks
+    debt_register = resolved_root / ".ai-debt" / "debt-register.json"
+    evidence_file = resolved_root / ".ai-debt" / "evidence.json"
+
+    if not debt_register.exists():
+        console.print(
+            "[bold red]Error:[/bold red] "
+            "debt-register.json not found. Run 'ai-debt analyze --no-ai' first."
+        )
+        raise typer.Exit(code=1)
+
+    if not evidence_file.exists():
+        console.print(
+            "[bold red]Error:[/bold red] evidence.json not found. Run 'ai-debt scan' first."
+        )
+        raise typer.Exit(code=1)
+
+    if provider not in ("disabled", "mock"):
+        console.print(
+            f"[bold red]Error:[/bold red] "
+            f"AI provider '{provider}' is not available. "
+            "Use --provider mock for local testing."
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        report = enrich_findings(
+            resolved_root,
+            provider_name=provider,
+            max_findings=max_findings,
+            finding_id=finding_id,
+            dry_run=dry_run,
+            strict=strict,
+        )
+    except ValueError as exc:
+        console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    # Handle disabled provider
+    if provider == "disabled":
+        for rej in report.rejections:
+            console.print(f"[dim]{rej.reason}[/dim]")
+        return
+
+    # Handle empty register
+    if not report.enrichments and not report.rejections:
+        console.print("No findings to enrich. The debt register is empty.")
+        return
+
+    console.print("[bold green]AI enrichment complete[/bold green]")
+    console.print(f"Provider:   {report.provider}")
+    console.print(f"Enriched:   {len(report.enrichments)} finding(s)")
+    console.print(f"Rejected:   {len(report.rejections)} output(s)")
+
+    if not dry_run:
+        ai_dir = resolved_root / ".ai-debt" / "ai"
+        console.print(f"Output:     {ai_dir}")
+
+    for rej in report.rejections:
+        fid = rej.finding_id or "unknown"
+        console.print(f"  [dim]Rejected {fid}: {rej.reason}[/dim]")
+
+
+@app.command()
 def run(
     repository_root: Annotated[
         Path | None,

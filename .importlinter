@@ -7,5 +7,6 @@ type = layers
 layers =
     pharabius.cli
     pharabius.core
+    (pharabius.ai)
     (pharabius.writers)
     pharabius.schemas
