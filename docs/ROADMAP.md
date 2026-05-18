@@ -87,6 +87,13 @@
 - Synthetic target nodes for policy-matched imports
 - Path-based layer matching for boundary violations
 
+## v0.6.1 — Rust Workspace Graph Completion (upcoming)
+
+- Rust `crates/*` node splitting from Cargo.toml discovery
+- Kebab→snake crate name normalization for import resolution
+- Synthetic target nodes for imports matching discovered crates
+- FN-003 completed: Symbiot now produces cross-crate edges
+
 ## v0.7.0 — Graph Polish + AI Adapter Preparation (planned)
 
 - Rust monorepo `crates/*` node splitting
