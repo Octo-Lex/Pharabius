@@ -507,6 +507,13 @@ def profile_repository(repository_root: Path) -> RepositoryProfile:
         if name in PACKAGE_MANAGER_FILES:
             package_managers.add(PACKAGE_MANAGER_FILES[name])
 
+        # Suffix-based detection for .NET project files
+        if file_path.suffix in {".csproj", ".fsproj", ".vbproj"}:
+            package_managers.add("nuget")
+
+        if file_path.suffix == ".sln":
+            build_tools.add("Visual Studio")
+
         if name in BUILD_TOOL_FILES:
             build_tools.add(BUILD_TOOL_FILES[name])
 

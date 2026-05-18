@@ -79,6 +79,14 @@ MANIFEST_FILES = {
     "Gemfile": "ruby_manifest",
     "Gemfile.lock": "ruby_lockfile",
     "Package.swift": "swift_manifest",
+    "packages.lock.json": "dotnet_lockfile",
+}
+
+
+MANIFEST_SUFFIXES: dict[str, str] = {
+    ".csproj": "dotnet_manifest",
+    ".fsproj": "dotnet_manifest",
+    ".vbproj": "dotnet_manifest",
 }
 
 
@@ -305,6 +313,56 @@ def _risk_keywords_for_path(path: Path, root: Path) -> list[str]:
     return sorted(keyword for keyword in RISK_KEYWORDS if keyword in normalized)
 
 
+_CI_PATH_PREFIXES: frozenset[str] = frozenset(
+    {
+        ".github/workflows/",
+        ".gitlab/",
+    }
+)
+
+_CI_PATH_EXACT: frozenset[str] = frozenset(
+    {
+        ".gitlab-ci.yml",
+        "jenkinsfile",
+        "azure-pipelines.yml",
+        "bitbucket-pipelines.yml",
+    }
+)
+
+# Keywords suppressed in CI/deployment files to avoid false risk signals.
+# 'checkout' matches actions/checkout in GitHub Actions (not a payment signal there).
+# Operational terms (deploy, release, monitoring, etc.) are infrastructure signals,
+# not security risks by themselves.
+_CI_SUPPRESSED_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "checkout",
+        "deploy",
+        "release",
+        "migration",
+        "rollback",
+        "incident",
+        "alert",
+        "monitoring",
+        "logging",
+        "tracing",
+    }
+)
+
+
+def _is_ci_or_deployment_path(path: Path, root: Path) -> bool:
+    """Return True if the file is a CI/deployment workflow file."""
+    try:
+        relative = _relative(path, root)
+    except ValueError:
+        relative = str(path).lower()
+    lower = relative.lower()
+    forward = lower.replace("\\", "/")
+
+    if forward in _CI_PATH_EXACT:
+        return True
+    return any(forward.startswith(prefix) for prefix in _CI_PATH_PREFIXES)
+
+
 def _risk_keywords_for_text(text: str) -> list[str]:
     lowered = text.lower()
 
@@ -484,6 +542,46 @@ def scan_repository(repository_root: Path) -> EvidenceStore:
                 metadata={"manifest_type": MANIFEST_FILES[file_path.name]},
             )
 
+        # Suffix-based manifest detection (.NET project files)
+        if file_path.suffix in MANIFEST_SUFFIXES:
+            builder.add(
+                type_="manifest_detected",
+                category="dependencies",
+                summary=f"Dependency or package manifest detected: {relative}",
+                location_file=relative,
+                subject=relative,
+                object_=MANIFEST_SUFFIXES[file_path.suffix],
+                raw_observation=file_path.name,
+                confidence="High",
+                metadata={"manifest_type": MANIFEST_SUFFIXES[file_path.suffix]},
+            )
+
+        # .NET solution file: distinct evidence type, not a dependency manifest
+        if file_path.suffix == ".sln":
+            builder.add(
+                type_="solution_file_detected",
+                category="structure",
+                summary=f".NET solution file detected: {relative}",
+                location_file=relative,
+                subject=relative,
+                object_="dotnet_solution",
+                raw_observation=file_path.name,
+                confidence="High",
+            )
+
+        # Terraform lockfile: reproducibility evidence, not a package manifest
+        if file_path.name == ".terraform.lock.hcl":
+            builder.add(
+                type_="lockfile_detected",
+                category="dependencies",
+                summary=f"Terraform provider lockfile detected: {relative}",
+                location_file=relative,
+                subject=relative,
+                object_="terraform_lockfile",
+                raw_observation=".terraform.lock.hcl",
+                confidence="High",
+            )
+
         # Root package.json workspaces: only at repository root
         if file_path.name == "package.json" and relative == "package.json":
             pkg_data = _read_json(file_path)
@@ -572,6 +670,10 @@ def scan_repository(repository_root: Path) -> EvidenceStore:
         if file_path.suffix in TEXT_EXTENSIONS or file_path.name in MANIFEST_FILES:
             text = _read_text(file_path)
             text_keywords = _risk_keywords_for_text(text)
+
+            # Suppress operational/CI keywords in CI/deployment files
+            if text_keywords and _is_ci_or_deployment_path(file_path, root):
+                text_keywords = [k for k in text_keywords if k not in _CI_SUPPRESSED_KEYWORDS]
 
             if text_keywords:
                 builder.add(

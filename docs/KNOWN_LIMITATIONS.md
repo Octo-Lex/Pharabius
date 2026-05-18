@@ -95,3 +95,31 @@ must be invoked explicitly when verification is desired.
 `ai-debt status` reads existing `.ai-debt/` artifacts and prints a summary.
 It does not run scan, analyze, or verify. Status information may be stale
 if the workspace has not been recently updated.
+
+## 21. Maven library modules are conservatively skipped
+
+Maven modules without application signals (Spring Boot plugin, shade plugin, etc.)
+do not produce TD-DEP dependency reproducibility findings. This is conservative:
+some library modules benefit from reproducibility evidence. If a POM cannot be read
+or its role is ambiguous, it is also skipped to avoid false positives.
+
+## 22. Terraform dependency reproducibility analysis is deferred
+
+`.terraform.lock.hcl` is detected as lockfile evidence, but no TD-DEP finding is
+generated for missing Terraform lockfiles. Terraform provider locking differs
+from package manager lockfiles and requires dedicated analysis logic.
+
+## 23. .NET manifest detection is suffix-based
+
+.NET project files (`.csproj`, `.fsproj`, `.vbproj`) are detected by file extension,
+not by exact filename. This matches standard .NET conventions where project
+filenames vary. `.sln` files are detected as solution/workspace files and do not
+produce dependency findings.
+
+## 24. CI/deployment workflow files receive narrowed risk keyword scanning
+
+Operational keywords (deploy, release, monitoring, logging, tracing) and the
+payment keyword "checkout" are excluded from risk-sensitive evidence when detected
+in CI/deployment workflow files. This prevents false security signals from
+standard CI tooling like `actions/checkout`. These keywords remain active as risk
+signals in application source files and configuration.
