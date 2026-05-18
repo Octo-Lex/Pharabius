@@ -6,6 +6,18 @@ All notable changes to Pharabius are documented in this file.
 
 ### Added
 
+- Architecture graph field validation results (11 repos, 9 real + 2 synthetic)
+- `docs/ARCHITECTURE_GRAPH_VALIDATION_SUMMARY.md` — Cross-repo validation summary
+- `docs/ARCHITECTURE_GRAPH_BACKLOG.md` — Prioritized improvement backlog
+- `docs/templates/architecture-graph-validation-result.md` — Validation result template
+- 11 validation result files in `docs/validation-results/agv-*`
+- Node derivation strategy documented in `docs/ARCHITECTURE.md`
+- KNOWN_LIMITATIONS items 38 (monorepo node collapse) and 39 (Rust import detection)
+
+## v0.5.1 — 2026-05-18
+
+### Added
+
 - TD-ARCH findings from `architecture-graph.json` cycles and boundary violations
 - `ai-debt analyze --no-ai` reads architecture-graph.json when present
 - Circular dependency findings with evidence-backed graph cycle IDs
