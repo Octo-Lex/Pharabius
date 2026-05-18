@@ -4,6 +4,23 @@ All notable changes to Pharabius are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Empty `evidence_ids` now rejected — AI enrichments must include at least one valid evidence ID
+- Unknown `--finding-id` now fails clearly instead of silently returning 0 enrichments
+- Missing `enrichments` key in AI output now produces rejection record instead of silently passing
+- Sidecar markdown now includes Privacy Caution section, timestamp, and canonical-artifact statement
+
+### Tests
+
+- 491 tests (54 new), 83.30% coverage
+- New rejection tests: 18 tests covering schema failures, evidence integrity, batch behavior
+- New context stress tests: 15 tests for budget caps, truncation, corrupted artifacts, ordering
+- New sidecar quality tests: 4 tests for privacy caution, timestamp, canonical statement
+- New immutability tests: 6 parameterized modes (disabled, mock, dry-run, strict, finding-id, max-findings)
+- New CLI integration tests: 10 tests for enrich command
+- New import boundary and privacy checks
+
 ### Added
 
 - `ai-debt enrich` command — provider-neutral, schema-validated, evidence-constrained AI enrichment

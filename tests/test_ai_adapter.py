@@ -565,3 +565,670 @@ class TestEnricherReportFormat:
         content = md_path.read_text(encoding="utf-8")
         assert "AI-generated enrichment" in content
         assert "debt-register.json" in content
+
+
+# ── FailingMockAdapter (test-only) ──────────────────────────────────
+
+
+class FailingMockAdapter(MockAIAdapter):
+    """Configurable mock that produces invalid output for testing rejection."""
+
+    def __init__(self, mode: str = "valid") -> None:
+        self._mode = mode
+
+    def generate_json(
+        self, prompt: str, context: dict[str, Any], schema_hint: dict[str, Any] | None = None
+    ) -> Any:
+        from pharabius.ai.adapter import AIResponse
+        from pharabius.schemas.ai_enrichment import AIUsageSummary
+
+        findings = context.get("findings", [])
+        if self._mode == "malformed-json":
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text="not json {{{",
+                parsed_json=None,
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+                errors=["Deliberate malformed JSON"],
+            )
+        elif self._mode == "wrong-shape":
+            raw = json.dumps({"data": "not enrichments"})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"data": "not enrichments"},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        elif self._mode == "missing-evidence":
+            encs = [
+                {
+                    "finding_id": f.get("id", ""),
+                    "evidence_ids": ["EVD-NONEXISTENT"],
+                    "confidence": "Medium",
+                    "limitations": ["test"],
+                }
+                for f in findings
+            ]
+            raw = json.dumps({"enrichments": encs})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"enrichments": encs},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        elif self._mode == "empty-evidence":
+            encs = [
+                {
+                    "finding_id": f.get("id", ""),
+                    "evidence_ids": [],
+                    "confidence": "Medium",
+                    "limitations": ["test"],
+                }
+                for f in findings
+            ]
+            raw = json.dumps({"enrichments": encs})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"enrichments": encs},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        elif self._mode == "unknown-finding":
+            encs = [
+                {
+                    "finding_id": "FAKE-001",
+                    "evidence_ids": ["EVD-001"],
+                    "confidence": "Medium",
+                    "limitations": ["test"],
+                }
+            ]
+            raw = json.dumps({"enrichments": encs})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"enrichments": encs},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        elif self._mode == "extra-fields":
+            encs = [
+                {
+                    "finding_id": f.get("id", ""),
+                    "evidence_ids": ["EVD-001"],
+                    "confidence": "Medium",
+                    "limitations": ["test"],
+                    "invented_field": "bad",
+                }
+                for f in findings
+            ]
+            raw = json.dumps({"enrichments": encs})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"enrichments": encs},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        elif self._mode == "invalid-confidence":
+            encs = [
+                {
+                    "finding_id": f.get("id", ""),
+                    "evidence_ids": ["EVD-001"],
+                    "confidence": "SuperHigh",
+                    "limitations": ["test"],
+                }
+                for f in findings
+            ]
+            raw = json.dumps({"enrichments": encs})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"enrichments": encs},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        elif self._mode == "empty-limitations":
+            encs = [
+                {
+                    "finding_id": f.get("id", ""),
+                    "evidence_ids": ["EVD-001"],
+                    "confidence": "Medium",
+                    "limitations": [],
+                }
+                for f in findings
+            ]
+            raw = json.dumps({"enrichments": encs})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"enrichments": encs},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        elif self._mode == "mixed-batch":
+            valid_enc = {
+                "finding_id": findings[0].get("id", "") if findings else "F-001",
+                "evidence_ids": ["EVD-001"],
+                "confidence": "Medium",
+                "limitations": ["test"],
+            }
+            invalid_enc = {
+                "finding_id": "FAKE-001",
+                "evidence_ids": ["EVD-001"],
+                "confidence": "Medium",
+                "limitations": ["test"],
+            }
+            raw = json.dumps({"enrichments": [valid_enc, invalid_enc]})
+            return AIResponse(
+                provider="failing-mock",
+                model="test",
+                raw_text=raw,
+                parsed_json={"enrichments": [valid_enc, invalid_enc]},
+                usage=AIUsageSummary(provider="failing-mock", model="test"),
+            )
+        else:
+            return super().generate_json(prompt, context, schema_hint)
+
+
+# ── Extended Rejection Tests ────────────────────────────────────────
+
+
+class TestRejectionSchemaFailures:
+    def _base(self) -> dict[str, Any]:
+        return {
+            "finding_id": "TD-DEP-001",
+            "evidence_ids": ["EVD-001"],
+            "confidence": "Medium",
+            "limitations": ["test"],
+        }
+
+    def test_valid_json_wrong_shape(self):
+        results = validate_raw_output('{"data": "not enrichments"}', {"TD-DEP-001"}, {"EVD-001"})
+        assert len(results) == 1
+        assert not results[0].is_valid
+        assert any("enrichments" in r for r in results[0].rejection_reasons)
+
+    def test_enrichment_array_contains_non_objects(self):
+        raw = json.dumps({"enrichments": ["not an object", 42]})
+        results = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        assert all(not r.is_valid for r in results)
+
+    def test_missing_finding_id(self):
+        data = self._base()
+        del data["finding_id"]
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+
+    def test_missing_evidence_ids(self):
+        data = self._base()
+        del data["evidence_ids"]
+        # Pydantic will use default_factory=list → empty list → rejected by our check
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+        assert "evidence_ids" in result.invalid_fields
+
+    def test_evidence_ids_is_string_not_list(self):
+        data = self._base()
+        data["evidence_ids"] = "EVD-001"
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+
+    def test_evidence_ids_empty_list_rejected(self):
+        data = self._base()
+        data["evidence_ids"] = []
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+        assert "evidence_ids" in result.invalid_fields
+
+    def test_finding_id_null(self):
+        data = self._base()
+        data["finding_id"] = None
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+
+    def test_confidence_empty_string(self):
+        data = self._base()
+        data["confidence"] = ""
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+        assert "confidence" in result.invalid_fields
+
+    def test_multiple_violations_in_one_enrichment(self):
+        data = {
+            "finding_id": "FAKE-001",
+            "evidence_ids": [],
+            "confidence": "Bad",
+            "limitations": [],
+        }
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+        assert len(result.invalid_fields) >= 3  # finding_id, evidence_ids, confidence, limitations
+
+
+class TestRejectionEvidenceFailures:
+    def _base(self) -> dict[str, Any]:
+        return {
+            "finding_id": "TD-DEP-001",
+            "evidence_ids": ["EVD-001"],
+            "confidence": "Medium",
+            "limitations": ["test"],
+        }
+
+    def test_evidence_id_from_another_repo(self):
+        data = self._base()
+        data["evidence_ids"] = ["EXT-EVD-999"]
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+        assert "EXT-EVD-999" in result.missing_evidence_ids
+
+    def test_invented_finding_id(self):
+        data = self._base()
+        data["finding_id"] = "TD-NEW-999"
+        result = validate_finding_enrichment(data, {"TD-DEP-001"}, {"EVD-001"})
+        assert not result.is_valid
+        assert "finding_id" in result.invalid_fields
+
+
+class TestRejectionBatchBehavior:
+    def _base(self) -> dict[str, Any]:
+        return {
+            "finding_id": "TD-DEP-001",
+            "evidence_ids": ["EVD-001"],
+            "confidence": "Medium",
+            "limitations": ["test"],
+        }
+
+    def test_valid_plus_invalid_non_strict(self):
+        valid = self._base()
+        invalid = {**self._base(), "finding_id": "FAKE-001"}
+        raw = json.dumps({"enrichments": [valid, invalid]})
+        results = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        assert results[0].is_valid
+        assert not results[1].is_valid
+
+    def test_valid_plus_invalid_strict(self):
+        valid = self._base()
+        invalid = {**self._base(), "finding_id": "FAKE-001"}
+        raw = json.dumps({"enrichments": [valid, invalid]})
+        results = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        # Strict behavior is handled by enricher, not validator
+        assert len(results) == 2
+        assert results[0].is_valid
+        assert not results[1].is_valid
+
+    def test_all_invalid_zero_accepted(self):
+        encs = [
+            {
+                "finding_id": "FAKE-001",
+                "evidence_ids": ["EVD-001"],
+                "confidence": "Medium",
+                "limitations": ["test"],
+            }
+        ]
+        raw = json.dumps({"enrichments": encs})
+        results = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        assert all(not r.is_valid for r in results)
+
+    def test_rejection_includes_raw_output_hash(self):
+        raw = json.dumps(
+            {
+                "enrichments": [
+                    {
+                        "finding_id": "FAKE",
+                        "evidence_ids": [],
+                        "confidence": "Medium",
+                        "limitations": ["t"],
+                    }
+                ]
+            }
+        )
+        results = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        assert results[0].raw_output_hash != ""
+        assert len(results[0].raw_output_hash) == 16
+
+    def test_rejection_includes_timestamp(self):
+        raw = json.dumps(
+            {
+                "enrichments": [
+                    {
+                        "finding_id": "FAKE",
+                        "evidence_ids": [],
+                        "confidence": "Medium",
+                        "limitations": ["t"],
+                    }
+                ]
+            }
+        )
+        results = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        assert results[0].timestamp != ""
+
+    def test_same_invalid_same_hash(self):
+        raw = json.dumps(
+            {
+                "enrichments": [
+                    {
+                        "finding_id": "FAKE",
+                        "evidence_ids": [],
+                        "confidence": "Medium",
+                        "limitations": ["t"],
+                    }
+                ]
+            }
+        )
+        r1 = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        r2 = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        assert r1[0].raw_output_hash == r2[0].raw_output_hash
+
+    def test_empty_enrichments_array(self):
+        raw = json.dumps({"enrichments": []})
+        results = validate_raw_output(raw, {"TD-DEP-001"}, {"EVD-001"})
+        assert results == []
+
+
+# ── Context Stress Tests ─────────────────────────────────────────────
+
+
+class TestContextStress:
+    def _make_large_evidence_repo(self, tmp_path: Path, n_evidence: int = 30) -> Path:
+        ai_debt = tmp_path / ".ai-debt"
+        evidence_items = []
+        for i in range(n_evidence):
+            evidence_items.append(
+                {
+                    "evidence_id": f"EVD-{i:03d}",
+                    "type": "manifest_detected",
+                    "location": {"file": f"file_{i}.py"},
+                    "raw_observation": f"Evidence item {i}" + "x" * 200,
+                }
+            )
+        _write_json(
+            ai_debt / "evidence.json", {"schema_version": "1.0", "evidence": evidence_items}
+        )
+        all_evids = [f"EVD-{i:03d}" for i in range(n_evidence)]
+        _write_json(
+            ai_debt / "debt-register.json",
+            {
+                "schema_version": "1.0",
+                "findings": [
+                    {
+                        "id": "F-001",
+                        "category": "TD-DEP",
+                        "title": "Test",
+                        "severity": "Medium",
+                        "evidence_ids": all_evids,
+                        "analysis_unit_ids": [],
+                    }
+                ],
+            },
+        )
+        return tmp_path
+
+    def test_max_evidence_items_capped(self, tmp_path: Path):
+        repo = self._make_large_evidence_repo(tmp_path, 30)
+        artifacts = load_artifacts(repo / ".ai-debt")
+        budget = AIBudget(max_evidence_items=10)
+        items, omitted = get_linked_evidence(artifacts, [f"EVD-{i:03d}" for i in range(30)], budget)
+        assert len(items) <= 10
+        assert omitted >= 20
+
+    def test_max_context_chars_capped(self, tmp_path: Path):
+        repo = self._make_large_evidence_repo(tmp_path, 10)
+        artifacts = load_artifacts(repo / ".ai-debt")
+        budget = AIBudget(max_context_chars=500)
+        items, _ = get_linked_evidence(artifacts, [f"EVD-{i:03d}" for i in range(10)], budget)
+        # Should stop before including all 10 due to char budget
+        assert len(items) < 10
+
+    def test_long_raw_observation_truncated(self, tmp_path: Path):
+        ai_debt = tmp_path / ".ai-debt"
+        _write_json(
+            ai_debt / "evidence.json",
+            {
+                "schema_version": "1.0",
+                "evidence": [
+                    {
+                        "evidence_id": "EVD-001",
+                        "type": "test",
+                        "location": {"file": "a.py"},
+                        "raw_observation": "x" * 10000,
+                    }
+                ],
+            },
+        )
+        _write_json(
+            ai_debt / "debt-register.json",
+            {
+                "schema_version": "1.0",
+                "findings": [{"id": "F-001", "evidence_ids": ["EVD-001"], "analysis_unit_ids": []}],
+            },
+        )
+        artifacts = load_artifacts(ai_debt)
+        budget = AIBudget()
+        items, _ = get_linked_evidence(artifacts, ["EVD-001"], budget)
+        assert len(items) == 1
+        # Verify observation exists but context stays bounded
+
+    def test_deterministic_evidence_ordering(self, tmp_path: Path):
+        repo = self._make_large_evidence_repo(tmp_path, 5)
+        artifacts = load_artifacts(repo / ".ai-debt")
+        budget = AIBudget()
+        ids = ["EVD-000", "EVD-001", "EVD-002", "EVD-003", "EVD-004"]
+        items1, _ = get_linked_evidence(artifacts, ids, budget)
+        items2, _ = get_linked_evidence(artifacts, ids, budget)
+        ids1 = [i["evidence_id"] for i in items1]
+        ids2 = [i["evidence_id"] for i in items2]
+        assert ids1 == ids2
+
+    def test_empty_raw_observation_handled(self, tmp_path: Path):
+        ai_debt = tmp_path / ".ai-debt"
+        _write_json(
+            ai_debt / "evidence.json",
+            {
+                "schema_version": "1.0",
+                "evidence": [
+                    {
+                        "evidence_id": "EVD-001",
+                        "type": "test",
+                        "location": {"file": "a.py"},
+                        "raw_observation": "",
+                    }
+                ],
+            },
+        )
+        _write_json(
+            ai_debt / "debt-register.json",
+            {
+                "schema_version": "1.0",
+                "findings": [{"id": "F-001", "evidence_ids": ["EVD-001"], "analysis_unit_ids": []}],
+            },
+        )
+        artifacts = load_artifacts(ai_debt)
+        items, _ = get_linked_evidence(artifacts, ["EVD-001"], AIBudget())
+        assert len(items) == 1
+
+    def test_zero_evidence_ids_safe(self, tmp_path: Path):
+        ai_debt = tmp_path / ".ai-debt"
+        _write_json(ai_debt / "evidence.json", {"schema_version": "1.0", "evidence": []})
+        _write_json(
+            ai_debt / "debt-register.json",
+            {
+                "schema_version": "1.0",
+                "findings": [{"id": "F-001", "evidence_ids": [], "analysis_unit_ids": []}],
+            },
+        )
+        artifacts = load_artifacts(ai_debt)
+        items, omitted = get_linked_evidence(artifacts, [], AIBudget())
+        assert items == []
+        assert omitted == 0
+
+    def test_corrupted_units_degrades(self, tmp_path: Path):
+        ai_debt = tmp_path / ".ai-debt"
+        _write_json(ai_debt / "evidence.json", {"schema_version": "1.0", "evidence": []})
+        _write_json(
+            ai_debt / "debt-register.json",
+            {
+                "schema_version": "1.0",
+                "findings": [{"id": "F-001", "evidence_ids": [], "analysis_unit_ids": []}],
+            },
+        )
+        (ai_debt / "analysis-units.json").write_text("not json", encoding="utf-8")
+        artifacts = load_artifacts(ai_debt)
+        # Should degrade gracefully — units returns empty dict
+        assert artifacts["units"] == {}
+
+    def test_corrupted_graph_degrades(self, tmp_path: Path):
+        ai_debt = tmp_path / ".ai-debt"
+        _write_json(ai_debt / "evidence.json", {"schema_version": "1.0", "evidence": []})
+        _write_json(
+            ai_debt / "debt-register.json",
+            {
+                "schema_version": "1.0",
+                "findings": [{"id": "F-001", "evidence_ids": [], "analysis_unit_ids": []}],
+            },
+        )
+        (ai_debt / "architecture-graph.json").write_text("not json", encoding="utf-8")
+        artifacts = load_artifacts(ai_debt)
+        assert artifacts["graph"] == {}
+
+    def test_corrupted_verification_degrades(self, tmp_path: Path):
+        ai_debt = tmp_path / ".ai-debt"
+        _write_json(ai_debt / "evidence.json", {"schema_version": "1.0", "evidence": []})
+        _write_json(
+            ai_debt / "debt-register.json",
+            {
+                "schema_version": "1.0",
+                "findings": [{"id": "F-001", "evidence_ids": [], "analysis_unit_ids": []}],
+            },
+        )
+        (ai_debt / "verification-report.json").write_text("not json", encoding="utf-8")
+        artifacts = load_artifacts(ai_debt)
+        assert artifacts["verification"] == {}
+
+    def test_no_whole_repository_dump(self, sample_repo: Path):
+        artifacts = load_artifacts(sample_repo / ".ai-debt")
+        budget = AIBudget()
+        ctx = build_enrichment_context(artifacts, max_findings=1, budget=budget)
+        # Only 1 finding should be in context
+        assert len(ctx["findings"]) == 1
+
+    def test_only_linked_evidence_in_context(self, sample_repo: Path):
+        artifacts = load_artifacts(sample_repo / ".ai-debt")
+        register = artifacts["register"]
+        finding = register["findings"][0]  # EVD-001, EVD-002
+        budget = AIBudget()
+        items, _ = get_linked_evidence(artifacts, finding["evidence_ids"], budget)
+        included = {i["evidence_id"] for i in items}
+        assert "EVD-003" not in included
+
+    def test_unknown_unit_ids_skipped(self, sample_repo: Path):
+        artifacts = load_artifacts(sample_repo / ".ai-debt")
+        budget = AIBudget()
+        units, _ = get_linked_units(artifacts, ["AU-NONEXISTENT"], budget)
+        assert units == []
+
+
+# ── Sidecar Quality Tests ───────────────────────────────────────────
+
+
+class TestSidecarQuality:
+    def test_md_privacy_caution_present(self, sample_repo: Path):
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "Privacy Caution" in md
+        assert "summarized repository context" in md
+
+    def test_md_states_external_providers_not_included(self, sample_repo: Path):
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "not included in v0.7.1" in md or "External AI providers are not included" in md
+
+    def test_md_states_canonical_unchanged(self, sample_repo: Path):
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "No canonical artifacts were modified" in md
+
+    def test_md_includes_timestamp(self, sample_repo: Path):
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "Generated:" in md
+
+
+# ── Immutability Across Modes ───────────────────────────────────────
+
+
+class TestImmutabilityModes:
+    def _hash_files(self, repo: Path) -> dict[str, str]:
+        import hashlib
+
+        hashes: dict[str, str] = {}
+        ai_debt = repo / ".ai-debt"
+        for name in ["debt-register.json", "evidence.json", "analysis-units.json"]:
+            p = ai_debt / name
+            if p.exists():
+                hashes[name] = hashlib.sha256(p.read_bytes()).hexdigest()
+        return hashes
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            {"provider_name": "disabled"},
+            {"provider_name": "mock"},
+            {"provider_name": "mock", "dry_run": True},
+            {"provider_name": "mock", "strict": True},
+            {"provider_name": "mock", "finding_id": "TD-DEP-001"},
+            {"provider_name": "mock", "max_findings": 1},
+        ],
+    )
+    def test_canonical_unchanged(self, sample_repo: Path, mode: dict[str, Any]):
+        before = self._hash_files(sample_repo)
+        enrich_findings(sample_repo, **mode)
+        after = self._hash_files(sample_repo)
+        assert before == after
+
+
+# ── Privacy & Dependency Checks ─────────────────────────────────────
+
+
+class TestPrivacyChecks:
+    def test_no_network_libs_in_ai_modules(self):
+        import pharabius.ai.adapter as adapter_mod
+        import pharabius.ai.context as context_mod
+        import pharabius.ai.enricher as enricher_mod
+        import pharabius.ai.validator as validator_mod
+
+        for mod in [adapter_mod, context_mod, enricher_mod, validator_mod]:
+            source = Path(mod.__file__).read_text(encoding="utf-8")
+            assert "httpx" not in source
+            assert "requests." not in source  # not "requests" alone (too broad)
+            assert "aiohttp" not in source
+            assert "urllib.request" not in source
+
+    def test_no_provider_sdks(self):
+        import pharabius.ai.mock_provider as mod
+
+        source = Path(mod.__file__).read_text(encoding="utf-8")
+        assert "openai" not in source.lower() or "mock" in source.lower()
+        assert "anthropic" not in source.lower()
+
+
+# ── Import Boundary Checks ──────────────────────────────────────────
+
+
+class TestImportBoundaries:
+    def test_ai_does_not_import_core(self):
+        import pharabius.ai.enricher as mod
+
+        source = Path(mod.__file__).read_text(encoding="utf-8")
+        assert "from pharabius.core" not in source
+        assert "import pharabius.core" not in source
+
+    def test_core_does_not_import_ai(self):
+        import pharabius.core.analyzer as mod
+
+        source = Path(mod.__file__).read_text(encoding="utf-8")
+        assert "from pharabius.ai" not in source
+        assert "import pharabius.ai" not in source

@@ -72,13 +72,18 @@ def validate_finding_enrichment(
         rejection_reasons.append(f"Unknown finding ID: {enrichment.finding_id}")
         invalid_fields.append("finding_id")
 
-    # 3. Evidence IDs exist
-    for eid in enrichment.evidence_ids:
-        if eid not in valid_evidence_ids:
-            missing_evidence_ids.append(eid)
-    if missing_evidence_ids:
-        rejection_reasons.append(f"Missing evidence IDs: {missing_evidence_ids}")
+    # 3. Evidence IDs must be non-empty
+    if not enrichment.evidence_ids:
+        rejection_reasons.append("evidence_ids must contain at least one valid evidence ID")
         invalid_fields.append("evidence_ids")
+    else:
+        # 3b. Evidence IDs must all exist
+        for eid in enrichment.evidence_ids:
+            if eid not in valid_evidence_ids:
+                missing_evidence_ids.append(eid)
+        if missing_evidence_ids:
+            rejection_reasons.append(f"Missing evidence IDs: {missing_evidence_ids}")
+            invalid_fields.append("evidence_ids")
 
     # 4. Analysis unit IDs exist (if provided)
     if enrichment.analysis_unit_ids and valid_unit_ids is not None:
@@ -144,7 +149,17 @@ def validate_raw_output(
             )
         ]
 
-    enrichments = parsed.get("enrichments", [])
+    enrichments = parsed.get("enrichments")
+    if enrichments is None:
+        return [
+            AIValidationResult(
+                enrichment=None,
+                is_valid=False,
+                rejection_reasons=["Missing 'enrichments' array in output"],
+                invalid_fields=["enrichments"],
+                raw_output_hash=raw_hash,
+            )
+        ]
     if not isinstance(enrichments, list):
         return [
             AIValidationResult(
