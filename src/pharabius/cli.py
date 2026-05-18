@@ -573,6 +573,22 @@ def enrich(
         )
         raise typer.Exit(code=1)
 
+    # Validate finding ID if specified
+    if finding_id is not None:
+        import json as _json
+
+        try:
+            register_data = _json.loads(debt_register.read_text(encoding="utf-8"))
+        except (OSError, _json.JSONDecodeError):
+            register_data = {}
+        known_ids = {f.get("id", "") for f in register_data.get("findings", [])}
+        if finding_id not in known_ids:
+            console.print(
+                f"[bold red]Error:[/bold red] "
+                f"Finding ID '{finding_id}' was not found in debt-register.json."
+            )
+            raise typer.Exit(code=1)
+
     try:
         report = enrich_findings(
             resolved_root,

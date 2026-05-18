@@ -143,8 +143,19 @@ def _write_md_report(report: AIEnrichmentReport, path: Path) -> None:
         [
             "---",
             "",
+            f"*Generated: {report.generated_at}*",
+            "",
+            "## Privacy Caution",
+            "",
+            "Sidecar files may contain summarized repository context. "
+            "Review before sharing with external parties.",
+            "",
+            "External AI providers are not included in v0.7.1. "
+            "Future providers may send evidence to third-party services.",
+            "",
             "*This report is AI-generated enrichment, not canonical finding data. "
-            "Deterministic findings remain in `debt-register.json`.*",
+            "Deterministic findings remain in `debt-register.json`. "
+            "No canonical artifacts were modified.*",
         ]
     )
 

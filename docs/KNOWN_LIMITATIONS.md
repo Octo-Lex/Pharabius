@@ -253,11 +253,16 @@ Evidence exceeding the budget is omitted and recorded in the context summary.
 
 ## 46. AI output validation rejects claims without evidence IDs
 
-Every enrichment must reference existing finding IDs and evidence IDs.
-Output with unknown IDs, invalid confidence values, or empty limitations is rejected
-and recorded in `rejected-ai-output.json`.
+Every enrichment must reference existing finding IDs and at least one evidence ID.
+Empty `evidence_ids` lists are rejected. Output with unknown IDs, invalid confidence values,
+or empty limitations is rejected and recorded in `rejected-ai-output.json`.
 
-## 47. No report integration for AI enrichments in v0.7.0
+## 47. No report integration for AI enrichments
 
 AI enrichments are not included in deterministic reports. Reports render normally
 when `.ai-debt/ai/` is absent or present. Report integration is planned for a future release.
+
+## 48. Unknown --finding-id fails clearly
+
+Running `ai-debt enrich --finding-id NONEXISTENT` exits with code 1 and a clear error message.
+It does not silently return 0 enrichments.
