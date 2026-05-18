@@ -1,12 +1,15 @@
 # Pharabius Roadmap
 
-## v0.3.1 — Stabilization & Verification UX
+## v0.3.2 — Field-Validation Bug Fixes (released 2026-05-18)
 
-- Verification report readability improvements
-- Verification edge-case test coverage for all 6 statuses
-- `ai-debt status` read-only workspace summary command
-- Lifecycle documentation
-- Documentation consistency
+- .NET manifest detection: `.csproj`, `.fsproj`, `.vbproj` produce evidence
+- .NET dependency findings for projects without `packages.lock.json`
+- Java Maven parent/library POM false positives eliminated
+- CI/deployment keyword false positives suppressed
+- Terraform `.terraform.lock.hcl` evidence detection
+- 195 tests passing, 87% coverage
+
+## v0.3.1 — Stabilization & Verification UX (released 2026-05-17)
 
 ## v0.3.0 — Finding Verification (released 2026-05-17)
 

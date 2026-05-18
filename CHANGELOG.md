@@ -4,13 +4,25 @@ All notable changes to Pharabius are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- .NET manifest detection: `.csproj`, `.fsproj`, `.vbproj` now produce `manifest_detected` evidence
+- .NET solution files (`.sln`) emit `solution_file_detected`, not dependency manifest evidence
+- `.NET` dependency findings now produced for projects without `packages.lock.json`
+- Java Maven parent/aggregator POMs no longer produce TD-DEP dependency findings
+- Java Maven library modules no longer produce TD-DEP dependency findings
+- CI workflow files no longer trigger false risk signals from `actions/checkout` or `deploy` keywords
+- `.terraform.lock.hcl` now detected as reproducibility evidence
+
 ### Added
 
-- `ai-debt status` — Read-only workspace summary command
-- Verification report improvements: status definitions, evidence delta columns, disclaimer, grouped actions
-- Edge-case test coverage for all 6 verification statuses
+- Suffix-based manifest detection for .NET project files
+- Maven POM role classification (parent/library/application/unknown)
+- CI/deployment file context-aware keyword suppression
+- Terraform lockfile evidence detection
+- NuGet package manager detection in profiler via `.csproj`/`.fsproj` suffix
 
-## v0.3.0 — 2026-05-17
+## v0.3.1 — 2026-05-17
 
 ### Added
 

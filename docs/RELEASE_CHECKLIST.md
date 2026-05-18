@@ -249,3 +249,18 @@ Completed 2026-05-17.
 - [ ] pyproject.toml version set to `0.3.1`
 - [ ] All 7 release gates green
 - [ ] CI passes on PR
+
+---
+
+## 19. Step 13 — v0.3.2 Field-Validation Bug Fixes
+
+- [x] .NET manifest suffix detection (BUG-001 fixed)
+- [x] .sln emits solution_file_detected, not manifest_detected
+- [x] .NET TD-DEP findings for .csproj without packages.lock.json
+- [x] Maven parent POM no longer produces TD-DEP
+- [x] Maven library modules no longer produce TD-DEP
+- [x] CI keyword false positives suppressed (checkout, deploy, release, monitoring)
+- [x] .terraform.lock.hcl detected as lockfile evidence
+- [x] 195 tests passing, 87% coverage
+- [x] All 7 release gates green
+- [x] CI passes on PR
