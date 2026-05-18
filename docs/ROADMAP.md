@@ -70,7 +70,23 @@
 - Static-analysis evidence connector (Semgrep, ruff audit mode)
 - Import graph analysis (coupling metrics, circular dependency detection)
 
-## v0.5.0 — AI Adapter (Evidence-Constrained) (planned)
+## v0.5.2 — Architecture Graph Field Validation (2026-05-18)
+
+- 11-repository validation of architecture graph and TD-ARCH findings
+- 4 false negatives documented (FN-001 through FN-004)
+- 0 false positives across all repos
+- Node derivation strategy documented
+- Backlog created for v0.6.0 graph improvements
+
+## v0.6.0 — Architecture Graph Enhancements (planned)
+
+- Monorepo node splitting (packages/*, apps/*) — fixes FN-001, FN-002, FN-004
+- Rust import detection (use statements) — fixes FN-003
+- Sub-package node derivation for Python src layouts
+- Test-scope edge confidence reduction
+- Architecture policy matching improvement
+
+## v0.7.0 — AI Adapter (Evidence-Constrained) (planned)
 
 - AI adapter interface behind `--ai` flag
 - Evidence-constrained: AI may only comment on evidence IDs already collected by the deterministic scanner

@@ -215,3 +215,14 @@ mapper does NOT import from: analyzer, reporter, planner
 ```
 init → profile → scan → map → analyze → report → plan
 ```
+
+### Node derivation strategy
+
+`ai-debt graph` creates architecture nodes from source files using this strategy:
+
+1. **Python (src layout)**: Files under `src/<top_package>/` are grouped into a single package node named after the top-level package directory.
+2. **Python (flat layout)**: Files are grouped by the first directory level under the repository root.
+3. **TypeScript/JS**: Files are grouped by the first directory level (e.g., `packages/`, `apps/`, `scripts/`).
+4. **Other ecosystems**: Same first-level directory grouping.
+
+**Known limitation**: Monorepo layouts using `packages/*` or `apps/*` collapse all sub-packages into a single node. See KNOWN_LIMITATIONS.md item 38.
