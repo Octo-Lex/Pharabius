@@ -102,12 +102,18 @@ def scan(
         ),
     ] = Path.cwd(),  # noqa: B008
 ) -> None:
-    """
-    Collect normalized repository evidence.
-    """
-    repository_root = repository_root.resolve()
+    """Collect normalized repository evidence."""
+    from pharabius.core.config import effective_exclude_paths, load_config
 
-    evidence_store = write_evidence_store(repository_root)
+    repository_root = repository_root.resolve()
+    config = load_config(repository_root)
+    extra_excludes = effective_exclude_paths(config)
+
+    evidence_store = write_evidence_store(
+        repository_root,
+        extra_exclude_paths=extra_excludes or None,
+        max_file_size_kb=config.analysis.max_file_size_kb,
+    )
 
     console.print("[bold green]Generated evidence store[/bold green]")
     console.print(f"Repository: {repository_root}")
