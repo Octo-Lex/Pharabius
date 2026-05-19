@@ -61,6 +61,14 @@ _ECOSYSTEMS = (
 )
 
 
+# Risk scoring template matching blueprint §12.1.
+#
+# All 12 factors are present. Two factors default to Low (1) and are not
+# overridden by any rule:
+#   - architecture_centrality: requires import graph wiring (deferred)
+#   - change_frequency: requires git history analysis (deferred)
+# Both defaulting to 1 is conservative — no score inflation.
+# Full alignment with blueprint §12 requires v0.11.0+ work.
 RISK_SCORE_TEMPLATE = {
     "technical_severity": 1,
     "architecture_centrality": 1,

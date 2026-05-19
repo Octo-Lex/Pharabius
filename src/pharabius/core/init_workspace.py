@@ -14,7 +14,7 @@ project:
 
 analysis:
   mode: "baseline"
-  include_git_history: true
+  include_git_history: false
   max_file_size_kb: 500
   exclude_paths:
     - node_modules
@@ -28,11 +28,9 @@ analysis:
     - __pycache__
 
 ai:
-  enabled: true
-  provider: "auto"
-  model: "auto"
+  enabled: false
+  provider: "disabled"
   require_evidence_ids: true
-  allow_business_inference: true
 
 risk_scoring:
   version: "1.0"

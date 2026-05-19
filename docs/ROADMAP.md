@@ -163,12 +163,24 @@
 - Optional manual smoke script
 - Privacy caution updated
 
-## v0.10.0 — Taxonomy Closure & v1 Readiness (unreleased)
+## v0.10.0 — Taxonomy Closure & v1 Readiness (released 2026-05-19)
 
 - 7 new analysis rules: TD-CODE, TD-COMP, TD-OPS, TD-DATA, TD-PERF, TD-OBS, TD-PROCESS
 - Full 14/14 taxonomy coverage
 - Evidence-backed findings only
 - Conservative severity defaults
+- False positive suppression for scanner/docs/test keyword noise
+- CI-only workflow suppression for TD-OPS/TD-OBS
+- Directory-structure matching for TD-DATA (no broad "schema" matching)
+
+## v0.10.1 — v1 Readiness Audit (unreleased)
+
+- Config defaults fixed (safe, accurate)
+- First-run smoke tests
+- Risk scoring audit documented
+- `.ai-debt/` contract audit
+- Report readability audit
+- Artifact ownership documented
 
 ## Future (v0.11.x+)
 
