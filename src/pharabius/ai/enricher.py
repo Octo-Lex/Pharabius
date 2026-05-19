@@ -31,20 +31,29 @@ from pharabius.schemas.ai_enrichment import (
 )
 
 
-def _get_provider(provider_name: str) -> AIAdapter:
+def _get_provider(
+    provider_name: str,
+    *,
+    model: str = "",
+) -> AIAdapter:
     """Get an AI adapter by name."""
-    providers = {
-        "disabled": DisabledAdapter,
-        "mock": MockAIAdapter,
-    }
-    cls = providers.get(provider_name)
-    if cls is None:
-        raise ValueError(
-            f"Provider '{provider_name}' is not available in v0.8.0. "
-            "Available providers: disabled, mock. "
-            "Future releases may add external provider support."
-        )
-    return cls()
+    if provider_name == "disabled":
+        return DisabledAdapter()
+    if provider_name == "mock":
+        return MockAIAdapter()
+    if provider_name == "openai-compatible":
+        try:
+            from pharabius.ai.providers.openai_compatible import OpenAICompatibleAdapter
+        except ImportError as exc:
+            raise ImportError(
+                "Provider 'openai-compatible' requires httpx. "
+                'Install with: pip install "pharabius[openai-compatible]"'
+            ) from exc
+        return OpenAICompatibleAdapter(model=model)
+    raise ValueError(
+        f"Provider '{provider_name}' is not available. "
+        "Available providers: disabled, mock, openai-compatible."
+    )
 
 
 def _build_prompt(context: dict[str, Any]) -> str:
@@ -327,6 +336,7 @@ def enrich_findings(
     dry_run: bool = False,
     strict: bool = False,
     budget: AIBudget | None = None,
+    model: str = "",
 ) -> AIEnrichmentReport:
     """Run AI enrichment pipeline.
 
@@ -375,7 +385,7 @@ def enrich_findings(
         )
 
     # 4. Get provider and call
-    provider = _get_provider(provider_name)
+    provider = _get_provider(provider_name, model=model)
     prompt = _build_prompt(ctx)
     response = provider.generate_json(prompt, ctx, timeout_seconds=budget.provider_timeout_seconds)
 

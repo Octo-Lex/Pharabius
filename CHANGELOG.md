@@ -2,6 +2,35 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [0.9.0] - Unreleased
+
+### Added
+
+- First real provider: `openai-compatible` adapter for any endpoint implementing the expected OpenAI-compatible `/v1/chat/completions` request and response shape
+- Optional dependency: `pip install "pharabius[openai-compatible]"` (adds `httpx`)
+- `--allow-external-provider` consent flag required before any external provider call
+- `--model` flag for provider model selection (required for openai-compatible if `PHARABIUS_OPENAI_MODEL` not set)
+- `--timeout-seconds` flag for provider call timeout
+- Credential handling from `PHARABIUS_OPENAI_API_KEY` environment variable only
+- `PHARABIUS_OPENAI_BASE_URL` for endpoint configuration (default: `https://api.openai.com`)
+- Provider error mapping: auth_failed, rate_limit, timeout, server_error, content_filter, network_error
+- Token usage captured from provider responses
+- Request ID and latency captured from provider responses
+
+### Security
+
+- Consent gate at CLI level: provider module never imported without `--allow-external-provider`
+- No credentials in sidecars, logs, or error messages
+- No `.env` loading, no config file, no credential storage
+- `--context-preview` works without credentials or consent
+
+### Tests
+
+- 597 tests (32 new), 83.88% coverage
+- OpenAI-compatible adapter tests: 22 tests with `httpx.MockTransport` (no real network)
+- CLI consent tests: 10 tests for consent gate, context preview, credential safety
+- Regression tests: 3 tests confirming unchanged behavior
+
 ## [0.8.0] - Unreleased
 
 ### Added

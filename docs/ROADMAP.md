@@ -128,7 +128,7 @@
 - Sidecar review workflow documented
 - Privacy and sharing guidance
 
-## v0.8.0 — Provider Interface Readiness (unreleased)
+## v0.8.0 — Provider Interface Readiness (released 2026-05-19)
 
 - `ai-debt enrich --context-preview` — preview bounded context without calling provider
 - Provider interface hardening: structured error fields in `AIResponse`
@@ -140,7 +140,21 @@
 - Prompt contract and credential policy documented
 - No real provider — readiness only
 
-## Future (v0.9.x+)
+## v0.9.0 — First Real Provider Adapter (unreleased)
+
+- First real provider: `openai-compatible` adapter
+- Optional dependency: `pip install "pharabius[openai-compatible]"`
+- `--allow-external-provider` consent flag
+- `--model` flag for provider model selection
+- `--timeout-seconds` flag for provider timeout
+- Credential handling from environment variables only
+- Provider error mapping: auth, rate-limit, timeout, content filter, network
+- Token usage and latency captured
+- No real network in CI — all tests use mock transport
+- No Azure-specific support
+- No automatic retries
+
+## Future (v0.10.x+)
 
 - Real provider integration (OpenAI, Claude, or local model)
 - Report integration for AI enrichments

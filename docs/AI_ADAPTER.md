@@ -1,4 +1,4 @@
-# AI Adapter — Pharabius v0.8.0
+# AI Adapter — Pharabius v0.9.0
 
 ## Overview
 
@@ -355,3 +355,90 @@ When a real external provider is added:
 - `--context-preview` allows inspecting what will be sent
 - No automatic external calls from `ai-debt run`
 - No hidden provider fallback
+
+## First Real Provider (v0.9.0)
+
+### Provider: openai-compatible
+
+Supports any endpoint that implements the expected OpenAI-compatible `/v1/chat/completions` request and response shape.
+
+### Installation
+
+```bash
+pip install "pharabius[openai-compatible]"
+```
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---|---|---|---|
+| `PHARABIUS_OPENAI_API_KEY` | Yes | — | API key |
+| `PHARABIUS_OPENAI_MODEL` | If `--model` not passed | — | Model name |
+| `PHARABIUS_OPENAI_BASE_URL` | No | `https://api.openai.com` | API base URL |
+
+No hardcoded model default. Model must be provided via `--model` or `PHARABIUS_OPENAI_MODEL`.
+
+### Usage
+
+```bash
+# Preview what would be sent (no provider call, no credentials needed)
+ai-debt enrich --provider openai-compatible --context-preview -r /path/to/repo
+
+# Run with consent
+ai-debt enrich --provider openai-compatible \
+  --model gpt-4o \
+  --allow-external-provider \
+  -r /path/to/repo
+```
+
+### Consent
+
+External providers require explicit consent:
+
+```text
+Provider 'openai-compatible' may send repository evidence to an external service.
+Run with --context-preview to inspect what would be sent.
+Then rerun with --allow-external-provider if you approve.
+```
+
+Mock and disabled providers do not require consent.
+
+### What data is sent
+
+- Selected findings with linked evidence only
+- Bounded context (respects budget)
+- System instruction requiring strict JSON output
+
+### What is never sent
+
+- Whole repository files
+- Unrelated evidence
+- Credentials
+- `.git` data
+
+### Manual smoke test procedure
+
+```bash
+# 1. Set credentials
+export PHARABIUS_OPENAI_API_KEY=sk-...
+export PHARABIUS_OPENAI_MODEL=gpt-4o
+
+# 2. Preview first
+ai-debt enrich --provider openai-compatible --context-preview -r /path/to/repo
+
+# 3. Run with consent
+ai-debt enrich --provider openai-compatible --allow-external-provider -r /path/to/repo
+
+# 4. Verify sidecar
+ai-debt ai-status -r /path/to/repo
+```
+
+### Credential policy
+
+- Credentials from environment variables only
+- No `.env` loading
+- No config file
+- No credentials in `.ai-debt/`
+- No credentials in sidecar JSON/markdown
+- No credentials in logs or errors
+- Missing credential fails with clear message
