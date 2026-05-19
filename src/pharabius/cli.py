@@ -542,9 +542,16 @@ def enrich(
             help="Reject entire batch if any enrichment fails validation.",
         ),
     ] = False,
+    context_preview: Annotated[
+        bool,
+        typer.Option(
+            "--context-preview",
+            help="Preview bounded context without calling any provider or writing files.",
+        ),
+    ] = False,
 ) -> None:
     """Enrich findings with AI-generated explanations and rationale."""
-    from pharabius.ai.enricher import enrich_findings
+    from pharabius.ai.enricher import enrich_findings, format_context_preview, preview_context
 
     resolved_root = (repository_root or Path.cwd()).resolve()
 
@@ -565,11 +572,38 @@ def enrich(
         )
         raise typer.Exit(code=1)
 
+    # Context preview mode — skip provider validation and enrichment
+    if context_preview:
+        # Validate finding ID if specified
+        if finding_id is not None:
+            import json as _json
+
+            try:
+                register_data = _json.loads(debt_register.read_text(encoding="utf-8"))
+            except (OSError, _json.JSONDecodeError):
+                register_data = {}
+            known_ids = {f.get("id", "") for f in register_data.get("findings", [])}
+            if finding_id not in known_ids:
+                console.print(
+                    f"[bold red]Error:[/bold red] "
+                    f"Finding ID '{finding_id}' was not found in debt-register.json."
+                )
+                raise typer.Exit(code=1)
+
+        preview = preview_context(
+            resolved_root,
+            max_findings=max_findings,
+            finding_id=finding_id,
+        )
+        console.print(format_context_preview(preview))
+        return
+
     if provider not in ("disabled", "mock"):
         console.print(
             f"[bold red]Error:[/bold red] "
-            f"AI provider '{provider}' is not available. "
-            "Use --provider mock for local testing."
+            f"Provider '{provider}' is not available in v0.8.0. "
+            "Available providers: disabled, mock. "
+            "Future releases may add external provider support."
         )
         raise typer.Exit(code=1)
 
