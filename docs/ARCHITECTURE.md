@@ -261,3 +261,28 @@ init → profile → scan → map → analyze → report → plan
 **Synthetic target nodes**: When a Python import targets a sub-package that matches a policy layer path but has no source evidence, a synthetic node is created to enable boundary violation detection.
 
 **Remaining limitations**: See KNOWN_LIMITATIONS.md items 38–39.
+
+## Artifact ownership
+
+Each CLI command produces specific `.ai-debt/` artifacts:
+
+| Command | Artifacts |
+|---|---|
+| `init` | `config.yaml`, `README.md`, empty templates |
+| `profile` | `project-profile.json` |
+| `scan` | `evidence.json` |
+| `map` | `analysis-units.json` |
+| `graph` | `architecture-graph.json` |
+| `analyze` | `debt-register.json`, `debt-register.md` |
+| `report` | `architecture-map.md`, `dependency-health.md`, `test-health.md`, `security-exposure.md`, `business-risk-proxy.md`, `reports/foundation-audit-report.md` |
+| `plan` | `remediation-roadmap.md`, `handoff-summary.md`, `work-packages/WP-*.md` |
+| `run` | `runs/RUN-*.json` (metadata for full pipeline) |
+| `export` | SARIF, CSV, JSONL exports (outside `.ai-debt/` by default) |
+| `enrich` | `.ai-debt/ai/` sidecar files |
+| `verify` | No files (read-only, console output) |
+| `status` | No files (read-only, console output) |
+| `ai-status` | No files (read-only, console output) |
+
+**Config note:** `.ai-debt/config.yaml` is written by `init` for future compatibility but
+not read by any command in v0.10.1. All behavior uses CLI flags and built-in defaults.
+Config reading is planned for v0.11.0.

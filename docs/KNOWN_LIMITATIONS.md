@@ -362,15 +362,24 @@ The compliance rule detects compliance-related keywords (PII, GDPR, HIPAA, PCI).
 It does NOT perform legal compliance assessment, gap analysis, or regulatory review.
 All findings are "potential exposure" based on keyword evidence.
 
-## 65. Configuration file not yet implemented
+## 65. Configuration file written but not read (v0.10.1)
 
-The v1 blueprint specifies `config.yaml` for project settings, analysis mode, and
-AI configuration. This is not yet implemented. All behavior uses CLI flags and
-defaults. Config file support is planned for v0.11.0.
+`ai-debt init` creates `.ai-debt/config.yaml` with safe defaults. However, no command
+reads or uses this file in v0.10.1. All behavior is controlled by CLI flags and built-in
+defaults. The config file is initialized for future compatibility only.
+Config reading/validation is deferred to v0.11.0.
 
-## 66. Risk scoring not fully aligned to blueprint §12
+The config contains no secrets, no API keys, no `.env` references, and no provider
+credentials. AI is disabled by default (`enabled: false`, `provider: "disabled"`).
 
-Current risk scoring uses a simplified model that approximates the blueprint §12
-formula but does not include all factors (e.g., change frequency from git history,
-architecture centrality from import graph). Full alignment requires git history
-analysis and is planned for v0.11.0.
+## 66. Risk scoring not fully aligned to blueprint §12 (v0.10.1)
+
+The `RISK_SCORE_TEMPLATE` structurally includes all 12 factors from blueprint §12.1.
+Priority bands match §12.3 exactly (Low 0–10, Medium 11–20, High 21–35, Critical 36+).
+
+Two factors default to Low (1) and are not overridden by any analysis rule:
+- `architecture_centrality`: requires wiring import graph data into the analyzer (deferred)
+- `change_frequency`: requires git history analysis (deferred)
+
+Both factors defaulting to 1 (Low) is conservative — it does not inflate scores.
+Full graph/git-backed scoring alignment requires v0.11.0+ work.
