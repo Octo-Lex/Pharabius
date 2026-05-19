@@ -2,7 +2,58 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [1.0.0rc1] - Unreleased
+## [1.0.0] - 2026-05-20
+
+### Summary
+
+Pharabius v1.0.0 is the first stable release. This is a version-only bump from
+v1.0.0rc1 with documentation updates. No source code, schema, command, provider,
+or config behavior changes.
+
+The v1 product surface was frozen at v1.0.0rc1 and validated across 8 repositories
+with zero P0 or P1 blockers found.
+
+### RC Validation Summary
+
+- 8 repositories validated (Python, Java, .NET, Terraform, Rust, TypeScript, empty)
+- 112/112 command executions passed (14 commands × 8 repos)
+- P0 blockers: 0
+- P1 blockers: 0
+- 731 tests, 85.07% coverage
+- All 7 local gates passed
+- GitHub CI passed
+- Deterministic runs verified on Pharabius and validation-java
+- Install/package audit passed
+- Provider safety verified (canonical immutability proven via hash)
+- Config safety verified
+- False positive review: zero false positives across all repos
+- Zero feature additions since RC
+
+### P2 Items Accepted for v1.1
+
+- Sample output gallery
+- `--version` CLI flag
+- Full graph/git-backed risk scoring (`architecture_centrality`, `change_frequency`)
+- Governance presets and template overrides
+- Git history analysis, incremental mode, IDE integrations
+
+### Changed
+
+- Version bumped from `1.0.0rc1` to `1.0.0`
+- CHANGELOG.md updated with v1.0.0 final section
+- KNOWN_LIMITATIONS.md header updated to v1.0.0
+- ROADMAP.md updated with v1.0.0 final entry
+
+### Not Changed
+
+- No source code changes
+- No schema changes
+- No command changes
+- No provider changes
+- No config behavior changes
+- No new tests
+
+## [1.0.0rc1] - 2026-05-19
 
 ### Changed
 
