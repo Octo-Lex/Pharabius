@@ -1,4 +1,4 @@
-# AI Adapter — Pharabius v0.9.0
+# AI Adapter — Pharabius v0.9.1
 
 ## Overview
 
@@ -442,3 +442,78 @@ ai-debt ai-status -r /path/to/repo
 - No credentials in sidecar JSON/markdown
 - No credentials in logs or errors
 - Missing credential fails with clear message
+
+## Selected-Finding Boundary (v0.9.1)
+
+Provider output is constrained to findings selected for the current enrichment run:
+
+- Enrichments for findings outside the selected set are rejected
+- This preserves `--finding-id` and `--max-findings` boundaries
+- Duplicate enrichments for the same finding are rejected (first kept)
+- Strict mode rejects the entire batch if any boundary violation occurs
+
+## Output Budget (v0.9.1)
+
+Provider raw output must respect `max_output_chars` (default: 4,000):
+
+- Over-budget output is rejected without parsing
+- Only the hash is recorded, not the raw content
+- Rejection reason includes actual size and max budget
+
+## Context-Preview-First Workflow
+
+The recommended workflow for using any external provider:
+
+```bash
+# Step 1: Ensure deterministic analysis is complete
+ai-debt analyze --no-ai -r /path/to/repo
+
+# Step 2: Preview what would be sent (no provider call, no credentials needed)
+ai-debt enrich --provider openai-compatible --model <model> --context-preview -r /path/to/repo
+
+# Step 3: Review the preview output carefully
+# - Check which findings are selected
+# - Check which evidence snippets are included
+# - Check context size vs budget
+
+# Step 4: Run with consent (requires API key)
+ai-debt enrich --provider openai-compatible --model <model> --allow-external-provider -r /path/to/repo
+
+# Step 5: Review sidecar output
+ai-debt ai-status -r /path/to/repo
+
+# Step 6: Inspect detailed enrichments
+cat .ai-debt/ai/enrichment-report.md
+```
+
+Key points:
+- Context preview sends nothing to any provider
+- Provider call sends selected finding context and evidence snippets
+- Provider output is constrained to selected findings
+- Provider output is budget-limited
+- Sidecar output is non-canonical
+- Canonical artifacts remain unchanged
+- Always inspect `.ai-debt/ai/enrichment-report.md` before acting on enrichments
+
+## Manual Smoke Validation (Optional)
+
+An optional manual smoke script is available at `scripts/manual_provider_smoke.py`:
+
+```bash
+export PHARABIUS_OPENAI_API_KEY=sk-...
+export PHARABIUS_OPENAI_MODEL=gpt-4o
+python scripts/manual_provider_smoke.py
+```
+
+This script:
+- Checks for credentials (exits clearly if absent)
+- Runs context preview first (always)
+- Runs actual provider call with consent
+- Validates sidecar JSON
+- Checks canonical immutability
+- Checks no credential leakage
+- Writes summary to stdout only
+
+**This script is never run in CI.** It is optional and for manual validation only.
+
+See `docs/templates/provider-smoke-result.md` for result documentation template.

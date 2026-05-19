@@ -43,7 +43,6 @@ class MockAIAdapter(AIAdapter):
         timeout_seconds: int = 30,
     ) -> AIResponse:
         findings = context.get("findings", [])
-        evidence_map = context.get("evidence_map", {})
 
         enrichments: list[dict[str, Any]] = []
         for finding in findings:
@@ -79,25 +78,12 @@ class MockAIAdapter(AIAdapter):
                     "AI-generated enrichment — validate before acting",
                     f"Based on {len(ev_ids)} evidence item(s)",
                 ],
-                "title_suggestion": "",
                 "explanation": explanation,
                 "risk_rationale": risk_rationale,
                 "recommended_action_refinement": recommended,
-                "verification_refinement": "",
                 "uncertainty_notes": uncertainty,
-                "grouping_suggestion": "",
-                "business_impact_narrative": "",
                 "analysis_unit_ids": finding.get("analysis_unit_ids", []),
                 "graph_ids": [],
-                "evidence_references": [
-                    {
-                        "evidence_id": eid,
-                        "relevance": f"Linked evidence for {fid}",
-                        "snippet_used": str(evidence_map.get(eid, ""))[:200],
-                    }
-                    for eid in ev_ids[:5]  # Cap at 5 references
-                ],
-                "rejected_claims": [],
             }
             enrichments.append(enrichment)
 

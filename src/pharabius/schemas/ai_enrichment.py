@@ -78,6 +78,9 @@ class AIUsageSummary(BaseModel):
     completion_tokens: int = 0
     total_tokens: int = 0
     estimated_cost: float = 0.0
+    latency_ms: int = 0
+    request_id: str = ""
+    provider_error_code: str = ""
 
 
 class AIBudget(BaseModel):
@@ -87,7 +90,7 @@ class AIBudget(BaseModel):
     max_evidence_items: int = 20
     max_graph_edges: int = 10
     max_analysis_units: int = 5
-    max_output_chars: int = 4_000
+    max_output_chars: int = 10_000
     max_repair_attempts: int = 0
     provider_timeout_seconds: int = 30
     max_provider_retries: int = 0

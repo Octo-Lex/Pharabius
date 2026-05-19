@@ -319,3 +319,21 @@ There is no config file or persistent consent mechanism in v0.9.0.
 Provider calls do not retry automatically on failure. The `max_provider_retries` field exists
 in `AIBudget` but defaults to 0 and is not exposed in the CLI. Retry behavior may be added
 in a future release.
+
+## 58. Manual smoke validation is optional and manual
+
+The `scripts/manual_provider_smoke.py` script requires real API credentials and makes
+actual network calls. It is not part of CI or release gates. Validation results are
+noted manually using the template at `docs/templates/provider-smoke-result.md`.
+
+## 59. Output budget does not count tokens
+
+`max_output_chars` (default: 10,000) counts raw characters, not tokens. A provider
+returning 4,000 characters of JSON may use significantly more tokens. Token counting
+is the provider's responsibility; Pharabius only enforces character limits.
+
+## 60. Duplicate detection is per-run
+
+Duplicate enrichment detection only applies within a single enrichment run. Running
+`ai-debt enrich` twice may produce duplicate enrichments in the sidecar. The second
+run overwrites the first.
