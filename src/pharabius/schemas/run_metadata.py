@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from importlib.metadata import version as _pkg_version
 
 from pydantic import BaseModel, Field
+
+
+def _get_version() -> str:
+    try:
+        return _pkg_version("pharabius")
+    except Exception:
+        return "0.0.0"
 
 
 def utc_now_iso() -> str:
@@ -26,12 +34,13 @@ class RunSummary(BaseModel):
 
 
 class RunMetadata(BaseModel):
+    schema_version: str = "1.0"
     run_id: str = Field(default_factory=generate_run_id)
     timestamp: str = Field(default_factory=utc_now_iso)
     repository: str = ""
     commit: str = ""
     branch: str = ""
-    tool_version: str = "0.1.0"
+    tool_version: str = Field(default_factory=_get_version)
     analysis_mode: str = "deterministic-no-ai"
     commands_run: list[str] = Field(default_factory=list)
     files_written: list[str] = Field(default_factory=list)
