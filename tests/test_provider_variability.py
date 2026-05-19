@@ -129,7 +129,7 @@ def _run_enrich(
     transport_status: int = 200,
     max_findings: int = 10,
     finding_id: str | None = None,
-    max_output_chars: int = 4_000,
+    max_output_chars: int = 10_000,
     strict: bool = False,
 ) -> Any:
     """Run enrich pipeline with mock transport."""

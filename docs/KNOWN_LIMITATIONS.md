@@ -328,7 +328,7 @@ noted manually using the template at `docs/templates/provider-smoke-result.md`.
 
 ## 59. Output budget does not count tokens
 
-`max_output_chars` (default: 4,000) counts raw characters, not tokens. A provider
+`max_output_chars` (default: 10,000) counts raw characters, not tokens. A provider
 returning 4,000 characters of JSON may use significantly more tokens. Token counting
 is the provider's responsibility; Pharabius only enforces character limits.
 
