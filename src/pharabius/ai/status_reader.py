@@ -41,6 +41,10 @@ class SidecarStatus:
         evidence_omitted: int = 0,
         canonical_artifacts_modified: bool = False,
         error_message: str = "",
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        latency_ms: int = 0,
+        provider_error_code: str = "",
     ) -> None:
         self.sidecar_present = sidecar_present
         self.provider = provider
@@ -53,6 +57,10 @@ class SidecarStatus:
         self.evidence_omitted = evidence_omitted
         self.canonical_artifacts_modified = canonical_artifacts_modified
         self.error_message = error_message
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+        self.latency_ms = latency_ms
+        self.provider_error_code = provider_error_code
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dict for JSON output."""
@@ -67,6 +75,10 @@ class SidecarStatus:
             "evidence_referenced": self.evidence_referenced,
             "evidence_omitted": self.evidence_omitted,
             "canonical_artifacts_modified": self.canonical_artifacts_modified,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "latency_ms": self.latency_ms,
+            "provider_error_code": self.provider_error_code,
             "status": "review_recommended" if self.sidecar_present else "no_sidecar",
         }
 
@@ -84,9 +96,23 @@ class SidecarStatus:
             f"  Enrichments rejected:  {self.enrichments_rejected}",
             f"  Evidence referenced:   {self.evidence_referenced}",
             f"  Evidence omitted:      {self.evidence_omitted}",
-            "",
-            "  Canonical artifacts:   not modified (by design)",
         ]
+        if self.prompt_tokens > 0 or self.completion_tokens > 0:
+            total = self.prompt_tokens + self.completion_tokens
+            lines.append(
+                f"  Token usage:           {self.prompt_tokens} prompt + "
+                f"{self.completion_tokens} completion = {total} total"
+            )
+        if self.latency_ms > 0:
+            lines.append(f"  Latency:               {self.latency_ms} ms")
+        if self.provider_error_code:
+            lines.append(f"  Last provider error:   {self.provider_error_code}")
+        lines.extend(
+            [
+                "",
+                "  Canonical artifacts:   not modified (by design)",
+            ]
+        )
         return "\n".join(lines)
 
 
@@ -149,6 +175,11 @@ def read_ai_status(repository_root: Path) -> tuple[SidecarStatus, int]:
     # Count evidence omitted from context summary
     omitted = report.context_summary.evidence_items_omitted
 
+    # Get provider error code from last rejection if any
+    last_error_code = ""
+    if report.rejections and hasattr(report.usage, "provider_error_code"):
+        last_error_code = report.usage.provider_error_code
+
     status = SidecarStatus(
         sidecar_present=True,
         provider=report.provider,
@@ -160,6 +191,10 @@ def read_ai_status(repository_root: Path) -> tuple[SidecarStatus, int]:
         evidence_referenced=len(evidence_ids),
         evidence_omitted=omitted,
         canonical_artifacts_modified=False,
+        prompt_tokens=getattr(report.usage, "prompt_tokens", 0),
+        completion_tokens=getattr(report.usage, "completion_tokens", 0),
+        latency_ms=getattr(report.usage, "latency_ms", 0),
+        provider_error_code=last_error_code,
     )
 
     return status, 0

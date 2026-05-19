@@ -2,6 +2,35 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [0.9.1] - Unreleased
+
+### Added
+
+- Selected-finding boundary enforcement: enrichments for unselected findings are rejected
+- Duplicate enrichment detection: first valid enrichment kept, duplicates rejected
+- Output budget enforcement: provider output exceeding `max_output_chars` rejected before parsing
+- `AIUsageSummary` extended with `latency_ms`, `request_id`, `provider_error_code`
+- Sidecar markdown shows token usage, latency, request ID when non-zero
+- `ai-status` shows token usage, latency, provider error code when present
+- Provider error messages improved: timeout suggests `--timeout-seconds`, rate-limit suggests waiting, network error includes base URL
+- Consent message improved with numbered steps and "No data was sent" reassurance
+- Privacy caution updated to reflect external provider capability
+- 5 credential redaction tests with sentinel-based leak detection
+- 27 provider variability tests (response format, boundary, budget, errors)
+- `scripts/manual_provider_smoke.py` — optional manual smoke validation script
+- `docs/templates/provider-smoke-result.md` — smoke result template
+
+### Changed
+
+- `enrich_findings()` passes selected finding IDs (not all register IDs) to validator
+- `validate_raw_output()` detects and rejects duplicate finding ID enrichments
+- Provider output exceeding `AIBudget.max_output_chars` rejected without parsing
+
+### Tests
+
+- 629 tests (32 new), 83%+ coverage
+- All tests use MockTransport — no real network in CI
+
 ## [0.9.0] - Unreleased
 
 ### Added

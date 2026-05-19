@@ -1141,10 +1141,10 @@ class TestSidecarQuality:
         assert "Privacy Caution" in md
         assert "summarized repository context" in md
 
-    def test_md_states_external_providers_not_included(self, sample_repo: Path):
+    def test_md_states_external_provider_caution(self, sample_repo: Path):
         enrich_findings(sample_repo, provider_name="mock")
         md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
-        assert "not included in v0.7.2" in md or "External AI providers are not included" in md
+        assert "External AI providers" in md or "third-party services" in md
 
     def test_md_states_canonical_unchanged(self, sample_repo: Path):
         enrich_findings(sample_repo, provider_name="mock")
@@ -1184,11 +1184,12 @@ class TestMarkdownUX:
         assert "No canonical artifacts modified" in md
         assert "Privacy caution acknowledged" in md
 
-    def test_md_privacy_caution_v072(self, sample_repo: Path) -> None:
+    def test_md_privacy_caution_updated(self, sample_repo: Path) -> None:
         enrich_findings(sample_repo, provider_name="mock")
         md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
         assert "Privacy Caution" in md
-        assert "v0.7.2" in md
+        # Should warn about external providers, not claim they're absent
+        assert "third-party" in md or "External AI providers" in md
 
     def test_md_canonical_statement(self, sample_repo: Path) -> None:
         enrich_findings(sample_repo, provider_name="mock")

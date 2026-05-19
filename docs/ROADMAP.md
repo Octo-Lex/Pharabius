@@ -140,7 +140,7 @@
 - Prompt contract and credential policy documented
 - No real provider — readiness only
 
-## v0.9.0 — First Real Provider Adapter (unreleased)
+## v0.9.0 — First Real Provider Adapter (released 2026-05-19)
 
 - First real provider: `openai-compatible` adapter
 - Optional dependency: `pip install "pharabius[openai-compatible]"`
@@ -151,8 +151,17 @@
 - Provider error mapping: auth, rate-limit, timeout, content filter, network
 - Token usage and latency captured
 - No real network in CI — all tests use mock transport
-- No Azure-specific support
-- No automatic retries
+
+## v0.9.1 — Real Provider Safety & Manual Smoke Validation (unreleased)
+
+- Selected-finding boundary enforcement
+- Duplicate enrichment detection
+- Output budget enforcement
+- Provider telemetry in sidecar/status
+- Credential redaction tests
+- 27 provider variability tests
+- Optional manual smoke script
+- Privacy caution updated
 
 ## Future (v0.10.x+)
 
