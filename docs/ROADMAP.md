@@ -117,7 +117,7 @@
 - CLI integration tests for enrich
 - Import boundary and privacy checks
 
-## v0.7.2 — AI Sidecar UX & Review Workflow (unreleased)
+## v0.7.2 — AI Sidecar UX & Review Workflow (released 2026-05-19)
 
 - `ai-debt ai-status` — read-only sidecar status summary
 - `ai-debt ai-status --json` — machine-readable output
@@ -128,7 +128,19 @@
 - Sidecar review workflow documented
 - Privacy and sharing guidance
 
-## Future (v0.8.x+)
+## v0.8.0 — Provider Interface Readiness (unreleased)
+
+- `ai-debt enrich --context-preview` — preview bounded context without calling provider
+- Provider interface hardening: structured error fields in `AIResponse`
+- Token/cost fields in `AIUsageSummary`
+- Provider timeout/retry fields in `AIBudget`
+- Provider simulation tests: 14 failure modes
+- Improved unknown provider error message
+- Provider readiness checklist (25 criteria audited)
+- Prompt contract and credential policy documented
+- No real provider — readiness only
+
+## Future (v0.9.x+)
 
 - Real provider integration (OpenAI, Claude, or local model)
 - Report integration for AI enrichments

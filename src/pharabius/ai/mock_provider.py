@@ -39,6 +39,8 @@ class MockAIAdapter(AIAdapter):
         prompt: str,
         context: dict[str, Any],
         schema_hint: dict[str, Any] | None = None,
+        *,
+        timeout_seconds: int = 30,
     ) -> AIResponse:
         findings = context.get("findings", [])
         evidence_map = context.get("evidence_map", {})

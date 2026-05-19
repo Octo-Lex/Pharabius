@@ -277,3 +277,21 @@ Review before sharing with external parties. Consider adding `.ai-debt/ai/` to
 
 `ai-debt ai-status` summarizes sidecar state but does not validate correctness of
 enrichment content. Review enrichment-report.md for detailed findings.
+
+## 51. No real AI provider in v0.8.0
+
+v0.8.0 is a provider interface readiness release. It hardens adapter interfaces and adds
+provider simulation tests but does not include any real external provider (OpenAI, Claude,
+local models). Available providers remain `disabled` (default) and `mock` (testing).
+
+## 52. Context preview is informational only
+
+`ai-debt enrich --context-preview` previews the bounded context that would be sent to a
+provider. It does not call any provider, write files, or validate context against provider
+requirements. The actual context sent may differ when a real provider is configured.
+
+## 53. Strict JSON requirement — no markdown wrapping or comments
+
+Provider output must be strict JSON. Markdown-fenced JSON (```` ```json ... ``` ````),
+JSON with comments (`// ...`), and partial/truncated JSON are all rejected by the
+validation pipeline. Providers must return raw JSON only.
