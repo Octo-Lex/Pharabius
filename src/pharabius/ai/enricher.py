@@ -14,7 +14,6 @@ from pharabius.ai.adapter import AIAdapter, DisabledAdapter
 from pharabius.ai.context import (
     build_enrichment_context,
     get_all_evidence_ids,
-    get_all_finding_ids,
     get_all_graph_ids,
     get_all_unit_ids,
     load_artifacts,
@@ -138,8 +137,27 @@ def _write_md_report(report: AIEnrichmentReport, path: Path) -> None:
         f"| Enrichments rejected | {len(sorted_rejections)} |",
         f"| Evidence IDs referenced | {evidence_count} |",
         f"| Evidence items omitted (budget) | {omitted} |",
-        "",
     ]
+
+    # Provider telemetry (shown when non-zero)
+    if report.usage.prompt_tokens > 0 or report.usage.completion_tokens > 0:
+        lines.extend(
+            [
+                f"| Prompt tokens | {report.usage.prompt_tokens} |",
+                f"| Completion tokens | {report.usage.completion_tokens} |",
+                f"| Total tokens | {report.usage.total_tokens} |",
+            ]
+        )
+    if report.usage.latency_ms > 0:
+        lines.append(f"| Latency | {report.usage.latency_ms} ms |")
+    if report.usage.request_id:
+        lines.append(f"| Request ID | {report.usage.request_id} |")
+
+    lines.extend(
+        [
+            "",
+        ]
+    )
 
     if sorted_enrichments:
         lines.append("## Enrichments")
@@ -210,8 +228,8 @@ def _write_md_report(report: AIEnrichmentReport, path: Path) -> None:
             "Sidecar files may contain summarized repository context. "
             "Review before sharing with external parties.",
             "",
-            "External AI providers are not included in v0.7.2. "
-            "Future providers may send evidence to third-party services.",
+            "External AI providers (e.g. openai-compatible) may send repository evidence "
+            "to third-party services. Review carefully before sharing sidecar files.",
             "",
             "*This report is AI-generated enrichment, not canonical finding data. "
             "Deterministic findings remain in `debt-register.json`. "
@@ -422,15 +440,45 @@ def enrich_findings(
         )
 
     # 5. Validate output
-    valid_finding_ids = get_all_finding_ids(register)
+    # Only allow enrichments for findings actually selected for this run.
+    # This preserves --finding-id and --max-findings boundaries.
+    selected_finding_ids = {f.get("id", "") for f in findings_to_enrich}
     valid_evidence_ids = get_all_evidence_ids(artifacts)
     valid_unit_ids = get_all_unit_ids(artifacts) or None
     valid_graph_ids = get_all_graph_ids(artifacts) or None
 
     raw_json = response.raw_text
+
+    # Output budget enforcement — reject oversized output before parsing
+    from pharabius.ai.validator import _hash_output
+
+    max_output = budget.max_output_chars
+    if len(raw_json) > max_output:
+        context_summary = _aggregate_context_summary(ctx.get("per_finding_contexts", []))
+        return AIEnrichmentReport(
+            provider=provider_name,
+            model=response.usage.model or provider.model,
+            repository=str(repository_root),
+            commit=_git_value(repository_root, ["rev-parse", "--short", "HEAD"]),
+            context_summary=context_summary,
+            usage=response.usage,
+            enrichments=[],
+            rejections=[
+                RejectedAIOutput(
+                    finding_id=None,
+                    reason=(
+                        f"Provider output exceeds budget: "
+                        f"{len(raw_json)} chars > {max_output} max. "
+                        f"Output rejected without parsing."
+                    ),
+                    raw_output_hash=_hash_output(raw_json),
+                )
+            ],
+        )
+
     results = validate_raw_output(
         raw_json,
-        valid_finding_ids,
+        selected_finding_ids,
         valid_evidence_ids,
         valid_unit_ids,
         valid_graph_ids,
@@ -485,6 +533,12 @@ def enrich_findings(
             items_processed=len(findings_to_enrich),
             items_accepted=len(enrichments),
             items_rejected=len(rejections),
+            prompt_tokens=response.usage.prompt_tokens,
+            completion_tokens=response.usage.completion_tokens,
+            total_tokens=response.usage.total_tokens,
+            latency_ms=response.latency_ms,
+            request_id=response.request_id,
+            provider_error_code=response.provider_error_code,
         ),
         enrichments=enrichments,
         rejections=rejections,

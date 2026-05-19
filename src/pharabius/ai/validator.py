@@ -172,6 +172,8 @@ def validate_raw_output(
         ]
 
     results: list[AIValidationResult] = []
+    seen_finding_ids: set[str] = set()
+
     for enrichment_data in enrichments:
         if not isinstance(enrichment_data, dict):
             results.append(
@@ -193,6 +195,21 @@ def validate_raw_output(
             valid_graph_ids,
             raw_output_hash=raw_hash,
         )
+
+        # Duplicate detection — keep first, reject subsequent
+        if result.is_valid and result.enrichment:
+            fid = result.enrichment.finding_id
+            if fid in seen_finding_ids:
+                result = AIValidationResult(
+                    enrichment=None,
+                    is_valid=False,
+                    rejection_reasons=[f"Duplicate enrichment for finding ID: {fid}"],
+                    invalid_fields=["finding_id"],
+                    raw_output_hash=raw_hash,
+                )
+            else:
+                seen_finding_ids.add(fid)
+
         results.append(result)
 
     return results

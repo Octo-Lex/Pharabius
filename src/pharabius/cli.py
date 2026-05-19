@@ -634,9 +634,14 @@ def enrich(
     external_providers = {"openai-compatible"}
     if provider in external_providers and not allow_external:
         console.print(
-            f"Provider '{provider}' may send repository evidence to an external service.\n"
-            "Run with --context-preview to inspect what would be sent.\n"
-            "Then rerun with --allow-external-provider if you approve."
+            f"Provider '{provider}' may send repository evidence "
+            "to an external AI service.\n"
+            "  1. Review:   ai-debt enrich --provider openai-compatible "
+            "--context-preview -r <repo>\n"
+            "  2. Approve:  ai-debt enrich --provider openai-compatible "
+            "--allow-external-provider -r <repo>\n"
+            "\n"
+            "No data was sent. No files were written."
         )
         raise typer.Exit(code=1)
 

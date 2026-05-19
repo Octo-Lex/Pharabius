@@ -51,7 +51,9 @@ class OpenAICompatibleAdapter(AIAdapter):
         api_key = os.environ.get("PHARABIUS_OPENAI_API_KEY", "")
         if not api_key:
             raise ValueError(
-                "API key not found. Set PHARABIUS_OPENAI_API_KEY environment variable."
+                "API key not found for provider 'openai-compatible'.\n"
+                "  Set the PHARABIUS_OPENAI_API_KEY environment variable.\n"
+                "  Example: export PHARABIUS_OPENAI_API_KEY=sk-..."
             )
         self._api_key = api_key
 
@@ -122,7 +124,10 @@ class OpenAICompatibleAdapter(AIAdapter):
             return AIResponse(
                 provider=self.name,
                 model=self._model,
-                errors=["Provider request timed out."],
+                errors=[
+                    "Provider request timed out. "
+                    "Retry with --timeout-seconds 60 or check endpoint availability."
+                ],
                 finish_reason="timeout",
                 latency_ms=latency_ms,
                 provider_error_code="timeout",
@@ -133,7 +138,10 @@ class OpenAICompatibleAdapter(AIAdapter):
             return AIResponse(
                 provider=self.name,
                 model=self._model,
-                errors=[f"Network error: {exc}"],
+                errors=[
+                    f"Network error connecting to {self._base_url}. "
+                    "Check endpoint URL and network connectivity."
+                ],
                 finish_reason="network_error",
                 latency_ms=latency_ms,
                 provider_error_code="network_error",
@@ -166,7 +174,7 @@ class OpenAICompatibleAdapter(AIAdapter):
             return AIResponse(
                 provider=self.name,
                 model=self._model,
-                errors=["Rate limit exceeded."],
+                errors=["Rate limit exceeded. Wait and retry, or check your API plan limits."],
                 finish_reason="rate_limit",
                 latency_ms=latency_ms,
                 provider_error_code="rate_limit",

@@ -78,6 +78,9 @@ class AIUsageSummary(BaseModel):
     completion_tokens: int = 0
     total_tokens: int = 0
     estimated_cost: float = 0.0
+    latency_ms: int = 0
+    request_id: str = ""
+    provider_error_code: str = ""
 
 
 class AIBudget(BaseModel):
