@@ -12,6 +12,7 @@ from typing import Any
 from unittest.mock import patch
 
 import httpx
+import pytest
 
 from pharabius.ai.enricher import enrich_findings
 from pharabius.schemas.ai_enrichment import AIBudget
@@ -145,6 +146,7 @@ def _run_enrich(
 
     import pharabius.ai.enricher as enricher_mod
 
+    _original_get_provider = enricher_mod._get_provider
     enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
     try:
         budget = AIBudget(max_output_chars=max_output_chars)
@@ -157,7 +159,7 @@ def _run_enrich(
             strict=strict,
         )
     finally:
-        enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
+        enricher_mod._get_provider = _original_get_provider  # type: ignore[assignment]
 
     return report
 
@@ -231,11 +233,12 @@ class TestResponseFormatVariability:
             clear=False,
         ):
             adapter = OpenAICompatibleAdapter(model="test-model", transport=transport)
-        enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
+        _original = enricher_mod._get_provider
         try:
+            enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
             report = enrich_findings(repo, provider_name="mock")
         finally:
-            pass
+            enricher_mod._get_provider = _original  # type: ignore[assignment]
         assert len(report.enrichments) == 1
         assert report.usage.request_id == ""
 
@@ -252,11 +255,12 @@ class TestResponseFormatVariability:
             clear=False,
         ):
             adapter = OpenAICompatibleAdapter(model="test-model", transport=transport)
-        enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
+        _original = enricher_mod._get_provider
         try:
+            enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
             report = enrich_findings(repo, provider_name="mock")
         finally:
-            pass
+            enricher_mod._get_provider = _original  # type: ignore[assignment]
         assert len(report.enrichments) == 1
         assert report.usage.prompt_tokens == 0
 
@@ -478,8 +482,12 @@ class TestProviderErrors:
             clear=False,
         ):
             adapter = OpenAICompatibleAdapter(model="test-model", transport=transport)
-        enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
-        report = enrich_findings(repo, provider_name="mock")
+        _original = enricher_mod._get_provider
+        try:
+            enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
+            report = enrich_findings(repo, provider_name="mock")
+        finally:
+            enricher_mod._get_provider = _original  # type: ignore[assignment]
         assert len(report.enrichments) == 0
         assert len(report.rejections) >= 1
         assert (
@@ -531,8 +539,12 @@ class TestProviderErrors:
             clear=False,
         ):
             adapter = OpenAICompatibleAdapter(model="test-model", transport=transport)
-        enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
-        report = enrich_findings(repo, provider_name="mock")
+        _original = enricher_mod._get_provider
+        try:
+            enricher_mod._get_provider = lambda name, *, model="": adapter  # type: ignore[assignment]
+            report = enrich_findings(repo, provider_name="mock")
+        finally:
+            enricher_mod._get_provider = _original  # type: ignore[assignment]
         assert len(report.enrichments) == 0
         assert len(report.rejections) >= 1
         # Content filter response with non-JSON content gets rejected
@@ -540,3 +552,34 @@ class TestProviderErrors:
             "filter" in r.reason.lower() or "malformed" in r.reason.lower()
             for r in report.rejections
         )
+
+
+# ── Regression: _get_provider isolation ─────────────────────────────
+
+
+class TestGetProviderIsolation:
+    """Regression tests for _get_provider leak between test classes.
+
+    Prior to v0.11.0, TestProviderErrors and TestResponseFormatVariability
+    mutated enricher_mod._get_provider without restoring it, causing
+    TestUnknownProviderMessage in test_provider_simulation.py to fail
+    when run in the same batch.
+    """
+
+    def test_get_provider_unknown_raises_after_variability(self) -> None:
+        """After all variability tests, _get_provider('openai') must still raise."""
+        import pharabius.ai.enricher as enricher_mod
+
+        # The original function should be in place — no leaked lambda
+        with pytest.raises(ValueError, match="not available"):
+            enricher_mod._get_provider("openai")
+
+    def test_get_provider_known_still_work(self) -> None:
+        """Known providers still resolve after variability tests."""
+        import pharabius.ai.enricher as enricher_mod
+
+        disabled = enricher_mod._get_provider("disabled")
+        assert disabled is not None
+
+        mock = enricher_mod._get_provider("mock")
+        assert mock is not None
