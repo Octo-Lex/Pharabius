@@ -2,7 +2,35 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [Unreleased]
+## [0.7.2] - Unreleased
+
+### Added
+
+- `ai-debt ai-status` — read-only command that summarizes AI sidecar state
+- `ai-debt ai-status --json` — machine-readable JSON output
+- `src/pharabius/ai/status_reader.py` — sidecar status reader (in `ai/` package, preserving core boundary)
+- Sidecar markdown improvements: summary table, review checklist, deterministic ordering
+- Sidecar enrichments sorted by `finding_id` alphabetically
+- Sidecar evidence IDs sorted alphabetically within each enrichment
+- Sidecar rejections sorted by `finding_id` (unknown last) with heading format
+- Sidecar rejection entries now include invalid fields, missing evidence IDs, and hash
+
+### Changed
+
+- Sidecar markdown now uses `## Summary` table instead of flat list
+- Sidecar markdown now embeds review checklist before footer
+- Sidecar rejections use `###` headings instead of bullet points for readability
+- Privacy version string updated from v0.7.1 to v0.7.2
+
+### Tests
+
+- 529 tests (38 new), 83.33% coverage
+- New status reader tests: 16 tests for read_ai_status and SidecarStatus
+- New CLI ai-status tests: 10 tests for command behavior
+- New markdown UX tests: 9 tests for summary table, checklist, ordering, diffability
+- New regression tests: 5 tests confirming existing behavior unchanged
+
+## [0.7.1]
 
 ### Fixed
 

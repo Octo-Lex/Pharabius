@@ -8,10 +8,13 @@ Never mutates canonical artifacts.
 from pharabius.ai.adapter import AIAdapter, AIResponse
 from pharabius.ai.enricher import enrich_findings
 from pharabius.ai.mock_provider import MockAIAdapter
+from pharabius.ai.status_reader import SidecarStatus, read_ai_status
 
 __all__ = [
     "AIAdapter",
     "AIResponse",
     "MockAIAdapter",
+    "SidecarStatus",
     "enrich_findings",
+    "read_ai_status",
 ]

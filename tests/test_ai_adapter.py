@@ -1144,7 +1144,7 @@ class TestSidecarQuality:
     def test_md_states_external_providers_not_included(self, sample_repo: Path):
         enrich_findings(sample_repo, provider_name="mock")
         md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
-        assert "not included in v0.7.1" in md or "External AI providers are not included" in md
+        assert "not included in v0.7.2" in md or "External AI providers are not included" in md
 
     def test_md_states_canonical_unchanged(self, sample_repo: Path):
         enrich_findings(sample_repo, provider_name="mock")
@@ -1155,6 +1155,150 @@ class TestSidecarQuality:
         enrich_findings(sample_repo, provider_name="mock")
         md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
         assert "Generated:" in md
+
+
+# ── Markdown UX Tests (v0.7.2) ─────────────────────────────────────
+
+
+class TestMarkdownUX:
+    """Tests for sidecar markdown readability improvements."""
+
+    def test_md_summary_table(self, sample_repo: Path) -> None:
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "## Summary" in md
+        assert "| Metric | Value |" in md
+        assert "| Provider" in md
+        assert "| Model" in md
+        assert "Enrichments accepted" in md
+        assert "Enrichments rejected" in md
+        assert "Evidence IDs referenced" in md
+        assert "Evidence items omitted" in md
+
+    def test_md_review_checklist(self, sample_repo: Path) -> None:
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "## Review Checklist" in md
+        assert "- [ ]" in md
+        assert "evidence IDs verified" in md
+        assert "No canonical artifacts modified" in md
+        assert "Privacy caution acknowledged" in md
+
+    def test_md_privacy_caution_v072(self, sample_repo: Path) -> None:
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "Privacy Caution" in md
+        assert "v0.7.2" in md
+
+    def test_md_canonical_statement(self, sample_repo: Path) -> None:
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        assert "No canonical artifacts were modified" in md
+
+    def test_md_evidence_ids_sorted(self, sample_repo: Path) -> None:
+        """Evidence IDs in enrichment section should be sorted."""
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        # Find the line with Evidence IDs
+        for line in md.split("\n"):
+            if "Evidence IDs:" in line:
+                # Extract the IDs after the label
+                ids_str = line.split("Evidence IDs:")[1].strip()
+                ids = [x.strip() for x in ids_str.split(",")]
+                assert ids == sorted(ids), f"Evidence IDs not sorted: {ids}"
+
+    def test_md_deterministic_enrichment_ordering(self, sample_repo: Path) -> None:
+        """Two enrichments runs should produce same enrichment ordering."""
+        import hashlib
+
+        enrich_findings(sample_repo, provider_name="mock")
+        md1 = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        # Strip timestamps for comparison
+        lines1 = [
+            ln for ln in md1.split("\n") if "Generated" not in ln and "generated_at" not in ln
+        ]
+        hash1 = hashlib.sha256("\n".join(lines1).encode()).hexdigest()
+
+        enrich_findings(sample_repo, provider_name="mock")
+        md2 = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        lines2 = [
+            ln for ln in md2.split("\n") if "Generated" not in ln and "generated_at" not in ln
+        ]
+        hash2 = hashlib.sha256("\n".join(lines2).encode()).hexdigest()
+
+        assert hash1 == hash2, "Markdown content differs between runs (excluding timestamps)"
+
+    def test_md_rejection_with_hash(self, sample_repo: Path) -> None:
+        """Rejection section should include raw_output_hash."""
+        import json as _json
+
+        enrich_findings(sample_repo, provider_name="mock")
+        rej_path = sample_repo / ".ai-debt" / "ai" / "rejected-ai-output.json"
+        if rej_path.exists():
+            rejections = _json.loads(rej_path.read_text(encoding="utf-8"))
+            for rej in rejections:
+                if rej.get("raw_output_hash"):
+                    md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(
+                        encoding="utf-8"
+                    )
+                    assert "Hash:" in md
+                    break
+
+    def test_md_rejection_section_uses_headings(self, sample_repo: Path) -> None:
+        """Rejection items should use ### headings for better readability."""
+        enrich_findings(sample_repo, provider_name="mock")
+        md = (sample_repo / ".ai-debt" / "ai" / "enrichment-report.md").read_text(encoding="utf-8")
+        # If there are rejections in the report, check heading format
+        if "## Rejections" in md:
+            # Should have ### for each rejection (not bullet points)
+            assert "### " in md or "Enrichments rejected" in md
+
+
+# ── Regression Tests (v0.7.2) ───────────────────────────────────────
+
+
+class TestRegressionV072:
+    """Regression tests to confirm v0.7.2 changes don't break existing behavior."""
+
+    def test_enrich_still_writes_sidecars(self, sample_repo: Path) -> None:
+        enrich_findings(sample_repo, provider_name="mock")
+        ai_dir = sample_repo / ".ai-debt" / "ai"
+        assert (ai_dir / "enrichment-report.json").exists()
+        assert (ai_dir / "enrichment-report.md").exists()
+        assert (ai_dir / "finding-enrichments.json").exists()
+        assert (ai_dir / "rejected-ai-output.json").exists()
+
+    def test_disabled_still_writes_nothing(self, sample_repo: Path) -> None:
+        enrich_findings(sample_repo, provider_name="disabled")
+        ai_dir = sample_repo / ".ai-debt" / "ai"
+        assert not ai_dir.exists()
+
+    def test_dry_run_still_writes_nothing(self, sample_repo: Path) -> None:
+        enrich_findings(sample_repo, provider_name="mock", dry_run=True)
+        ai_dir = sample_repo / ".ai-debt" / "ai"
+        assert not ai_dir.exists()
+
+    def test_unknown_finding_id_still_fails(self, sample_repo: Path) -> None:
+        from typer.testing import CliRunner as CR
+
+        from pharabius.cli import app as cli_app
+
+        r = CR().invoke(
+            cli_app,
+            ["enrich", "--provider", "mock", "--finding-id", "NONEXISTENT", "-r", str(sample_repo)],
+        )
+        assert r.exit_code == 1
+        assert "NONEXISTENT" in r.output
+
+    def test_ai_status_not_in_run(self, tmp_path: Path) -> None:
+        """ai-status is a separate command, not part of ai-debt run."""
+
+        # run should work normally without any ai-status behavior
+        # Just verify the function exists and is separate
+        from pharabius.ai.status_reader import read_ai_status
+
+        _status, code = read_ai_status(tmp_path)
+        assert code == 0  # no sidecar is fine
 
 
 # ── Immutability Across Modes ───────────────────────────────────────

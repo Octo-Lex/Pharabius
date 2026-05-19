@@ -94,7 +94,7 @@
 - Synthetic target nodes for imports matching discovered crates
 - FN-003 completed: Symbiot now produces cross-crate edges
 
-## v0.7.0 — Evidence-Constrained AI Adapter (upcoming)
+## v0.7.0 — Evidence-Constrained AI Adapter (released 2026-05-19)
 
 - `ai-debt enrich` command — provider-neutral AI enrichment
 - Provider interface with mock and disabled modes
@@ -103,10 +103,10 @@
 - Evidence ID and finding ID validation
 - Sidecar output contract: `.ai-debt/ai/`
 - No canonical artifact mutation
-- No real network provider in v0.7.0
+- No real network provider in v0.7.x
 - AI disabled by default
 
-## v0.7.1 — AI Adapter Stabilization (upcoming)
+## v0.7.1 — AI Adapter Stabilization (released 2026-05-19)
 
 - Rejection test hardening (54 new tests)
 - Empty evidence_ids rejected
@@ -117,15 +117,23 @@
 - CLI integration tests for enrich
 - Import boundary and privacy checks
 
-## v0.7.2 — AI Adapter Polish (planned)
+## v0.7.2 — AI Sidecar UX & Review Workflow (unreleased)
+
+- `ai-debt ai-status` — read-only sidecar status summary
+- `ai-debt ai-status --json` — machine-readable output
+- Sidecar markdown summary table, review checklist, deterministic ordering
+- Sidecar enrichments sorted by finding_id
+- Sidecar evidence IDs sorted alphabetically
+- Sidecar rejections with headings, invalid fields, hashes
+- Sidecar review workflow documented
+- Privacy and sharing guidance
+
+## Future (v0.8.x+)
 
 - Real provider integration (OpenAI, Claude, or local model)
 - Report integration for AI enrichments
 - Configuration file for AI settings
 - `--apply-enrichment` flag for merging validated enrichments
-
-## v0.8.0 — Graph Polish (planned)
-
 - Block-comment filtering for Rust imports
 - Test-scope edge confidence reduction
 - Non-standard monorepo layout support

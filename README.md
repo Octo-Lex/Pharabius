@@ -21,6 +21,7 @@ ai-debt status            # Show workspace status (read-only)
 ai-debt graph             # Build architecture dependency graph
 ai-debt export            # Export findings to SARIF, CSV, JSONL
 ai-debt enrich            # AI enrichment (disabled by default, mock for testing)
+ai-debt ai-status         # Show AI sidecar status (read-only)
 ai-debt run               # Run full pipeline + write run metadata
 ```
 
