@@ -1,4 +1,4 @@
-# Known Limitations — Pharabius v0.2.1
+# Known Limitations — Pharabius v0.11.0
 
 This document lists known limitations of Pharabius v0.1.0. These are honest constraints, not bugs.
 

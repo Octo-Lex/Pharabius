@@ -1,19 +1,20 @@
-# V1 Readiness Audit — v0.10.1
+# V1 Readiness Audit — v0.11.0
 
 **Date:** 2026-05-19
-**Version:** v0.10.1
+**Version:** v0.11.0
 **Status:** Audit complete
 
 ## Executive Summary
 
-Pharabius v0.10.1 is a v1 readiness audit and stabilization patch. It does not add
-new features, taxonomy categories, or providers. It audits the current state against
-the v1 blueprint, closes small documentation gaps, fixes a config default issue, and
-validates the first-run experience.
+Pharabius v0.11.0 adds minimal config runtime to the v1 readiness baseline. Config.yaml
+is now read by commands (`analysis.exclude_paths` and `analysis.max_file_size_kb` are
+authoritative). Missing/malformed config produces safe defaults with appropriate warnings.
+No credentials, model selection, or provider consent are stored in config. Provider safety
+boundaries are preserved.
 
 ## 1. Config Decision
 
-**Status:** Written but not read.
+**Status:** Implemented and narrow.
 
 `ai-debt init` creates `.ai-debt/config.yaml` with safe defaults:
 - `ai.enabled: false` — matches CLI default
@@ -21,10 +22,16 @@ validates the first-run experience.
 - No `model: "auto"` — model must be explicitly set
 - No secrets, API keys, or credentials
 
-No command reads config.yaml in v0.10.1. Config reading is deferred to v0.11.0.
+Commands now read config for:
+- `analysis.exclude_paths` — supplements hardcoded exclusions
+- `analysis.max_file_size_kb` — file size threshold
 
-**Fix applied:** Previous config had `ai.enabled: true` and `provider: "auto"` which
-contradicted actual behavior. Fixed to safe defaults.
+CLI flags always override config values. Malformed config produces warnings and uses
+safe defaults. Unknown keys produce warnings and are ignored.
+
+Config does NOT store credentials, model selection, or provider consent. The
+`ai.provider` field is parsed but does NOT enable real provider calls without
+explicit CLI `--provider` and `--allow-external-provider` flags.
 
 ## 2. Risk Scoring Audit
 
@@ -115,16 +122,17 @@ Present with repository context, methodology, findings, and recommendations. ✅
 
 **No readability changes needed.**
 
-## 6. Remaining V1 Blockers
+## 6. Remaining V1 Follow-ups
 
-| Blocker | Scope | Target |
+| Follow-up | Scope | Target |
 |---|---|---|
-| Config reading not implemented | v0.11.0 | Low priority |
-| `architecture_centrality` factor unused | v0.11.0 | Requires graph wiring |
-| `change_frequency` factor unused | v0.11.0 | Requires git history |
-| Git history analysis | v0.11.0 | Major feature |
-| Incremental analysis mode | v0.11.0 | Major feature |
-| Jira/GitHub Issues export | v0.11.0 | New format |
+| `architecture_centrality` factor unused | v1.1 | Requires graph wiring |
+| `change_frequency` factor unused | v1.1 | Requires git history |
+| Git history analysis | v1.1 | Major feature |
+| Incremental analysis mode | v1.1 | Major feature |
+| Jira/GitHub Issues export | v1.1 | New format |
+| Report integration for AI enrichments | v1.1 | Integration |
+| Sample output gallery | v1.1 | Documentation |
 
 ## 7. What Was NOT Changed
 

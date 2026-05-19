@@ -182,7 +182,7 @@
 - Report readability audit
 - Artifact ownership documented
 
-## v0.11.0 — Config Runtime (unreleased)
+## v0.11.0 — Config Runtime (released 2026-05-19)
 
 - Config.yaml now read by commands
 - `exclude_paths` and `max_file_size_kb` configurable
