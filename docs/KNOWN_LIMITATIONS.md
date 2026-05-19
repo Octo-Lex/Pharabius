@@ -337,3 +337,40 @@ is the provider's responsibility; Pharabius only enforces character limits.
 Duplicate enrichment detection only applies within a single enrichment run. Running
 `ai-debt enrich` twice may produce duplicate enrichments in the sidecar. The second
 run overwrites the first.
+
+## 61. New taxonomy rules are conservative (v0.10.0)
+
+The 7 new analysis rules (TD-CODE, TD-COMP, TD-OPS, TD-DATA, TD-PERF, TD-OBS,
+TD-PROCESS) use conservative detection thresholds and require explicit evidence.
+They may miss valid debt that requires deeper code analysis (AST, runtime metrics,
+or git history). False negatives are expected; false positives are minimized.
+
+## 62. TD-PERF does not measure performance
+
+The performance debt rule detects synchronous/blocking keyword patterns near
+risk-sensitive areas. It does NOT run benchmarks, measure latency, or profile code.
+Findings represent potential concern, not confirmed bottlenecks.
+
+## 63. TD-DATA does not inspect database state
+
+The data debt rule checks for migration/schema files without rollback evidence.
+It does NOT connect to databases, inspect schema state, or assess data integrity.
+
+## 64. TD-COMP does not perform legal compliance assessment
+
+The compliance rule detects compliance-related keywords (PII, GDPR, HIPAA, PCI).
+It does NOT perform legal compliance assessment, gap analysis, or regulatory review.
+All findings are "potential exposure" based on keyword evidence.
+
+## 65. Configuration file not yet implemented
+
+The v1 blueprint specifies `config.yaml` for project settings, analysis mode, and
+AI configuration. This is not yet implemented. All behavior uses CLI flags and
+defaults. Config file support is planned for v0.11.0.
+
+## 66. Risk scoring not fully aligned to blueprint §12
+
+Current risk scoring uses a simplified model that approximates the blueprint §12
+formula but does not include all factors (e.g., change frequency from git history,
+architecture centrality from import graph). Full alignment requires git history
+analysis and is planned for v0.11.0.

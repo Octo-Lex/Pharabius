@@ -152,7 +152,7 @@
 - Token usage and latency captured
 - No real network in CI — all tests use mock transport
 
-## v0.9.1 — Real Provider Safety & Manual Smoke Validation (unreleased)
+## v0.9.1 — Real Provider Safety & Manual Smoke Validation (released 2026-05-19)
 
 - Selected-finding boundary enforcement
 - Duplicate enrichment detection
@@ -163,7 +163,14 @@
 - Optional manual smoke script
 - Privacy caution updated
 
-## Future (v0.10.x+)
+## v0.10.0 — Taxonomy Closure & v1 Readiness (unreleased)
+
+- 7 new analysis rules: TD-CODE, TD-COMP, TD-OPS, TD-DATA, TD-PERF, TD-OBS, TD-PROCESS
+- Full 14/14 taxonomy coverage
+- Evidence-backed findings only
+- Conservative severity defaults
+
+## Future (v0.11.x+)
 
 - Real provider integration (OpenAI, Claude, or local model)
 - Report integration for AI enrichments

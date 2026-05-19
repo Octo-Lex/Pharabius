@@ -2,6 +2,29 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [0.10.0] - Unreleased
+
+### Added
+
+- 7 new deterministic analysis rules completing the 14-category taxonomy:
+  - **TD-CODE**: Large source files (>1000 lines), accumulated debt markers (TODO/FIXME/HACK)
+  - **TD-COMP**: Potential compliance exposure (PII, GDPR, HIPAA, PCI, audit, retention)
+  - **TD-OPS**: Deployment files without healthcheck/rollback indicators
+  - **TD-DATA**: Schema migrations without rollback/down evidence
+  - **TD-PERF**: Synchronous/blocking patterns near risk-sensitive areas
+  - **TD-OBS**: Deployment without observability (logging/monitoring/tracing) evidence
+  - **TD-PROCESS**: Missing repository process artifacts (CODEOWNERS, CONTRIBUTING, PR templates)
+- All new rules are evidence-backed: no evidence → no finding
+- Conservative severity: new categories default to Medium/Low severity
+- All new findings use "inferred" language for business impact
+
+### Tests
+
+- 657 tests (28 new), 84%+ coverage
+- 28 taxonomy closure tests covering all 7 new categories
+- Negative tests: no evidence → no finding for each category
+- Existing category stability verified
+
 ## [0.9.1] - Unreleased
 
 ### Added
