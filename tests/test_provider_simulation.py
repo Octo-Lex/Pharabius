@@ -157,7 +157,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -179,7 +179,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -202,7 +202,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -224,7 +224,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -241,7 +241,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -260,7 +260,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -279,7 +279,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -298,7 +298,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -320,7 +320,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -340,7 +340,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -357,7 +357,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -392,7 +392,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -414,7 +414,7 @@ class TestProviderSimulation:
         import pharabius.ai.enricher as enricher_mod
 
         original = enricher_mod._get_provider
-        enricher_mod._get_provider = lambda name: provider
+        enricher_mod._get_provider = lambda name, *, model="": provider
         try:
             report = enrich_findings(repo, provider_name="simulated")
         finally:
@@ -478,26 +478,18 @@ class TestAIResponseFields:
 class TestUnknownProviderMessage:
     """Tests for improved unknown provider error message."""
 
-    def test_unknown_provider_message_v080(self, tmp_path: Any) -> None:
-        """Unknown provider should mention v0.8.0 and available providers."""
-        from typer.testing import CliRunner
-
-        from pharabius.cli import app
-
-        runner = CliRunner()
-        runner.invoke(app, ["enrich", "--provider", "openai", "-r", str(tmp_path)])
-        # Should fail because debt-register.json is missing, but the provider
-        # check happens first only when prerequisites exist
-        # Let's test the enricher directly
+    def test_unknown_provider_message(self, tmp_path: Any) -> None:
+        """Unknown provider should list available providers."""
         from pharabius.ai.enricher import _get_provider
 
         try:
             _get_provider("openai")
             raise AssertionError("Should have raised ValueError")
         except ValueError as e:
-            assert "v0.8.0" in str(e)
-            assert "disabled, mock" in str(e)
-            assert "Future releases" in str(e)
+            assert "not available" in str(e)
+            assert "disabled" in str(e)
+            assert "mock" in str(e)
+            assert "openai-compatible" in str(e)
 
     def test_unknown_provider_message_no_credential_lookup(self, tmp_path: Any) -> None:
         """Error message should not contain credential hints."""

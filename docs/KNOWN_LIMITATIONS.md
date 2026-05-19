@@ -295,3 +295,27 @@ requirements. The actual context sent may differ when a real provider is configu
 Provider output must be strict JSON. Markdown-fenced JSON (```` ```json ... ``` ````),
 JSON with comments (`// ...`), and partial/truncated JSON are all rejected by the
 validation pipeline. Providers must return raw JSON only.
+
+## 54. OpenAI-compatible adapter requires optional dependency
+
+The `openai-compatible` provider requires `httpx`, installed via the optional extra:
+`pip install "pharabius[openai-compatible]"`. Without it, the provider fails with a clear
+install instruction. No official OpenAI SDK is used.
+
+## 55. No Azure-specific support
+
+The `openai-compatible` adapter targets the standard `/v1/chat/completions` request and
+response shape. It does not include Azure-specific endpoint/version handling. Users may
+set `PHARABIUS_OPENAI_BASE_URL` to an Azure endpoint if it implements the expected shape,
+but this is not explicitly tested.
+
+## 56. External provider consent is per-invocation
+
+`--allow-external-provider` is a per-invocation CLI flag. It does not persist between runs.
+There is no config file or persistent consent mechanism in v0.9.0.
+
+## 57. No automatic retry
+
+Provider calls do not retry automatically on failure. The `max_provider_retries` field exists
+in `AIBudget` but defaults to 0 and is not exposed in the CLI. Retry behavior may be added
+in a future release.
