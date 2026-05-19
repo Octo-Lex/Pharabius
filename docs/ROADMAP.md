@@ -1,5 +1,22 @@
 # Pharabius Roadmap
 
+## v1.0.0 — First Stable Release (released 2026-05-20)
+
+- First stable v1 release
+- Version bump from v1.0.0rc1 with documentation updates only
+- 14 CLI commands, 14 taxonomy categories, complete `.ai-debt/` handoff contract
+- RC validation: 8 repos, 112/112 commands passed, 0 P0/P1 blockers
+- 731 tests, 85.07% coverage
+- No source code changes from RC
+
+## v1.0.0rc1 — Release Candidate (released 2026-05-19)
+
+- Version bumped to 1.0.0rc1
+- RunMetadata schema_version and tool_version fixes
+- Schema compatibility policy documented
+- P1 doc fixes (ROADMAP, KNOWN_LIMITATIONS, V1_READINESS_AUDIT)
+- 9-repo validation matrix, install audit, provider/config safety audits
+
 ## v0.5.1 — TD-ARCH Finding Integration (released 2026-05-18)
 
 - TD-ARCH findings from architecture-graph.json cycles and boundary violations
@@ -190,21 +207,18 @@
 - CLI flags override config
 - No credentials in config, no provider consent bypass
 
-## Future (v0.11.x+)
+## Future (v1.1+)
 
-- Real provider integration (OpenAI, Claude, or local model)
+- `--version` CLI flag
+- Sample output gallery (`docs/SAMPLE_OUTPUT.md`)
+- Full graph/git-backed risk scoring (`architecture_centrality`, `change_frequency`)
+- Governance presets and template overrides
 - Report integration for AI enrichments
-- Configuration file for AI settings
-- `--apply-enrichment` flag for merging validated enrichments
-- Block-comment filtering for Rust imports
-- Test-scope edge confidence reduction
-- Non-standard monorepo layout support
-
-## Future Considerations
-
 - Git history analysis (change frequency, hotspots, churn metrics)
-- Multi-repository comparison and portfolio-level dashboards
+- Incremental analysis mode
 - IDE plugin integration (VS Code, JetBrains)
 - CI/CD gate mode (exit non-zero when new debt is introduced)
 - Dependency freshness and deprecation tracking
 - Architecture decision record (ADR) generation from findings
+- Multi-repository comparison and portfolio-level dashboards
+- Jira/GitHub Issues export
