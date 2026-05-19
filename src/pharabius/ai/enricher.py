@@ -92,23 +92,50 @@ def _aggregate_context_summary(
     )
 
 
+def _count_evidence_ids(enrichments: list[FindingEnrichment]) -> int:
+    """Count unique evidence IDs across enrichments."""
+    ids: set[str] = set()
+    for enc in enrichments:
+        ids.update(enc.evidence_ids)
+    return len(ids)
+
+
 def _write_md_report(report: AIEnrichmentReport, path: Path) -> None:
     """Write human-readable markdown enrichment report."""
-    lines = [
+    # Deterministic ordering: sort enrichments by finding_id
+    sorted_enrichments = sorted(report.enrichments, key=lambda e: e.finding_id)
+    # Deterministic ordering: sort rejections by finding_id (unknown last)
+    sorted_rejections = sorted(
+        report.rejections,
+        key=lambda r: r.finding_id or "zzz_unknown",
+    )
+
+    evidence_count = _count_evidence_ids(sorted_enrichments)
+    omitted = report.context_summary.evidence_items_omitted
+
+    lines: list[str] = [
         "# AI Enrichment Report",
         "",
-        f"- **Provider:** {report.provider}",
-        f"- **Model:** {report.model}",
-        f"- **Generated:** {report.generated_at}",
-        f"- **Findings enriched:** {len(report.enrichments)}",
-        f"- **Rejections:** {len(report.rejections)}",
+        "## Summary",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
+        f"| Provider | {report.provider} |",
+        f"| Model | {report.model} |",
+        f"| Generated | {report.generated_at} |",
+        f"| Findings selected for enrichment | {report.usage.items_processed} |",
+        f"| Enrichments accepted | {len(sorted_enrichments)} |",
+        f"| Enrichments rejected | {len(sorted_rejections)} |",
+        f"| Evidence IDs referenced | {evidence_count} |",
+        f"| Evidence items omitted (budget) | {omitted} |",
         "",
     ]
 
-    if report.enrichments:
+    if sorted_enrichments:
         lines.append("## Enrichments")
         lines.append("")
-        for enc in report.enrichments:
+        for enc in sorted_enrichments:
+            sorted_evidence = sorted(enc.evidence_ids)
             lines.append(f"### {enc.finding_id}")
             lines.append("")
             if enc.explanation:
@@ -124,19 +151,42 @@ def _write_md_report(report: AIEnrichmentReport, path: Path) -> None:
                 lines.append(f"**Uncertainty:** {enc.uncertainty_notes}")
                 lines.append("")
             lines.append(f"- **Confidence:** {enc.confidence}")
-            lines.append(f"- **Evidence IDs:** {', '.join(enc.evidence_ids)}")
+            lines.append(f"- **Evidence IDs:** {', '.join(sorted_evidence)}")
             lines.append(f"- **Limitations:** {'; '.join(enc.limitations)}")
             lines.append("")
 
-    if report.rejections:
+    if sorted_rejections:
         lines.append("## Rejections")
         lines.append("")
-        for rej in report.rejections:
+        for rej in sorted_rejections:
             fid = rej.finding_id or "unknown"
-            lines.append(f"- **{fid}:** {rej.reason}")
-            if rej.invalid_fields:
-                lines.append(f"  - Invalid fields: {', '.join(rej.invalid_fields)}")
+            lines.append(f"### {fid}")
             lines.append("")
+            lines.append(f"- **Reason:** {rej.reason}")
+            if rej.invalid_fields:
+                sorted_fields = sorted(rej.invalid_fields)
+                lines.append(f"- **Invalid fields:** {', '.join(sorted_fields)}")
+            if rej.missing_evidence_ids:
+                sorted_missing = sorted(rej.missing_evidence_ids)
+                lines.append(f"- **Missing evidence IDs:** {', '.join(sorted_missing)}")
+            if rej.raw_output_hash:
+                lines.append(f"- **Hash:** {rej.raw_output_hash}")
+            lines.append("")
+
+    # Review checklist
+    lines.extend(
+        [
+            "## Review Checklist",
+            "",
+            "- [ ] Enrichment evidence IDs verified against `evidence.json`",
+            "- [ ] No canonical artifacts modified (by design)",
+            "- [ ] Limitations reviewed for each enrichment",
+            "- [ ] Rejected outputs inspected (if any)",
+            "- [ ] Privacy caution acknowledged",
+            "- [ ] Sidecar files reviewed before sharing",
+            "",
+        ]
+    )
 
     # Footer
     lines.extend(
@@ -150,7 +200,7 @@ def _write_md_report(report: AIEnrichmentReport, path: Path) -> None:
             "Sidecar files may contain summarized repository context. "
             "Review before sharing with external parties.",
             "",
-            "External AI providers are not included in v0.7.1. "
+            "External AI providers are not included in v0.7.2. "
             "Future providers may send evidence to third-party services.",
             "",
             "*This report is AI-generated enrichment, not canonical finding data. "

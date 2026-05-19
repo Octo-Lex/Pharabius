@@ -628,6 +628,47 @@ def enrich(
 
 
 @app.command()
+def ai_status(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to check AI sidecar status for.",
+        ),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Output machine-readable JSON.",
+        ),
+    ] = False,
+) -> None:
+    """Show AI sidecar enrichment status. Read-only."""
+    import json as _json
+
+    from pharabius.ai.status_reader import read_ai_status
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+
+    status, exit_code = read_ai_status(resolved_root)
+
+    if exit_code != 0:
+        console.print(f"[bold red]Error:[/bold red] {status.error_message}")
+        raise typer.Exit(code=exit_code)
+
+    if not status.sidecar_present:
+        console.print(status.error_message)
+        return
+
+    if json_output:
+        console.print(_json.dumps(status.to_dict(), indent=2))
+    else:
+        console.print(status.to_human())
+
+
+@app.command()
 def run(
     repository_root: Annotated[
         Path | None,
