@@ -266,3 +266,14 @@ when `.ai-debt/ai/` is absent or present. Report integration is planned for a fu
 
 Running `ai-debt enrich --finding-id NONEXISTENT` exits with code 1 and a clear error message.
 It does not silently return 0 enrichments.
+
+## 49. Sidecar files may contain summarized repository context
+
+`.ai-debt/ai/` sidecar files may contain summarized evidence and repository context.
+Review before sharing with external parties. Consider adding `.ai-debt/ai/` to
+`.gitignore` for sensitive repositories.
+
+## 50. ai-status is informational only
+
+`ai-debt ai-status` summarizes sidecar state but does not validate correctness of
+enrichment content. Review enrichment-report.md for detailed findings.

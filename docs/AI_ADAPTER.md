@@ -1,4 +1,4 @@
-# AI Adapter — Pharabius v0.7.0
+# AI Adapter — Pharabius v0.7.2
 
 ## Overview
 
@@ -14,6 +14,12 @@ ai-debt run -r /path/to/repo
 
 # Enrich with mock provider (for testing)
 ai-debt enrich --provider mock -r /path/to/repo
+
+# Check sidecar status
+ai-debt ai-status -r /path/to/repo
+
+# Machine-readable status
+ai-debt ai-status --json -r /path/to/repo
 
 # Dry run (assemble context, validate, but write nothing)
 ai-debt enrich --provider mock --dry-run -r /path/to/repo
@@ -32,6 +38,87 @@ Running `ai-debt enrich` with no flags prints:
 AI provider is disabled. Use --provider mock for local testing.
 ```
 
+## Sidecar Review Workflow
+
+The recommended workflow for reviewing AI enrichments:
+
+```bash
+# 1. Run deterministic pipeline
+ai-debt analyze --no-ai -r /path/to/repo
+
+# 2. Enrich with mock (or future real provider)
+ai-debt enrich --provider mock -r /path/to/repo
+
+# 3. Review sidecar summary
+ai-debt ai-status -r /path/to/repo
+
+# 4. Read full report if needed
+# Open .ai-debt/ai/enrichment-report.md
+```
+
+### What to check
+
+| Question | Where to find the answer |
+|---|---|
+| Which findings were enriched? | `ai-status` output + Enrichments section |
+| Which enrichments were rejected? | `ai-status` output + Rejections section |
+| Why were outputs rejected? | Rejection reasons + invalid fields |
+| Which evidence IDs support each enrichment? | Per-finding Evidence IDs |
+| Were evidence items omitted due to budget? | Evidence omitted count |
+| Are canonical artifacts unchanged? | By design + `ai-status` statement |
+| What should reviewers trust? | Only deterministic findings in `debt-register.json` |
+| What is AI suggestion only? | Everything in `.ai-debt/ai/` |
+
+### `ai-debt ai-status`
+
+Read-only command that summarizes AI sidecar state without modifying anything.
+
+```
+AI Sidecar Status
+
+  Provider:              mock
+  Model:                 mock-v0.7.0
+  Generated:             2026-05-19T00:00:00+00:00
+
+  Findings selected:     5
+  Enrichments accepted:  5
+  Enrichments rejected:  0
+  Evidence referenced:   12
+  Evidence omitted:      3
+
+  Canonical artifacts:   not modified (by design)
+```
+
+With `--json`:
+
+```json
+{
+  "sidecar_present": true,
+  "provider": "mock",
+  "model": "mock-v0.7.0",
+  "generated_at": "2026-05-19T00:00:00+00:00",
+  "findings_selected": 5,
+  "enrichments_accepted": 5,
+  "enrichments_rejected": 0,
+  "evidence_referenced": 12,
+  "evidence_omitted": 3,
+  "canonical_artifacts_modified": false,
+  "status": "review_recommended"
+}
+```
+
+**Exit codes:**
+- 0: sidecar present and valid, or no sidecar found (informational)
+- 1: sidecar directory exists but report is missing or corrupted
+
+### Sharing sidecar files
+
+- `.ai-debt/ai/` may contain summarized repository context
+- Review before committing to git
+- Consider adding `.ai-debt/ai/` to `.gitignore` for sensitive repos
+- Future external providers may send evidence off-machine
+- Sidecar files are never read by other Pharabius commands in v0.7.x
+
 ## Command Reference
 
 ```
@@ -44,6 +131,12 @@ Options:
   --finding-id TEXT              Enrich a single finding by ID
   --dry-run                      Assemble context and validate without writing files
   --strict                       Reject entire batch if any enrichment fails validation
+
+ai-debt ai-status [OPTIONS]
+
+Options:
+  -r, --repository-root PATH     Repository root (default: current directory)
+  --json                         Output machine-readable JSON
 ```
 
 ## Provider Modes
@@ -53,7 +146,7 @@ Options:
 | `disabled` | No-op. Prints disabled message. | No |
 | `mock` | Returns deterministic schema-valid test output | No |
 
-**No real network provider in v0.7.0.** Future versions may add OpenAI, Claude, or local model providers.
+**No real network provider in v0.7.x.** Future versions may add OpenAI, Claude, or local model providers.
 
 ## Output Contract
 
@@ -67,7 +160,7 @@ When `--provider mock` runs successfully:
     rejected-ai-output.json     # Rejected outputs with reasons
 ```
 
-**This directory is not read by any other Pharabius command in v0.7.0.** It is completely optional and does not affect deterministic workflows.
+**This directory is not read by any other Pharabius command in v0.7.x.** It is completely optional and does not affect deterministic workflows.
 
 ## Trust Model
 
@@ -143,6 +236,9 @@ cli.py
     → ai.adapter.generate_json()               # Call provider (mock/disabled)
     → ai.validator.validate_raw_output()       # Validate against schemas + IDs
     → write .ai-debt/ai/ sidecar files
+
+cli.py
+  → ai.status_reader.read_ai_status()        # Read sidecar, return summary
 ```
 
 ### Import contract
@@ -150,7 +246,7 @@ cli.py
 ```
 pharabius.ai imports from:   pharabius.schemas
 pharabius.ai does NOT import from: pharabius.core, pharabius.cli
-pharabius.cli imports from:  pharabius.ai.enricher
+pharabius.cli imports from:  pharabius.ai.enricher, pharabius.ai.status_reader
 ```
 
 ### Layer diagram
@@ -175,12 +271,13 @@ Schemas (schemas/*)
 
 ## Limitations
 
-See `docs/KNOWN_LIMITATIONS.md` items 41–47 for AI-specific limitations.
+See `docs/KNOWN_LIMITATIONS.md` items 41–48 for AI-specific limitations.
 
 Key points:
-- No real AI provider in v0.7.0
+- No real AI provider in v0.7.x
 - AI enrichments are sidecar records, not canonical findings
 - AI does not mutate debt-register.json or any canonical artifact
 - Context assembly is bounded — may omit some evidence
-- No report integration in v0.7.0
+- No report integration in v0.7.x
 - `ai-debt enrich` is not part of `ai-debt run`
+- `ai-debt ai-status` is read-only and creates/modifies no files
