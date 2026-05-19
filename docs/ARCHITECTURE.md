@@ -283,6 +283,23 @@ Each CLI command produces specific `.ai-debt/` artifacts:
 | `status` | No files (read-only, console output) |
 | `ai-status` | No files (read-only, console output) |
 
-**Config note:** `.ai-debt/config.yaml` is written by `init` for future compatibility but
-not read by any command in v0.10.1. All behavior uses CLI flags and built-in defaults.
-Config reading is planned for v0.11.0.
+**Config note:** `.ai-debt/config.yaml` is written by `init` and read by commands starting
+in v0.11.0. `analysis.exclude_paths` and `analysis.max_file_size_kb` are authoritative.
+CLI flags always override config values.
+
+---
+
+## Schema Compatibility Policy
+
+**Canonical schemas** (everything in `schemas/` except `ai_enrichment.py`) follow
+additive-only changes during v1.x where practical:
+- Fields will not be removed or renamed without a migration note in CHANGELOG.md
+- New optional fields may be added
+- `schema_version` will be incremented if breaking changes are ever introduced
+- All canonical JSON artifacts include `schema_version: "1.0"`
+
+**AI sidecar schemas** (`schemas/ai_enrichment.py`) are optional/experimental and may
+evolve independently. Sidecar output is never read by canonical commands.
+
+**Derived/export schemas** (SARIF, CSV, JSONL) follow their respective external standards.
+SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding data.

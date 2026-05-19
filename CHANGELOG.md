@@ -2,7 +2,38 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [0.11.0] - Unreleased
+## [1.0.0rc1] - Unreleased
+
+### Changed
+
+- Version bumped to `1.0.0rc1` (release candidate)
+- `RunMetadata` now includes `schema_version: "1.0"` in run JSON
+- `RunMetadata.tool_version` now reads from installed package metadata (was hardcoded `"0.1.0"`)
+
+### Documentation
+
+- Fixed KNOWN_LIMITATIONS.md header version (was incorrectly `v0.2.1`)
+- Updated ROADMAP.md to show v0.11.0 as released
+- Updated V1_READINESS_AUDIT.md to reflect v0.11.0 state
+- Added schema compatibility policy to ARCHITECTURE.md
+- Updated command count to 14 in all documentation
+
+### Validation
+
+- 9-repository field validation matrix executed
+- Full workflow validated (all 14 commands)
+- Install/packaging audit completed
+- Provider safety audit completed (15 checks)
+- Config runtime audit completed (12 checks)
+- `.ai-debt/` contract freeze verified
+
+### Notes
+
+- This is a release candidate. Not production-ready until v1.0.0 final.
+- No feature additions, no new providers, no new taxonomy categories.
+- Risk scoring gaps documented as v1.1 follow-up.
+
+## [0.11.0] - 2026-05-19
 
 ### Added
 
