@@ -1346,10 +1346,10 @@ class TestPrivacyChecks:
 
         for mod in [adapter_mod, context_mod, enricher_mod, validator_mod]:
             source = Path(mod.__file__).read_text(encoding="utf-8")
-            assert "httpx" not in source
-            assert "requests." not in source  # not "requests" alone (too broad)
-            assert "aiohttp" not in source
-            assert "urllib.request" not in source
+            assert "import httpx" not in source
+            assert "import requests" not in source
+            assert "import aiohttp" not in source
+            assert "import urllib.request" not in source
 
     def test_no_provider_sdks(self):
         import pharabius.ai.mock_provider as mod

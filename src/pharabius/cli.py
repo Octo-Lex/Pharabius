@@ -510,7 +510,7 @@ def enrich(
         str,
         typer.Option(
             "--provider",
-            help="AI provider: disabled or mock.",
+            help="AI provider: disabled, mock, or openai-compatible.",
         ),
     ] = "disabled",
     max_findings: Annotated[
@@ -549,6 +549,28 @@ def enrich(
             help="Preview bounded context without calling any provider or writing files.",
         ),
     ] = False,
+    allow_external: Annotated[
+        bool,
+        typer.Option(
+            "--allow-external-provider",
+            help="Consent to send repository evidence to an external AI provider.",
+        ),
+    ] = False,
+    model_override: Annotated[
+        str,
+        typer.Option(
+            "--model",
+            help="Provider model name (required for openai-compatible if env var not set).",
+        ),
+    ] = "",
+    timeout_seconds: Annotated[
+        int,
+        typer.Option(
+            "--timeout-seconds",
+            help="Provider call timeout in seconds.",
+            min=1,
+        ),
+    ] = 30,
 ) -> None:
     """Enrich findings with AI-generated explanations and rationale."""
     from pharabius.ai.enricher import enrich_findings, format_context_preview, preview_context
@@ -598,12 +620,23 @@ def enrich(
         console.print(format_context_preview(preview))
         return
 
-    if provider not in ("disabled", "mock"):
+    # Provider validation and consent gate
+    known_providers = {"disabled", "mock", "openai-compatible"}
+    if provider not in known_providers:
         console.print(
             f"[bold red]Error:[/bold red] "
-            f"Provider '{provider}' is not available in v0.8.0. "
-            "Available providers: disabled, mock. "
-            "Future releases may add external provider support."
+            f"Provider '{provider}' is not available. "
+            f"Available providers: {', '.join(sorted(known_providers))}."
+        )
+        raise typer.Exit(code=1)
+
+    # External provider consent — must happen before provider import/init
+    external_providers = {"openai-compatible"}
+    if provider in external_providers and not allow_external:
+        console.print(
+            f"Provider '{provider}' may send repository evidence to an external service.\n"
+            "Run with --context-preview to inspect what would be sent.\n"
+            "Then rerun with --allow-external-provider if you approve."
         )
         raise typer.Exit(code=1)
 
@@ -631,8 +664,12 @@ def enrich(
             finding_id=finding_id,
             dry_run=dry_run,
             strict=strict,
+            model=model_override,
         )
     except ValueError as exc:
+        console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+    except ImportError as exc:
         console.print(f"[bold red]Error:[/bold red] {exc}")
         raise typer.Exit(code=1) from exc
 
