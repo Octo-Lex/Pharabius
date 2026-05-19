@@ -2,6 +2,40 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [0.11.0] - Unreleased
+
+### Added
+
+- Config runtime: `.ai-debt/config.yaml` is now read by commands
+- New `src/pharabius/schemas/config.py` — Pydantic config model with safe defaults
+- New `src/pharabius/core/config.py` — config loader with warning behavior
+- `scan` command reads `analysis.exclude_paths` from config (supplements hardcoded exclusions)
+- `scan` command reads `analysis.max_file_size_kb` from config
+- Malformed config produces clear warning + safe defaults
+- Unknown config keys produce clear warning + ignored
+- Missing config uses safe defaults (no warning)
+- CLI flags always override config values
+- 20 config tests: model, loader, integration, provider safety
+
+### Fixed
+
+- Config path matching bug: `.git` exclusion no longer incorrectly matches `.github/`
+
+### Changed
+
+- `scan_repository()` accepts optional `extra_exclude_paths` and `max_file_size_kb` params
+- `write_evidence_store()` passes config-derived settings to scanner
+
+### Documentation
+
+- Updated KNOWN_LIMITATIONS.md #65: config is now read by commands
+- Updated ARCHITECTURE.md with config runtime architecture
+- Updated V1_READINESS_AUDIT.md with config runtime status
+
+### Tests
+
+- 729 tests (20 new), 85%+ coverage
+
 ## [0.10.1] - Unreleased
 
 ### Changed
