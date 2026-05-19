@@ -182,18 +182,46 @@ def _relative(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
-def _is_excluded(path: Path, root: Path) -> bool:
-    return is_excluded_path(path, root)
+def _is_excluded(
+    path: Path,
+    root: Path,
+    extra_exclude_paths: set[str] | None = None,
+) -> bool:
+    if is_excluded_path(path, root):
+        return True
+    if extra_exclude_paths:
+        try:
+            relative = path.relative_to(root)
+        except ValueError:
+            return True
+        parts_str = "/" + relative.as_posix()
+        for exc in extra_exclude_paths:
+            exc_norm = exc.strip("/")
+            if not exc_norm:
+                continue
+            # Match as path segment: exact or followed by /
+            if parts_str == "/" + exc_norm:
+                return True
+            if parts_str.startswith("/" + exc_norm + "/"):
+                return True
+            # Also match if a path component equals the exclusion
+            for segment in relative.parts:
+                if segment == exc_norm:
+                    return True
+    return False
 
 
-def _iter_files(root: Path) -> list[Path]:
+def _iter_files(
+    root: Path,
+    extra_exclude_paths: set[str] | None = None,
+) -> list[Path]:
     files: list[Path] = []
 
     for path in root.rglob("*"):
         if path.is_dir():
             continue
 
-        if _is_excluded(path, root):
+        if _is_excluded(path, root, extra_exclude_paths=extra_exclude_paths):
             continue
 
         files.append(path)
@@ -518,9 +546,14 @@ class EvidenceBuilder:
         self.items.append(item)
 
 
-def scan_repository(repository_root: Path) -> EvidenceStore:
+def scan_repository(
+    repository_root: Path,
+    *,
+    extra_exclude_paths: set[str] | None = None,
+    max_file_size_kb: int | None = None,
+) -> EvidenceStore:
     root = repository_root.resolve()
-    files = _iter_files(root)
+    files = _iter_files(root, extra_exclude_paths=extra_exclude_paths)
 
     builder = EvidenceBuilder()
 
@@ -774,8 +807,17 @@ def scan_repository(repository_root: Path) -> EvidenceStore:
     return EvidenceStore(repository=str(root), evidence=builder.items)
 
 
-def write_evidence_store(repository_root: Path) -> EvidenceStore:
-    store = scan_repository(repository_root)
+def write_evidence_store(
+    repository_root: Path,
+    *,
+    extra_exclude_paths: set[str] | None = None,
+    max_file_size_kb: int | None = None,
+) -> EvidenceStore:
+    store = scan_repository(
+        repository_root,
+        extra_exclude_paths=extra_exclude_paths,
+        max_file_size_kb=max_file_size_kb,
+    )
     output_path = repository_root.resolve() / ".ai-debt" / "evidence.json"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -173,7 +173,7 @@
 - CI-only workflow suppression for TD-OPS/TD-OBS
 - Directory-structure matching for TD-DATA (no broad "schema" matching)
 
-## v0.10.1 — v1 Readiness Audit (unreleased)
+## v0.10.1 — v1 Readiness Audit (released 2026-05-19)
 
 - Config defaults fixed (safe, accurate)
 - First-run smoke tests
@@ -181,6 +181,14 @@
 - `.ai-debt/` contract audit
 - Report readability audit
 - Artifact ownership documented
+
+## v0.11.0 — Config Runtime (unreleased)
+
+- Config.yaml now read by commands
+- `exclude_paths` and `max_file_size_kb` configurable
+- Safe defaults, malformed config warning, unknown key warning
+- CLI flags override config
+- No credentials in config, no provider consent bypass
 
 ## Future (v0.11.x+)
 

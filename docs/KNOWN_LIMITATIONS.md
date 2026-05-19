@@ -362,15 +362,26 @@ The compliance rule detects compliance-related keywords (PII, GDPR, HIPAA, PCI).
 It does NOT perform legal compliance assessment, gap analysis, or regulatory review.
 All findings are "potential exposure" based on keyword evidence.
 
-## 65. Configuration file written but not read (v0.10.1)
+## 65. Config runtime implemented with narrow scope (v0.11.0)
 
-`ai-debt init` creates `.ai-debt/config.yaml` with safe defaults. However, no command
-reads or uses this file in v0.10.1. All behavior is controlled by CLI flags and built-in
-defaults. The config file is initialized for future compatibility only.
-Config reading/validation is deferred to v0.11.0.
+`ai-debt init` creates `.ai-debt/config.yaml` with safe defaults. Commands now read
+config for `analysis.exclude_paths` and `analysis.max_file_size_kb`. CLI flags always
+override config values. Malformed config produces warnings and uses safe defaults.
+Unknown keys produce warnings and are ignored.
 
-The config contains no secrets, no API keys, no `.env` references, and no provider
-credentials. AI is disabled by default (`enabled: false`, `provider: "disabled"`).
+Config does NOT store credentials, model selection, or provider consent. The
+`ai.provider` field is parsed but does NOT enable real provider calls without
+explicit CLI `--provider` and `--allow-external-provider` flags.
+
+The following fields remain non-authoritative (parsed but not behavior-changing):
+- `project.*` (informational only)
+- `analysis.mode` (only "baseline" exists)
+- `analysis.include_git_history` (not implemented)
+- `ai.enabled` (parsed but real providers require CLI consent)
+- `risk_scoring.priority_bands` (not wired to scoring)
+- `output.directory` (does not relocate workspace)
+- `output.formats` (always produces both JSON + Markdown)
+- Policy fields (parsed, all default true, do not weaken safety)
 
 ## 66. Risk scoring not fully aligned to blueprint §12 (v0.10.1)
 
