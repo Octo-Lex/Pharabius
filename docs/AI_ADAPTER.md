@@ -1,4 +1,4 @@
-# AI Adapter — Pharabius v0.7.2
+# AI Adapter — Pharabius v0.8.0
 
 ## Overview
 
@@ -117,7 +117,7 @@ With `--json`:
 - Review before committing to git
 - Consider adding `.ai-debt/ai/` to `.gitignore` for sensitive repos
 - Future external providers may send evidence off-machine
-- Sidecar files are never read by other Pharabius commands in v0.7.x
+- Sidecar files are never read by other Pharabius commands in v0.8.x
 
 ## Command Reference
 
@@ -146,7 +146,7 @@ Options:
 | `disabled` | No-op. Prints disabled message. | No |
 | `mock` | Returns deterministic schema-valid test output | No |
 
-**No real network provider in v0.7.x.** Future versions may add OpenAI, Claude, or local model providers.
+**No real network provider in v0.8.x.** Future versions may add OpenAI, Claude, or local model providers.
 
 ## Output Contract
 
@@ -160,7 +160,7 @@ When `--provider mock` runs successfully:
     rejected-ai-output.json     # Rejected outputs with reasons
 ```
 
-**This directory is not read by any other Pharabius command in v0.7.x.** It is completely optional and does not affect deterministic workflows.
+**This directory is not read by any other Pharabius command in v0.8.x.** It is completely optional and does not affect deterministic workflows.
 
 ## Trust Model
 
@@ -274,10 +274,84 @@ Schemas (schemas/*)
 See `docs/KNOWN_LIMITATIONS.md` items 41–48 for AI-specific limitations.
 
 Key points:
-- No real AI provider in v0.7.x
+- No real AI provider in v0.8.x
 - AI enrichments are sidecar records, not canonical findings
 - AI does not mutate debt-register.json or any canonical artifact
 - Context assembly is bounded — may omit some evidence
-- No report integration in v0.7.x
+- No report integration in v0.8.x
 - `ai-debt enrich` is not part of `ai-debt run`
 - `ai-debt ai-status` is read-only and creates/modifies no files
+
+## Provider Interface Readiness (v0.8.0)
+
+### Readiness status
+
+v0.8.0 is a **readiness-only release**. No real external provider is included.
+
+Provider readiness criteria (25 items) have been audited. See the plan document for the full checklist.
+
+Key readiness items:
+- Provider-level errors now produce rejection records
+- `AIResponse` includes `request_id`, `latency_ms`, `response_truncated`, `provider_error_code`, `provider_error_message`
+- `AIUsageSummary` includes `prompt_tokens`, `completion_tokens`, `total_tokens`, `estimated_cost`
+- `AIBudget` includes `provider_timeout_seconds`, `max_provider_retries`
+- Provider simulation tests cover 14 failure modes
+- Context preview allows inspection before any provider call
+
+### Context Preview
+
+```bash
+# Preview what evidence would be sent to a provider
+ai-debt enrich --context-preview -r /path/to/repo
+
+# Preview for a single finding
+ai-debt enrich --context-preview --finding-id TD-DEP-001 -r /path/to/repo
+
+# Preview limits findings
+ai-debt enrich --context-preview --max-findings 3 -r /path/to/repo
+```
+
+Context preview:
+- Assembles bounded context
+- Prints findings, evidence counts, budget usage
+- Does NOT call any provider
+- Does NOT write any files
+- Works with default (disabled) provider
+
+### Prompt Contract
+
+Any future provider prompt MUST require:
+- Output must be JSON with `enrichments` array
+- Must use existing finding IDs from `debt-register.json`
+- Must use existing evidence IDs from `evidence.json`
+- Must not invent new findings or categories
+- Must not invent file paths
+- Must include non-empty `limitations`
+- Must include valid `confidence` (High/Medium/Low)
+- Must mark output as sidecar-only, not canonical
+
+### Strict JSON Requirement
+
+Provider output must be strict JSON. The following are **rejected**:
+- Markdown-fenced JSON (```` ```json ... ``` ````)
+- JSON with comments (`// comment`)
+- Partial or truncated JSON
+- Non-JSON text
+
+### Future Credential Policy
+
+When a real provider is added in a future release:
+- Credentials read from environment variables only (e.g., `PHARABIUS_OPENAI_API_KEY`)
+- No credentials stored in `.ai-debt/` files
+- No credentials in logs or sidecar output
+- Missing credentials fail with a clear error message
+- No `.ai-debt/config.yaml` in v0.8.x
+
+### Future External Provider Consent
+
+When a real external provider is added:
+- Users must explicitly configure the provider
+- Users must be warned that repository evidence will be sent externally
+- `--context-preview` allows inspecting what will be sent
+- No automatic external calls from `ai-debt run`
+- No hidden provider fallback

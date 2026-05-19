@@ -1,7 +1,7 @@
 """AI adapter interface and response types.
 
 Defines the provider-neutral adapter contract.
-Real providers are NOT included in v0.7.0.
+Real providers are NOT included in v0.8.0.
 """
 
 from __future__ import annotations
@@ -24,6 +24,11 @@ class AIResponse(BaseModel):
     usage: AIUsageSummary = Field(default_factory=AIUsageSummary)
     finish_reason: str = ""
     errors: list[str] = Field(default_factory=list)
+    request_id: str = ""
+    latency_ms: int = 0
+    response_truncated: bool = False
+    provider_error_code: str = ""
+    provider_error_message: str = ""
 
 
 class AIAdapter(ABC):
@@ -52,6 +57,8 @@ class AIAdapter(ABC):
         prompt: str,
         context: dict[str, Any],
         schema_hint: dict[str, Any] | None = None,
+        *,
+        timeout_seconds: int = 30,
     ) -> AIResponse:
         """Generate a JSON response from the provider.
 
@@ -59,6 +66,7 @@ class AIAdapter(ABC):
             prompt: Instruction text for the provider.
             context: Structured context (evidence, finding, units, etc.).
             schema_hint: Optional schema describing expected output shape.
+            timeout_seconds: Timeout for provider call (default 30s).
 
         Returns:
             AIResponse with parsed_json set if successful.
@@ -84,6 +92,8 @@ class DisabledAdapter(AIAdapter):
         prompt: str,
         context: dict[str, Any],
         schema_hint: dict[str, Any] | None = None,
+        *,
+        timeout_seconds: int = 30,
     ) -> AIResponse:
         return AIResponse(
             provider=self.name,

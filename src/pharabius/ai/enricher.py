@@ -40,8 +40,9 @@ def _get_provider(provider_name: str) -> AIAdapter:
     cls = providers.get(provider_name)
     if cls is None:
         raise ValueError(
-            f"AI provider '{provider_name}' is not available. "
-            "Use --provider mock for local testing."
+            f"Provider '{provider_name}' is not available in v0.8.0. "
+            "Available providers: disabled, mock. "
+            "Future releases may add external provider support."
         )
     return cls()
 
@@ -212,6 +213,93 @@ def _write_md_report(report: AIEnrichmentReport, path: Path) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def preview_context(
+    repository_root: Path,
+    *,
+    max_findings: int = 10,
+    finding_id: str | None = None,
+    budget: AIBudget | None = None,
+) -> dict[str, Any]:
+    """Assemble bounded context for preview without calling any provider.
+
+    Returns dict with:
+    - findings: list of findings selected for enrichment
+    - per_finding_contexts: list of per-finding context dicts
+    - summary: aggregated context summary
+    - no_provider_called: True
+    - no_files_written: True
+    """
+    if budget is None:
+        budget = AIBudget()
+
+    ai_debt_dir = repository_root / ".ai-debt"
+    artifacts = load_artifacts(ai_debt_dir)
+    register = artifacts.get("register", {})
+
+    if not register.get("findings"):
+        return {
+            "findings": [],
+            "per_finding_contexts": [],
+            "summary": AIContextSummary(),
+            "no_provider_called": True,
+            "no_files_written": True,
+        }
+
+    ctx = build_enrichment_context(
+        artifacts, max_findings=max_findings, finding_id=finding_id, budget=budget
+    )
+    context_summary = _aggregate_context_summary(ctx.get("per_finding_contexts", []))
+
+    return {
+        "findings": ctx["findings"],
+        "per_finding_contexts": ctx.get("per_finding_contexts", []),
+        "summary": context_summary,
+        "no_provider_called": True,
+        "no_files_written": True,
+    }
+
+
+def format_context_preview(preview: dict[str, Any]) -> str:
+    """Format context preview dict into human-readable text."""
+    findings = preview["findings"]
+    summary: AIContextSummary = preview["summary"]
+    per_finding = preview.get("per_finding_contexts", [])
+
+    lines = [
+        "Context Preview",
+        "",
+        "No provider was called.",
+        "No files were written.",
+        "",
+        f"Findings selected: {len(findings)}",
+    ]
+
+    for fc in per_finding:
+        finding = fc.get("finding", {})
+        cs = fc.get("context_summary", AIContextSummary())
+        fid = finding.get("id", "unknown")
+        title = finding.get("title", "")
+        lines.append(f"  {fid}: {title}")
+        lines.append(f"    Evidence included: {cs.evidence_items_included}")
+        lines.append(f"    Evidence omitted: {cs.evidence_items_omitted}")
+        lines.append(f"    Analysis units: {cs.analysis_units_included}")
+        lines.append(f"    Graph records: {cs.graph_records_included}")
+
+    lines.extend(
+        [
+            "",
+            f"Total evidence included: {summary.evidence_items_included}",
+            f"Total evidence omitted: {summary.evidence_items_omitted}",
+            f"Total analysis units: {summary.analysis_units_included}",
+            f"Total graph records: {summary.graph_records_included}",
+            f"Context chars used: {summary.total_context_chars}",
+            f"Budget limit: {summary.budget_limit_chars}",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
 def _git_value(root: Path, args: list[str]) -> str:
     """Get a git value, returning empty string on any failure."""
     import subprocess
@@ -289,7 +377,7 @@ def enrich_findings(
     # 4. Get provider and call
     provider = _get_provider(provider_name)
     prompt = _build_prompt(ctx)
-    response = provider.generate_json(prompt, ctx)
+    response = provider.generate_json(prompt, ctx, timeout_seconds=budget.provider_timeout_seconds)
 
     # Check for disabled provider
     if response.errors and provider_name == "disabled":
@@ -298,6 +386,22 @@ def enrich_findings(
             model="none",
             repository=str(repository_root),
             usage=AIUsageSummary(provider=provider_name, model="none"),
+            enrichments=[],
+            rejections=[
+                RejectedAIOutput(
+                    finding_id=None,
+                    reason=response.errors[0],
+                )
+            ],
+        )
+
+    # Check for provider-level errors (timeout, rate-limit, auth, etc.)
+    if response.errors and not response.raw_text:
+        return AIEnrichmentReport(
+            provider=provider_name,
+            model=response.usage.model or provider.model,
+            repository=str(repository_root),
+            usage=response.usage,
             enrichments=[],
             rejections=[
                 RejectedAIOutput(

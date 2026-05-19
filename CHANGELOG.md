@@ -2,7 +2,41 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [0.7.2] - Unreleased
+## [0.8.0] - Unreleased
+
+### Added
+
+- `ai-debt enrich --context-preview` — preview bounded context without calling any provider or writing files
+- Provider interface hardening: `AIResponse` gains `request_id`, `latency_ms`, `response_truncated`, `provider_error_code`, `provider_error_message`
+- `AIUsageSummary` gains `prompt_tokens`, `completion_tokens`, `total_tokens`, `estimated_cost`
+- `AIBudget` gains `provider_timeout_seconds`, `max_provider_retries`
+- `AIAdapter.generate_json` accepts `timeout_seconds` keyword parameter
+- Provider simulation tests: 14 tests covering timeout, rate-limit, auth failure, malformed JSON, markdown-fenced JSON, partial JSON, JSON with comments, content filter, truncated output, empty response, mixed batch
+- Context preview tests: 17 tests covering CLI and unit behavior
+- Improved unknown provider error message: references v0.8.0 and lists available providers
+
+### Changed
+
+- Unknown provider error now reads: `Provider '<name>' is not available in v0.8.0. Available providers: disabled, mock.`
+- Provider-level errors (timeout, rate-limit, auth, content filter) now produce rejection records instead of crashing
+
+### Documentation
+
+- Provider readiness checklist (25 criteria)
+- Prompt contract requirements for future providers
+- Future credential policy: environment variables only, no repository files
+- Future external-provider consent requirement documented
+- Strict JSON requirement: markdown-fenced, comments, and partial JSON are rejected
+
+### Tests
+
+- 565 tests (36 new), 84.02% coverage
+- Provider simulation tests: 14 tests for failure modes
+- Context preview tests: 17 tests for --context-preview flag
+- AIResponse/AIUsageSummary field tests: 5 tests for new fields
+- Unknown provider message tests: 2 tests
+
+## [0.7.2]
 
 ### Added
 

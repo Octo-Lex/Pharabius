@@ -74,6 +74,10 @@ class AIUsageSummary(BaseModel):
     items_processed: int = 0
     items_accepted: int = 0
     items_rejected: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    estimated_cost: float = 0.0
 
 
 class AIBudget(BaseModel):
@@ -85,6 +89,8 @@ class AIBudget(BaseModel):
     max_analysis_units: int = 5
     max_output_chars: int = 4_000
     max_repair_attempts: int = 0
+    provider_timeout_seconds: int = 30
+    max_provider_retries: int = 0
 
 
 # ── Enrichment models ──────────────────────────────────────────────────
