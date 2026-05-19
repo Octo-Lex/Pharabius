@@ -2,6 +2,31 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [0.10.1] - Unreleased
+
+### Changed
+
+- Fixed `config.yaml` defaults: `ai.enabled: false`, `ai.provider: "disabled"`, removed `model: "auto"` and `allow_business_inference`
+- Previous config had `enabled: true` / `provider: "auto"` which contradicted actual CLI defaults
+- Config is still written but not read — no command behavior changes
+
+### Added
+
+- 8 config default tests verifying safe defaults, no secrets, blueprint priority bands
+- 10 first-run smoke tests covering the full CLI workflow on a tiny fixture repo
+- `docs/V1_READINESS_AUDIT.md` — v1 readiness audit documenting config, risk scoring, contract, and readability
+- Artifact ownership table in `docs/ARCHITECTURE.md`
+- Risk scoring comment in `analyzer.py` documenting 2 unused factors
+
+### Documentation
+
+- Updated `KNOWN_LIMITATIONS.md` #65: config is written but not read
+- Updated `KNOWN_LIMITATIONS.md` #66: clarified which 2 risk factors are unused
+
+### Tests
+
+- 709 tests (18 new), 84%+ coverage
+
 ## [0.10.0] - Unreleased
 
 ### Added
