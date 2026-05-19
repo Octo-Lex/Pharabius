@@ -981,18 +981,41 @@ def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) 
     """TD-COMP: Flag potential compliance-sensitive areas without supporting controls.
 
     Detects compliance-related keywords (PII, GDPR, HIPAA, PCI, audit, retention)
-    in source code. Creates a finding only when compliance-sensitive evidence exists.
+    in application/domain source code. Creates a finding only when compliance-sensitive
+    evidence exists in application code — NOT in scanner logic, test fixtures, docs,
+    or keyword-list definitions.
     Does NOT claim legal non-compliance.
     """
-    COMPLIANCE_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "consent", "patient"}
+    COMPLIANCE_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}
+
+    # Paths that indicate tooling/infrastructure rather than application logic
+    NOISE_PATH_SEGMENTS = {
+        "tests/",
+        "test_",
+        "_test.",
+        "docs/",
+        "templates/",
+        "scanner.py",
+        "analyzer.py",
+        "validator.py",
+        "enricher.py",
+        "mock_provider.py",
+        "test_taxonomy",
+    }
 
     comp_items: list[EvidenceItem] = []
     for item in store.evidence:
         if item.type != "risk_sensitive_keyword_detected":
             continue
         keyword = item.raw_observation.lower().strip()
-        if keyword in COMPLIANCE_KEYWORDS:
-            comp_items.append(item)
+        if keyword not in COMPLIANCE_KEYWORDS:
+            continue
+        # Skip evidence from tooling/test/docs paths
+        if item.location.file:
+            file_lower = item.location.file.lower().replace("\\", "/")
+            if any(seg in file_lower for seg in NOISE_PATH_SEGMENTS):
+                continue
+        comp_items.append(item)
 
     if not comp_items:
         return
@@ -1054,23 +1077,45 @@ def _analyze_deployment_without_healthchecks(store: EvidenceStore, builder: Find
     """TD-OPS: Flag deployment files without healthcheck/rollback indicators.
 
     Checks deployment and infrastructure evidence for missing operational
-    safety cues. Conservative: only triggers when deployment evidence exists.
+    safety cues. Only triggers when actual deployment/service artifacts
+    exist (Dockerfile, k8s, terraform, docker-compose), NOT for CI-only
+    workflows (GitHub Actions, GitLab CI) unless accompanied by deployment
+    artifacts.
     """
     deploy_items = _evidence_by_type(store, "deployment_file_detected")
     infra_items = _evidence_by_type(store, "infrastructure_file_detected")
-    all_ops = deploy_items + infra_items
 
-    if not all_ops:
+    if not deploy_items and not infra_items:
         return
+
+    # Separate CI-only workflows from actual deployment artifacts
+    CI_PREFIXES = (".github/workflows/", ".gitlab-ci")
+    ci_items = [
+        item
+        for item in deploy_items
+        if item.location.file
+        and item.location.file.lower().replace("\\", "/").startswith(CI_PREFIXES)
+    ]
+    # Actual deployment artifacts: Dockerfile, compose, k8s, terraform, etc.
+    deploy_artifacts = [item for item in deploy_items if item not in ci_items]
+
+    # If only CI workflows exist (no actual deployment artifacts),
+    # do not flag for missing healthcheck — CI != deployment.
+    if not deploy_artifacts and not infra_items:
+        return
+
+    all_ops = deploy_artifacts + infra_items
+    # Also include CI items for rollback check (CI deploy steps may have rollback)
+    all_for_check = all_ops + ci_items
 
     # Check for healthcheck/rollback evidence in observations
     has_healthcheck = any(
         "healthcheck" in item.raw_observation.lower()
         or "health_check" in item.raw_observation.lower()
         or "readiness" in item.raw_observation.lower()
-        for item in all_ops
+        for item in all_for_check
     )
-    has_rollback = any("rollback" in item.raw_observation.lower() for item in all_ops)
+    has_rollback = any("rollback" in item.raw_observation.lower() for item in all_for_check)
 
     if has_healthcheck and has_rollback:
         return
@@ -1130,10 +1175,24 @@ def _analyze_deployment_without_healthchecks(store: EvidenceStore, builder: Find
 def _analyze_data_migration_risk(store: EvidenceStore, builder: FindingBuilder) -> None:
     """TD-DATA: Flag migration files without rollback/down evidence.
 
-    Detects migration-related files and checks for rollback support.
-    Conservative: only triggers when migration evidence exists.
+    Detects database migration artifacts and checks for rollback support.
+    Conservative: only triggers when actual migration files exist in recognized
+    migration directory structures. Does NOT match "schema" in general paths
+    (e.g., Pydantic schema definitions, JSON schema validators).
     """
-    MIGRATION_PATTERNS = {"migration", "migrate", "schema"}
+    # Match migration files in recognized migration directory structures
+    MIGRATION_DIR_PATTERNS = {
+        "migrations/",
+        "migrate/",
+        "db/migrate/",
+        "alembic/",
+        "alembic/versions/",
+        "prisma/migrations/",
+        "supabase/migrations/",
+        "flyway/",
+        "liquibase/",
+        "src/main/resources/db/",
+    }
     ROLLBACK_INDICATORS = {"rollback", "down", "revert", "reverse"}
 
     migration_items: list[EvidenceItem] = []
@@ -1142,10 +1201,21 @@ def _analyze_data_migration_risk(store: EvidenceStore, builder: FindingBuilder) 
             continue
         if not item.location.file:
             continue
-        path_str = item.location.file.lower()
+        file_path = item.location.file.lower().replace("\\", "/")
         name = Path(item.location.file).name.lower()
-        if any(p in name or p in path_str for p in MIGRATION_PATTERNS):
-            migration_items.append(item)
+        # Exclude docs, tests, and tool paths
+        if "/tests/" in file_path or file_path.startswith("tests/"):
+            continue
+        if "/docs/" in file_path or file_path.startswith("docs/"):
+            continue
+        # Match files in recognized migration directories
+        in_migration_dir = any(p in file_path for p in MIGRATION_DIR_PATTERNS)
+        # Also match files with migration-related names
+        # (e.g. V001__create_users.sql, 001_initial.py)
+        has_migration_name = "migration" in name or "migrate" in name
+        if not (in_migration_dir or has_migration_name):
+            continue
+        migration_items.append(item)
 
     if not migration_items:
         return
@@ -1294,6 +1364,17 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
     if not deploy_items and not infra_items:
         return
 
+    # Filter out CI-only workflows (same logic as TD-OPS)
+    CI_PREFIXES = (".github/workflows/", ".gitlab-ci")
+    deploy_artifacts = [
+        item
+        for item in deploy_items
+        if item.location.file
+        and not item.location.file.lower().replace("\\", "/").startswith(CI_PREFIXES)
+    ]
+    if not deploy_artifacts and not infra_items:
+        return
+
     # Check if any observability keywords exist
     obs_items: list[EvidenceItem] = []
     for item in store.evidence:
@@ -1306,7 +1387,7 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
     if obs_items:
         return
 
-    ops_evidence = (deploy_items + infra_items)[:5]
+    ops_evidence = (deploy_artifacts + infra_items)[:5]
 
     breakdown = {
         **RISK_SCORE_TEMPLATE,
