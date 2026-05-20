@@ -1,0 +1,11 @@
+name: default
+version: "1.0"
+description: General-purpose governance preset matching Pharabius v1.1 output.
+intended_use: Default for all repositories. Safe starting point.
+supported_artifacts: []
+safety_boundaries:
+  - Findings are never suppressed
+  - Severity is never escalated
+  - Evidence IDs are never changed
+  - Canonical JSON is never mutated
+note: Default preset uses built-in rendering (no template files).
