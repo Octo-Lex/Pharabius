@@ -1,6 +1,15 @@
 # Pharabius Roadmap
 
-## v1.1.0 — Adoption Polish (unreleased)
+## v1.2.0 — Governance Presets and Template Overrides (unreleased)
+
+- `.ai-debt/governance.yaml` — controls Markdown presentation and handoff policy
+- Project-local template overrides via `.ai-debt/templates/`
+- Bundled `default` preset
+- Safe template engine with `{{ placeholder }}` substitution
+- Governance documentation, preset reference, template override guide
+- No engine/analyzer/provider/config behavior changes
+
+## v1.1.0 — Adoption Polish (released 2026-05-20)
 
 - `ai-debt --version` flag
 - `docs/SAMPLE_OUTPUT.md` — curated output snippets

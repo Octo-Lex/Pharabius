@@ -178,6 +178,17 @@ def initialize_workspace(repository_root: Path, force: bool = False) -> list[Pat
     if _write_text(workspace / "config.yaml", DEFAULT_CONFIG, force):
         created_or_updated.append(workspace / "config.yaml")
 
+    # Governance controls Markdown presentation and handoff policy only.
+    # Does NOT change scanner, analyzer, or provider behavior.
+    from pharabius.core.governance import default_governance_yaml
+
+    if _write_text(
+        workspace / "governance.yaml",
+        default_governance_yaml(),
+        force,
+    ):
+        created_or_updated.append(workspace / "governance.yaml")
+
     for json_path, json_content in PLACEHOLDER_JSON.items():
         target = workspace / json_path
         if _write_json(target, json_content, force):

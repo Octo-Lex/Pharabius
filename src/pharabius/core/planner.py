@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import json
 import re
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from pharabius.core.governance import effective_preset, load_governance
+from pharabius.core.template_engine import (
+    load_resolved_template,
+    render_template,
+)
 from pharabius.schemas.finding import DebtFinding, DebtRegister
+from pharabius.schemas.governance import GovernanceConfig
 from pharabius.schemas.repository import RepositoryProfile
 from pharabius.schemas.work_package import PlanResult, WorkPackage
 
@@ -224,7 +231,75 @@ def _generate_work_packages(
     return packages
 
 
-def render_work_package_markdown(package: WorkPackage, finding: DebtFinding) -> str:
+def _render_work_package_template(
+    template_text: str,
+    package: WorkPackage,
+    finding: DebtFinding,
+) -> str:
+    """Render work package using a template file."""
+    linked = "\n".join(f"- `{item}`" for item in package.linked_debt_items)
+    evidence = "\n".join(f"- `{eid}`" for eid in finding.evidence_ids)
+    approach = "\n".join(
+        f"{i}. {step}" for i, step in enumerate(package.recommended_engineering_approach, 1)
+    )
+    areas = "\n".join(f"- `{a}`" for a in package.expected_affected_areas)
+    preconds = "\n".join(f"- {p}" for p in package.preconditions)
+    verifications = "\n".join(f"- {v}" for v in package.verification_recommendations)
+    cautions = "\n".join(f"- {c}" for c in package.risks_and_cautions)
+    dod = "\n".join(f"- {d}" for d in package.definition_of_done)
+
+    placeholders = {
+        "package_id": package.id,
+        "package_title": package.title,
+        "package_status": package.status,
+        "linked_findings": linked,
+        "package_objective": package.objective,
+        "evidence_list": evidence,
+        "current_risk": package.current_risk,
+        "recommended_approach": approach,
+        "expected_affected_areas": areas,
+        "preconditions": preconds,
+        "verification_recommendations": verifications,
+        "risks_and_cautions": cautions,
+        "definition_of_done": dod,
+        "estimated_effort": package.estimated_effort,
+        "expected_risk_reduction": package.expected_risk_reduction,
+        "suggested_owner_area": package.suggested_owner_area or "Product Engineering",
+    }
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return render_template(
+            template_text,
+            placeholders,
+            artifact_name="work-package.md",
+        )
+
+
+def render_work_package_markdown(
+    package: WorkPackage,
+    finding: DebtFinding,
+    *,
+    repository_root: Path | None = None,
+    governance: GovernanceConfig | None = None,
+) -> str:
+    # Try template override
+    if repository_root is not None:
+        gov = governance or GovernanceConfig()
+        preset = effective_preset(gov)
+        template_text = load_resolved_template(
+            "work-package.md",
+            repository_root,
+            override_dir=gov.templates.override_dir,
+            preset=preset,
+        )
+        if template_text is not None:
+            return _render_work_package_template(
+                template_text,
+                package,
+                finding,
+            )
+
+    # Built-in default rendering (v1.1 behavior)
     lines = [
         f"# Work Package: {package.id} {package.title}",
         "",
@@ -315,10 +390,99 @@ def render_work_package_markdown(package: WorkPackage, finding: DebtFinding) -> 
     return "\n".join(lines)
 
 
-def render_remediation_roadmap(
+def _render_roadmap_template(
+    template_text: str,
     register: DebtRegister,
     packages: list[WorkPackage],
 ) -> str:
+    """Render roadmap using a template file."""
+    findings_by_id = {finding.id: finding for finding in register.findings}
+    buckets: dict[str, list[DebtFinding]] = defaultdict(list)
+    for package in packages:
+        for debt_id in package.linked_debt_items:
+            finding = findings_by_id.get(debt_id)
+            if finding is not None:
+                buckets[_roadmap_bucket(finding)].append(finding)
+
+    summary = (
+        f"- Total findings in debt register: `{register.summary.total_findings}`\n"
+        f"- Work packages generated: `{len(packages)}`\n"
+        "- Planning mode: `deterministic-no-ai`"
+    )
+
+    bucket_parts: list[str] = []
+    for bucket_name in ("Immediate", "Next", "Later"):
+        findings = buckets.get(bucket_name, [])
+        if not findings:
+            bucket_parts.append(
+                f"## {bucket_name}\n\nNo work packages currently assigned to this bucket.\n"
+            )
+            continue
+        lines = [
+            f"## {bucket_name}\n",
+            "| Priority | Debt ID | Title | Category | Score | Effort |",
+            "|---|---|---|---|---:|---|",
+        ]
+        for f in findings:
+            lines.append(
+                "| "
+                f"{f.priority} | "
+                f"`{f.id}` | "
+                f"{f.title} | "
+                f"`{f.category}` | "
+                f"{f.risk_score} | "
+                f"{f.remediation_effort} |"
+            )
+        lines.append("")
+        bucket_parts.append("\n".join(lines))
+
+    wp_list_parts: list[str] = []
+    if packages:
+        for pkg in packages:
+            slug = _slugify(pkg.title)
+            wp_list_parts.append(f"- `{pkg.id}` — `work-packages/{pkg.id}-{slug}.md`")
+    else:
+        wp_list_parts.append("No work packages generated because no findings were available.")
+
+    placeholders = {
+        "summary_section": summary,
+        "roadmap_buckets": "\n".join(bucket_parts),
+        "work_package_list": "\n".join(wp_list_parts),
+    }
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return render_template(
+            template_text,
+            placeholders,
+            artifact_name="remediation-roadmap.md",
+        )
+
+
+def render_remediation_roadmap(
+    register: DebtRegister,
+    packages: list[WorkPackage],
+    *,
+    repository_root: Path | None = None,
+    governance: GovernanceConfig | None = None,
+) -> str:
+    # Try template override
+    if repository_root is not None:
+        gov = governance or GovernanceConfig()
+        preset = effective_preset(gov)
+        template_text = load_resolved_template(
+            "remediation-roadmap.md",
+            repository_root,
+            override_dir=gov.templates.override_dir,
+            preset=preset,
+        )
+        if template_text is not None:
+            return _render_roadmap_template(
+                template_text,
+                register,
+                packages,
+            )
+
+    # Built-in default rendering (v1.1 behavior)
     findings_by_id = {finding.id: finding for finding in register.findings}
     buckets: dict[str, list[DebtFinding]] = defaultdict(list)
 
@@ -399,11 +563,153 @@ def render_remediation_roadmap(
     return "\n".join(lines)
 
 
-def render_handoff_summary(
+def _render_handoff_template(
+    template_text: str,
     profile: RepositoryProfile,
     register: DebtRegister,
     packages: list[WorkPackage],
 ) -> str:
+    """Render handoff summary using a template file."""
+    findings = sorted(
+        register.findings,
+        key=lambda f: f.risk_score,
+        reverse=True,
+    )
+
+    repo_section = (
+        f"- Project: `{profile.project_name or register.project_name}`\n"
+        f"- Repository: `{register.repository}`\n"
+        f"- Branch: `{register.branch or 'Unknown'}`\n"
+        f"- Commit: `{register.commit or 'Unknown'}`\n"
+        "- Analysis mode: `deterministic-no-ai`"
+    )
+
+    if findings:
+        top = findings[0]
+        exec_summary = (
+            f"Pharabius generated `{register.summary.total_findings}` "
+            f"deterministic technical debt finding(s) and "
+            f"`{len(packages)}` work package(s).\n\n"
+            f"The top finding is `{top.id}` with priority `{top.priority}` "
+            f"and risk score `{top.risk_score}`."
+        )
+    else:
+        exec_summary = (
+            "Pharabius did not generate deterministic technical debt findings "
+            "from the available evidence.\n\n"
+            "This does not prove the repository is debt-free; it means the "
+            "current deterministic analyzer lacked sufficient evidence for "
+            "supported findings."
+        )
+
+    table_header = (
+        "| Priority | Debt ID | Title | Category | Score | Effort |\n|---|---|---|---:|---|---|"
+    )
+    if not findings:
+        table_rows = "| N/A | N/A | No findings generated. | N/A | 0 | N/A |"
+    else:
+        rows = []
+        for f in findings[:10]:
+            rows.append(
+                "| "
+                f"{f.priority} | "
+                f"`{f.id}` | "
+                f"{f.title} | "
+                f"`{f.category}` | "
+                f"{f.risk_score} | "
+                f"{f.remediation_effort} |"
+            )
+        table_rows = "\n".join(rows)
+    top_risks = f"{table_header}\n{table_rows}"
+
+    if packages:
+        actions = "\n".join(
+            f"{i}. Review `{p.id}` — {p.title}." for i, p in enumerate(packages[:3], 1)
+        )
+    else:
+        actions = (
+            "1. Validate that repository evidence is complete.\n"
+            "2. Add richer scanner integrations if deeper analysis is required.\n"
+            "3. Re-run `ai-debt analyze --no-ai` after new evidence is available."
+        )
+
+    pet_decisions = (
+        "- Confirm whether inferred business impact matches product priorities.\n"
+        "- Confirm ownership for each generated work package.\n"
+        "- Confirm whether any remediation requires architecture, security, "
+        "or compliance review."
+    )
+
+    cautions = (
+        "- Pharabius v1 planning is evidence-backed but does not replace "
+        "Product Engineering ownership.\n"
+        "- Do not change public API behavior without explicit approval.\n"
+        "- Do not change authentication, authorization, or data-handling "
+        "semantics without review."
+    )
+
+    if profile.limitations:
+        uncertainties = "\n".join(f"- {lim}" for lim in profile.limitations)
+    else:
+        uncertainties = (
+            "- Production incident history is not available from repository-only evidence.\n"
+            "- Runtime usage, revenue impact, and customer criticality are not available.\n"
+            "- Coverage quality is not assessed unless coverage artifacts are added later."
+        )
+
+    artifacts = (
+        "- `debt-register.md`\n"
+        "- `remediation-roadmap.md`\n"
+        "- `work-packages/`\n"
+        "- `reports/foundation-audit-report.md`"
+    )
+
+    placeholders = {
+        "repository_section": repo_section,
+        "executive_summary": exec_summary,
+        "top_risks_table": top_risks,
+        "recommended_first_actions": actions,
+        "pet_decisions": pet_decisions,
+        "risks_and_cautions": cautions,
+        "uncertainties": uncertainties,
+        "generated_artifacts": artifacts,
+    }
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return render_template(
+            template_text,
+            placeholders,
+            artifact_name="handoff-summary.md",
+        )
+
+
+def render_handoff_summary(
+    profile: RepositoryProfile,
+    register: DebtRegister,
+    packages: list[WorkPackage],
+    *,
+    repository_root: Path | None = None,
+    governance: GovernanceConfig | None = None,
+) -> str:
+    # Try template override
+    if repository_root is not None:
+        gov = governance or GovernanceConfig()
+        preset = effective_preset(gov)
+        template_text = load_resolved_template(
+            "handoff-summary.md",
+            repository_root,
+            override_dir=gov.templates.override_dir,
+            preset=preset,
+        )
+        if template_text is not None:
+            return _render_handoff_template(
+                template_text,
+                profile,
+                register,
+                packages,
+            )
+
+    # Built-in default rendering (v1.1 behavior)
     findings = sorted(
         register.findings,
         key=lambda finding: finding.risk_score,
@@ -564,6 +870,9 @@ def write_plan(
     workspace = root / ".ai-debt"
     work_packages_dir = workspace / "work-packages"
 
+    # Load governance for template overrides
+    governance = load_governance(root)
+
     profile = _load_profile(root)
     register = _load_debt_register(root)
     findings = _sorted_findings(register, top=top)
@@ -583,7 +892,12 @@ def write_plan(
         slug = _slugify(package.title)
         path = work_packages_dir / f"{package.id}-{slug}.md"
         path.write_text(
-            render_work_package_markdown(package, finding),
+            render_work_package_markdown(
+                package,
+                finding,
+                repository_root=root,
+                governance=governance,
+            ),
             encoding="utf-8",
         )
         work_package_paths.append(path)
@@ -592,11 +906,22 @@ def write_plan(
     handoff_path = workspace / "handoff-summary.md"
 
     roadmap_path.write_text(
-        render_remediation_roadmap(register, packages),
+        render_remediation_roadmap(
+            register,
+            packages,
+            repository_root=root,
+            governance=governance,
+        ),
         encoding="utf-8",
     )
     handoff_path.write_text(
-        render_handoff_summary(profile, register, packages),
+        render_handoff_summary(
+            profile,
+            register,
+            packages,
+            repository_root=root,
+            governance=governance,
+        ),
         encoding="utf-8",
     )
 
