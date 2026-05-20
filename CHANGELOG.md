@@ -2,36 +2,35 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [1.2.0] - Unreleased
+## [1.2.1] - Unreleased
+
+### Fixed
+
+- Hardened template override path handling — `override_dir` paths that escape
+  the repository root are now rejected with a clear warning
+- Reduced `TEMPLATEABLE_ARTIFACTS` to the 3 shipped artifacts
+  (work-package, handoff, roadmap); debt-register and foundation-audit-report
+  are explicitly deferred
 
 ### Added
 
-- Governance presets and template overrides system
-- `.ai-debt/governance.yaml` — controls Markdown presentation and handoff policy
-- Project-local template overrides via `.ai-debt/templates/`
-- Bundled `default` preset matching v1.1 output
-- `ai-debt init` creates `governance.yaml` alongside other workspace artifacts
-- Safe template engine with `{{ placeholder }}` substitution
-- `docs/GOVERNANCE.md` — governance overview and principles
-- `docs/PRESET_REFERENCE.md` — bundled preset descriptions
-- `docs/TEMPLATE_OVERRIDES.md` — template override guide
+- 24 new governance hardening tests (path safety, binary/empty template
+  fallback, override precedence, canonical immutability, warning clarity)
+- Field validation on Pharabius, validation-java, validation-empty
 
 ### Changed
 
-- `planner.py` now supports governance-aware template rendering
-- Version bumped to 1.2.0
+- Version bumped to 1.2.1
 
 ### Not Changed
 
-- No engine changes (finding generation unchanged)
-- No analyzer changes
-- No provider changes
-- No config behavior expansion (governance is separate from config)
-- No artifact contract changes (canonical JSON schemas unchanged)
-- No AI-generated canonical findings
-- No remediation/code modification behavior
+- No engine/analyzer/provider/config behavior changes
+- No new templateable artifacts
+- No full non-default preset templates
+- No canonical JSON schema changes
+- No finding generation changes
 
-## [1.1.0] - 2026-05-20
+## [1.2.0] - 2026-05-20
 
 ### Summary
 
