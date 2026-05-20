@@ -2,7 +2,40 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [1.3.0] - Unreleased
+## [1.4.0] - Unreleased
+
+### Added
+
+- `ai-debt review` command for non-canonical PET review decisions
+  - `--init`: create empty `.ai-debt/review/decisions.json` sidecar
+  - `--status`: read-only summary of decisions vs findings
+  - `--validate`: validate decisions against debt-register
+- `schemas/review.py` — ReviewDecision, ReviewDecisions, ReviewValidationResult, ReviewSummary
+- `core/review.py` — loader, validator, summarizer, init
+- 7 allowed decision statuses: accepted, rejected, deferred, needs-investigation, duplicate, already-fixed, risk-accepted
+- Unknown finding IDs: warning (not error)
+- Duplicate finding IDs: first kept + warning
+- Invalid statuses: hard validation error
+- Stale decisions (finding removed) detected
+- Canonical JSON hashes unchanged after all review operations
+
+### Changed
+
+- Version bumped to 1.4.0
+- CLI command count: 15 (was 14)
+
+### Not Changed
+
+- No analyzer behavior changes
+- No provider behavior changes
+- No config/governance behavior changes
+- No finding generation changes
+- No schema changes to existing schemas
+- No remediation/code modification behavior
+- No AI-generated canonical findings
+- No run/enrich integration
+
+## [1.3.0] - Released 2026-05-20
 
 ### Added
 

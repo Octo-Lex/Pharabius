@@ -141,6 +141,7 @@ class TestFirstRunWorkflow:
             "enrich",
             "ai-status",
             "run",
+            "review",
         ]:
             assert cmd in result.output, f"Command '{cmd}' not in --help"
 
