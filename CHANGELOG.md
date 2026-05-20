@@ -2,6 +2,29 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.1.0] - Unreleased
+
+### Added
+
+- `ai-debt --version` — prints installed version and exits 0
+- `docs/SAMPLE_OUTPUT.md` — curated output snippets for onboarding
+- `docs/ADOPTION_GUIDE.md` — Product Engineering Team adoption workflow
+
+### Changed
+
+- Version bumped to 1.1.0
+- README.md updated with links to new docs and `--version`
+
+### Not Changed
+
+- No engine changes
+- No analyzer changes
+- No provider changes
+- No config behavior changes
+- No artifact contract changes
+- No AI-generated canonical findings
+- No remediation/code modification behavior
+
 ## [1.0.0] - 2026-05-20
 
 ### Summary
