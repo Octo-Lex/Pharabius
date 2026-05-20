@@ -1,6 +1,14 @@
 # Pharabius Roadmap
 
-## v1.3.0 — Differentiated Governance Presets (unreleased)
+## v1.4.0 — Review Decision Sidecar (unreleased)
+
+- `ai-debt review` command with --init/--status/--validate
+- Non-canonical PET review decision sidecar
+- 7 allowed statuses, validation, stale detection
+- 49 new tests
+- No engine/analyzer/provider/config behavior changes
+
+## v1.3.0 — Differentiated Governance Presets (released 2026-05-20)
 
 - 4 differentiated presets with real Markdown templates
 - security-sensitive, startup-lean, platform-engineering, compliance-sensitive

@@ -794,5 +794,95 @@ def run(
     )
 
 
+@app.command()
+def review(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root.",
+        ),
+    ] = None,
+    init: Annotated[
+        bool,
+        typer.Option(
+            "--init",
+            help="Initialize an empty review decision sidecar.",
+        ),
+    ] = False,
+    show_status: Annotated[
+        bool,
+        typer.Option(
+            "--status",
+            help="Show review decision summary. Read-only.",
+        ),
+    ] = False,
+    do_validate: Annotated[
+        bool,
+        typer.Option(
+            "--validate",
+            help="Validate review decisions against debt-register.",
+        ),
+    ] = False,
+) -> None:
+    """
+    Manage non-canonical review decisions for findings.
+
+    Review decisions are Product Engineering Team workflow state.
+    They never modify canonical artifacts or affect finding generation.
+    """
+    from pharabius.core.review import (
+        format_summary_text,
+        init_review_sidecar,
+        summarize_decisions,
+        validate_decisions,
+    )
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+
+    # Default to status if no mode specified
+    modes = [init, show_status, do_validate]
+    if not any(modes):
+        show_status = True
+
+    if init:
+        try:
+            path = init_review_sidecar(resolved_root)
+            console.print("[bold green]Initialized review sidecar[/bold green]")
+            console.print(f"Repository: {resolved_root}")
+            console.print(f"Sidecar:    {path}")
+        except FileExistsError as exc:
+            console.print(f"[bold red]Error:[/bold red] {exc}")
+            raise typer.Exit(code=1) from exc
+
+    if show_status:
+        summary = summarize_decisions(resolved_root)
+        text = format_summary_text(summary)
+        console.print(text)
+
+    if do_validate:
+        result = validate_decisions(resolved_root)
+        if not result.valid:
+            console.print("[bold red]Validation failed[/bold red]")
+            for notice in result.notices:
+                if notice.level == "error":
+                    console.print(f"  Error: {notice.message}")
+            raise typer.Exit(code=1)
+        else:
+            console.print("[bold green]Validation passed[/bold green]")
+            console.print(f"Decisions: {result.total_decisions}")
+            if result.unknown_finding_ids:
+                console.print(f"Unknown findings: {', '.join(result.unknown_finding_ids)}")
+            if result.duplicate_finding_ids:
+                console.print(f"Duplicates: {', '.join(result.duplicate_finding_ids)}")
+            if result.stale_finding_ids:
+                console.print(f"Stale: {', '.join(result.stale_finding_ids)}")
+            if result.undecided_finding_ids:
+                console.print(f"Undecided: {len(result.undecided_finding_ids)}")
+            for notice in result.notices:
+                console.print(f"  {notice.level.title()}: {notice.message}")
+
+
 if __name__ == "__main__":
     app()

@@ -311,3 +311,126 @@ class TestEnrichCLI:
             app, ["enrich", "--provider", "mock", "--max-findings", "0", "-r", str(repo)]
         )
         assert result.exit_code != 0
+
+
+# ── Review CLI tests ─────────────────────────────────────────────
+
+
+def _setup_repo_for_review(tmp_path: Path) -> Path:
+    """Create a minimal workspace with findings for review testing."""
+    from typer.testing import CliRunner
+
+    runner = CliRunner()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "requirements.txt").write_text("flask\n")
+
+    runner.invoke(app, ["init", "-r", str(repo)])
+    runner.invoke(app, ["run", "-r", str(repo)])
+    runner.invoke(app, ["analyze", "--no-ai", "-r", str(repo)])
+    return repo
+
+
+class TestReviewCLI:
+    def test_review_init_creates_sidecar(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        result = runner.invoke(app, ["review", "--init", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert (repo / ".ai-debt" / "review" / "decisions.json").exists()
+
+    def test_review_init_refuses_overwrite(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        runner.invoke(app, ["review", "--init", "-r", str(repo)])
+        result = runner.invoke(app, ["review", "--init", "-r", str(repo)])
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+
+    def test_review_status_no_sidecar(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        result = runner.invoke(app, ["review", "--status", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert "No review sidecar" in result.output or "not found" in result.output.lower()
+
+    def test_review_status_with_decisions(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        runner.invoke(app, ["review", "--init", "-r", str(repo)])
+
+        # Add a decision manually
+        import json
+
+        path = repo / ".ai-debt" / "review" / "decisions.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["decisions"].append(
+            {
+                "finding_id": "TD-DEP-001",
+                "status": "accepted",
+                "reviewed_at": "2026-05-20T12:00:00Z",
+                "reviewer": "platform-team",
+                "rationale": "",
+                "ticket_url": "",
+                "owner_area": "",
+                "target_release": "",
+                "notes": "",
+            }
+        )
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+        result = runner.invoke(app, ["review", "--status", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert "TD-DEP-001" in result.output
+        assert "accepted" in result.output
+
+    def test_review_validate_valid(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        runner.invoke(app, ["review", "--init", "-r", str(repo)])
+        result = runner.invoke(app, ["review", "--validate", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert "Validation passed" in result.output
+
+    def test_review_validate_invalid_status(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        runner.invoke(app, ["review", "--init", "-r", str(repo)])
+
+        import json
+
+        path = repo / ".ai-debt" / "review" / "decisions.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["decisions"].append(
+            {
+                "finding_id": "TD-DEP-001",
+                "status": "invalid",
+                "reviewed_at": "2026-05-20T12:00:00Z",
+            }
+        )
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+        result = runner.invoke(app, ["review", "--validate", "-r", str(repo)])
+        assert result.exit_code == 1
+        assert "Validation failed" in result.output
+
+    def test_review_validate_no_sidecar(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        result = runner.invoke(app, ["review", "--validate", "-r", str(repo)])
+        assert result.exit_code == 1
+
+    def test_review_default_is_status(self, tmp_path: Path) -> None:
+        repo = _setup_repo_for_review(tmp_path)
+        runner = CliRunner()
+
+        result = runner.invoke(app, ["review", "-r", str(repo)])
+        assert result.exit_code == 0
+        assert "Review Decision Summary" in result.output
