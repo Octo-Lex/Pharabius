@@ -105,3 +105,24 @@ Governance does not affect AI enrichment behavior:
 - Consent is still required for real providers
 - Sidecar output remains separate from canonical artifacts
 - Governance affects deterministic Markdown output only
+
+---
+
+## Path Safety
+
+The `templates.override_dir` field is validated:
+- Paths must resolve **inside** the repository root
+- Path traversal (`../../escape`) is rejected with a warning
+- Absolute paths outside the repository are rejected
+- Non-existent directories are handled gracefully (no crash)
+- Bundled preset templates are always safe (inside package)
+
+---
+
+## Deferred Features
+
+The following are deferred to v1.3+:
+- `debt-register.md` template override
+- `foundation-audit-report.md` template override
+- Full non-default preset template differentiation
+  (currently metadata-only)

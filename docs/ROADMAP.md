@@ -1,6 +1,13 @@
 # Pharabius Roadmap
 
-## v1.2.0 — Governance Presets and Template Overrides (unreleased)
+## v1.2.1 — Governance Field Validation & Template Hardening (unreleased)
+
+- Path safety hardening for template override_dir
+- 24 new governance hardening tests
+- Field validation on Pharabius, validation-java, validation-empty
+- No engine/analyzer/provider/config behavior changes
+
+## v1.2.0 — Governance Presets and Template Overrides (released 2026-05-20)
 
 - `.ai-debt/governance.yaml` — controls Markdown presentation and handoff policy
 - Project-local template overrides via `.ai-debt/templates/`
