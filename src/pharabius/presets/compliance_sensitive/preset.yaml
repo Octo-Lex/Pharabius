@@ -1,0 +1,13 @@
+name: compliance-sensitive
+version: "1.0"
+description: Compliance-focused governance preset for regulated industries.
+intended_use: Reposories subject to regulatory, audit, or compliance requirements.
+supported_artifacts:
+  - work-package.md
+  - handoff-summary.md
+  - remediation-roadmap.md
+safety_boundaries:
+  - Findings are never suppressed
+  - Severity is never escalated
+  - Evidence IDs are never changed
+  - Canonical JSON is never mutated

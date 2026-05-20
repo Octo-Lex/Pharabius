@@ -1,0 +1,13 @@
+name: platform-engineering
+version: "1.0"
+description: Platform engineering preset emphasizing dependency and operational health.
+intended_use: Platform and infrastructure teams focused on dependency, CI/CD, and observability.
+supported_artifacts:
+  - work-package.md
+  - handoff-summary.md
+  - remediation-roadmap.md
+safety_boundaries:
+  - Findings are never suppressed
+  - Severity is never escalated
+  - Evidence IDs are never changed
+  - Canonical JSON is never mutated
