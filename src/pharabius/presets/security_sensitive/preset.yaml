@@ -1,0 +1,13 @@
+name: security-sensitive
+version: "1.0"
+description: Security-first governance preset for security-conscious organizations.
+intended_use: Repositories where security and compliance review is mandatory.
+supported_artifacts:
+  - work-package.md
+  - handoff-summary.md
+  - remediation-roadmap.md
+safety_boundaries:
+  - Findings are never suppressed
+  - Severity is never escalated
+  - Evidence IDs are never changed
+  - Canonical JSON is never mutated

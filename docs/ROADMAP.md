@@ -1,6 +1,13 @@
 # Pharabius Roadmap
 
-## v1.2.1 — Governance Field Validation & Template Hardening (unreleased)
+## v1.3.0 — Differentiated Governance Presets (unreleased)
+
+- 4 differentiated presets with real Markdown templates
+- security-sensitive, startup-lean, platform-engineering, compliance-sensitive
+- 50 new preset tests
+- No engine/analyzer/provider/config behavior changes
+
+## v1.2.1 — Governance Field Validation & Template Hardening (released 2026-05-20)
 
 - Path safety hardening for template override_dir
 - 24 new governance hardening tests

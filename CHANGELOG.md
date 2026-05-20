@@ -2,7 +2,37 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [1.2.1] - Unreleased
+## [1.3.0] - Unreleased
+
+### Added
+
+- Differentiated governance presets with real Markdown template files:
+  - `security-sensitive` — security review sections, sign-off, credential
+    caution, escalation guide, compliance emphasis
+  - `startup-lean` — condensed work packages, action-oriented handoff,
+    minimal verbosity while preserving evidence/actions/verifications
+  - `platform-engineering` — platform impact assessment, dependency/ops
+    emphasis, operational readiness language
+  - `compliance-sensitive` — attestation notice, audit trail, compliance
+    escalation guide, regulatory review checklist
+- 50 new preset differentiation tests
+- Each preset provides 3 template files (work-package, handoff, roadmap)
+
+### Changed
+
+- Version bumped to 1.3.0
+- Template engine maps hyphenated preset names to underscored directories
+
+### Not Changed
+
+- Default preset uses built-in rendering (unchanged from v1.2.1)
+- No engine/analyzer/provider/config behavior changes
+- No canonical JSON schema changes
+- No finding generation changes
+- No severity/priority changes
+- No evidence ID changes
+
+## [1.2.1] - 2026-05-20
 
 ### Fixed
 

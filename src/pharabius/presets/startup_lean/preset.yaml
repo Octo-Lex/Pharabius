@@ -1,0 +1,13 @@
+name: startup-lean
+version: "1.0"
+description: Lean governance preset for small teams with fast iteration cycles.
+intended_use: Startups and small teams that need action-oriented, concise output.
+supported_artifacts:
+  - work-package.md
+  - handoff-summary.md
+  - remediation-roadmap.md
+safety_boundaries:
+  - Findings are never suppressed
+  - Severity is never escalated
+  - Evidence IDs are never changed
+  - Canonical JSON is never mutated
