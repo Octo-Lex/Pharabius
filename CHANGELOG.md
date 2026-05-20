@@ -2,30 +2,36 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [1.1.0] - Unreleased
+## [1.2.0] - Unreleased
 
 ### Added
 
-- `ai-debt --version` — prints installed version and exits 0
-- `docs/SAMPLE_OUTPUT.md` — curated output snippets for onboarding
-- `docs/ADOPTION_GUIDE.md` — Product Engineering Team adoption workflow
+- Governance presets and template overrides system
+- `.ai-debt/governance.yaml` — controls Markdown presentation and handoff policy
+- Project-local template overrides via `.ai-debt/templates/`
+- Bundled `default` preset matching v1.1 output
+- `ai-debt init` creates `governance.yaml` alongside other workspace artifacts
+- Safe template engine with `{{ placeholder }}` substitution
+- `docs/GOVERNANCE.md` — governance overview and principles
+- `docs/PRESET_REFERENCE.md` — bundled preset descriptions
+- `docs/TEMPLATE_OVERRIDES.md` — template override guide
 
 ### Changed
 
-- Version bumped to 1.1.0
-- README.md updated with links to new docs and `--version`
+- `planner.py` now supports governance-aware template rendering
+- Version bumped to 1.2.0
 
 ### Not Changed
 
-- No engine changes
+- No engine changes (finding generation unchanged)
 - No analyzer changes
 - No provider changes
-- No config behavior changes
-- No artifact contract changes
+- No config behavior expansion (governance is separate from config)
+- No artifact contract changes (canonical JSON schemas unchanged)
 - No AI-generated canonical findings
 - No remediation/code modification behavior
 
-## [1.0.0] - 2026-05-20
+## [1.1.0] - 2026-05-20
 
 ### Summary
 

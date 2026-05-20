@@ -45,6 +45,9 @@ See `docs/VALIDATION_MATRIX.md` for the full test plan and `docs/RELEASE_CHECKLI
 | [CHANGELOG.md](CHANGELOG.md) | Release notes for each version |
 | [SAMPLE_OUTPUT.md](docs/SAMPLE_OUTPUT.md) | Curated output snippets and examples |
 | [ADOPTION_GUIDE.md](docs/ADOPTION_GUIDE.md) | Product Engineering Team adoption workflow |
+| [GOVERNANCE.md](docs/GOVERNANCE.md) | Governance overview and safety invariants |
+| [PRESET_REFERENCE.md](docs/PRESET_REFERENCE.md) | Bundled governance preset descriptions |
+| [TEMPLATE_OVERRIDES.md](docs/TEMPLATE_OVERRIDES.md) | Template override guide and placeholder reference |
 | [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Honest constraints of current version |
 | [ROADMAP.md](docs/ROADMAP.md) | Release history and future work |
 | [VALIDATION_SUMMARY.md](docs/VALIDATION_SUMMARY.md) | 8-repository validation results |
