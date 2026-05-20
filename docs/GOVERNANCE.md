@@ -121,8 +121,8 @@ The `templates.override_dir` field is validated:
 
 ## Deferred Features
 
-The following are deferred to v1.3+:
+The following are deferred to v1.4+:
+- Graph/git-backed risk scoring (separate validation-heavy release)
+- Manual review/decision sidecar
 - `debt-register.md` template override
 - `foundation-audit-report.md` template override
-- Full non-default preset template differentiation
-  (currently metadata-only)

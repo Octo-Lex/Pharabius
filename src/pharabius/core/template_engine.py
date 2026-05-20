@@ -137,7 +137,11 @@ def resolve_template_path(
         return conventional
 
     # 3. Bundled preset template (inside package, always safe)
-    preset_path = Path(__file__).parent.parent / "presets" / preset / "templates" / artifact_name
+    # Map preset name (hyphenated) to directory name (underscored)
+    preset_dir = preset.replace("-", "_")
+    preset_path = (
+        Path(__file__).parent.parent / "presets" / preset_dir / "templates" / artifact_name
+    )
     if preset_path.exists():
         return preset_path
 
