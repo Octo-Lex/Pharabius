@@ -1,5 +1,12 @@
 # Pharabius Roadmap
 
+## v1.1.0 — Adoption Polish (unreleased)
+
+- `ai-debt --version` flag
+- `docs/SAMPLE_OUTPUT.md` — curated output snippets
+- `docs/ADOPTION_GUIDE.md` — PET adoption workflow
+- No engine changes
+
 ## v1.0.0 — First Stable Release (released 2026-05-20)
 
 - First stable v1 release

@@ -18,17 +18,32 @@ from pharabius.core.scanner import write_evidence_store
 app = typer.Typer(
     name="ai-debt",
     help="Pharabius technical debt intelligence CLI.",
-    no_args_is_help=True,
 )
 
 console = Console()
 
 
-@app.callback()
-def main() -> None:
-    """
-    Pharabius technical debt intelligence CLI.
-    """
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option("--version", help="Show installed version and exit."),
+    ] = False,
+) -> None:
+    """Pharabius technical debt intelligence CLI."""
+    if version:
+        from importlib.metadata import version as get_version
+
+        try:
+            v = get_version("pharabius")
+        except Exception:
+            v = "unknown"
+        console.print(f"Pharabius {v}")
+        raise typer.Exit(0)
+    if ctx.invoked_subcommand is None:
+        console.print(ctx.get_help())
+        raise typer.Exit(0)
 
 
 @app.command()

@@ -143,3 +143,19 @@ class TestFirstRunWorkflow:
             "run",
         ]:
             assert cmd in result.output, f"Command '{cmd}' not in --help"
+
+    def test_version_flag(self) -> None:
+        """--version prints version and exits 0."""
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert "Pharabius" in result.output
+        # Should contain a version-like pattern (e.g. 1.1.0 or 0.x.y)
+        import re
+
+        assert re.search(r"\d+\.\d+", result.output), f"No version in: {result.output}"
+
+    def test_no_args_shows_help(self) -> None:
+        """Running ai-debt with no args shows help."""
+        result = runner.invoke(app, [])
+        assert result.exit_code == 0
+        assert "Commands" in result.output

@@ -9,6 +9,7 @@ It does not modify production code by default.
 ## Commands
 
 ```bash
+ai-debt --version         # Show installed version
 ai-debt init              # Create .ai-debt workspace
 ai-debt profile           # Detect repository stack and structure
 ai-debt scan              # Collect normalized evidence
@@ -42,8 +43,10 @@ See `docs/VALIDATION_MATRIX.md` for the full test plan and `docs/RELEASE_CHECKLI
 | Document | Description |
 |---|---|
 | [CHANGELOG.md](CHANGELOG.md) | Release notes for each version |
+| [SAMPLE_OUTPUT.md](docs/SAMPLE_OUTPUT.md) | Curated output snippets and examples |
+| [ADOPTION_GUIDE.md](docs/ADOPTION_GUIDE.md) | Product Engineering Team adoption workflow |
 | [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Honest constraints of current version |
-| [ROADMAP.md](docs/ROADMAP.md) | Planned v0.2.1, v0.3.0, and future work |
+| [ROADMAP.md](docs/ROADMAP.md) | Release history and future work |
 | [VALIDATION_SUMMARY.md](docs/VALIDATION_SUMMARY.md) | 8-repository validation results |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module structure and import contract |
 | [ENGINEERING_POLICY.md](docs/ENGINEERING_POLICY.md) | Quality gates and coding standards |
