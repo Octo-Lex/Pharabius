@@ -19,8 +19,6 @@ TEMPLATEABLE_ARTIFACTS = frozenset(
         "work-package.md",
         "handoff-summary.md",
         "remediation-roadmap.md",
-        "debt-register.md",
-        "foundation-audit-report.md",
     }
 )
 
@@ -86,6 +84,23 @@ def load_template_file(path: Path) -> str | None:
     return text
 
 
+def _is_safe_path(resolved_path: Path, repo_root: Path, artifact_name: str) -> bool:
+    """Verify a resolved path stays within the repository root.
+
+    Rejects path traversal attempts. Warns and returns False if unsafe.
+    """
+    try:
+        resolved_path.relative_to(repo_root)
+    except ValueError:
+        warnings.warn(
+            f"Template override path for '{artifact_name}' escapes "
+            f"repository root. Falling back to default.",
+            stacklevel=3,
+        )
+        return False
+    return True
+
+
 def resolve_template_path(
     artifact_name: str,
     repository_root: Path,
@@ -105,18 +120,23 @@ def resolve_template_path(
     if artifact_name not in TEMPLATEABLE_ARTIFACTS:
         return None
 
+    # Resolve repository root once for safety checks
+    repo_root = repository_root.resolve()
+
     # 1. Explicit override_dir from governance.yaml
     if override_dir:
-        override_path = repository_root / override_dir / artifact_name
+        override_path = (repo_root / override_dir / artifact_name).resolve()
+        if not _is_safe_path(override_path, repo_root, artifact_name):
+            return None  # warning already emitted
         if override_path.exists():
             return override_path
 
     # 2. Conventional .ai-debt/templates/ directory
-    conventional = repository_root / ".ai-debt" / "templates" / artifact_name
+    conventional = (repo_root / ".ai-debt" / "templates" / artifact_name).resolve()
     if conventional.exists():
         return conventional
 
-    # 3. Bundled preset template
+    # 3. Bundled preset template (inside package, always safe)
     preset_path = Path(__file__).parent.parent / "presets" / preset / "templates" / artifact_name
     if preset_path.exists():
         return preset_path

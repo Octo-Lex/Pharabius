@@ -172,3 +172,26 @@ Templates can only change **presentation**. They cannot:
 - Modify canonical JSON artifacts
 - Affect provider behavior
 - Enable remediation
+
+### Path Safety
+
+`override_dir` is validated against the repository root:
+
+- Paths must resolve **inside** the repository root
+- Path traversal (`../../escape`) is rejected with a warning
+- Absolute paths outside the repository are rejected
+- Non-existent directories return no templates (fall back to default)
+
+### Binary and Empty Templates
+
+- Binary/non-text files produce a warning and fall back to built-in
+- Empty files produce a warning and fall back to built-in
+- Large files are handled safely (no size limit in v1.2.x)
+
+### Deferred Artifacts
+
+The following are **not** templateable in v1.2.x:
+
+- `debt-register.md` — rendered by `analyzer.py`, deferred to v1.3
+- `foundation-audit-report.md` — heavily data-driven, deferred to v1.3
+- All JSON artifacts — never templateable by design
