@@ -5,6 +5,7 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 from pharabius.core.architecture_analyzer import (
     analyze_architecture_graph as _analyze_architecture_graph,
@@ -105,8 +106,8 @@ def _severity_for_priority(priority: str) -> str:
     return "Low"
 
 
-def _score(breakdown: dict[str, int]) -> tuple[int, str]:
-    total = sum(breakdown.values())
+def _score(breakdown: dict[str, Any]) -> tuple[int, str]:
+    total = sum(v for v in breakdown.values() if isinstance(v, int))
     return total, _priority_for_score(total)
 
 
@@ -1589,6 +1590,58 @@ def _add_architecture_findings(
         )
 
 
+def _apply_enhanced_scoring(root: Path, findings: list[DebtFinding]) -> None:
+    """Apply enhanced risk scoring factors if opted in.
+
+    Only mutates findings when config enables enhanced scoring.
+    Default behavior (enhanced=false) is a no-op.
+    """
+    from pharabius.core.config import load_config
+    from pharabius.core.scoring import (
+        enhance_risk_breakdown,
+        recalculate_risk_score,
+    )
+
+    config = load_config(root)
+    rs = config.risk_scoring
+
+    if not rs.enhanced:
+        return
+
+    use_centrality = rs.use_architecture_centrality
+    use_frequency = rs.use_change_frequency
+
+    if not use_centrality and not use_frequency:
+        return
+
+    for finding in findings:
+        enhanced = enhance_risk_breakdown(
+            root,
+            finding.locations,
+            use_centrality=use_centrality,
+            use_frequency=use_frequency,
+            max_git_commits=rs.max_git_commits,
+            git_timeout=rs.git_timeout_seconds,
+        )
+
+        # Merge enhanced factors into risk_breakdown
+        breakdown = (
+            dict(finding.risk_breakdown) if finding.risk_breakdown else dict(RISK_SCORE_TEMPLATE)
+        )
+        for key, data in enhanced.items():
+            breakdown[key] = data["value"]
+            # Store provenance alongside numeric values
+            breakdown[f"{key}_level"] = data["level"]
+            breakdown[f"{key}_source"] = data["source"]
+            breakdown[f"{key}_reason"] = data["reason"]
+
+        new_score = recalculate_risk_score(RISK_SCORE_TEMPLATE, enhanced)
+
+        finding.risk_score = new_score
+        finding.risk_breakdown = breakdown
+        finding.priority = _score(breakdown)[1]
+
+
 def analyze_evidence(repository_root: Path) -> DebtRegister:
     root = repository_root.resolve()
     store = _load_evidence_store(root)
@@ -1617,6 +1670,16 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
 
     findings = sorted(
         builder.findings,
+        key=lambda finding: finding.risk_score,
+        reverse=True,
+    )
+
+    # Enhanced risk scoring (v1.5) — opt-in only
+    _apply_enhanced_scoring(root, findings)
+
+    # Re-sort after potential score updates
+    findings = sorted(
+        findings,
         key=lambda finding: finding.risk_score,
         reverse=True,
     )

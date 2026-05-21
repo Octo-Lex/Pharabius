@@ -33,7 +33,14 @@ ai:
   require_evidence_ids: true
 
 risk_scoring:
-  version: "1.0"
+  schema_version: "1.0"
+  enhanced: false
+  use_architecture_centrality: false
+  use_change_frequency: false
+  max_git_commits: 1000
+  max_git_paths: 5000
+  git_timeout_seconds: 10
+  graph_timeout_seconds: 5
   priority_bands:
     low: [0, 10]
     medium: [11, 20]

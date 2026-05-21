@@ -1,6 +1,15 @@
 # Pharabius Roadmap
 
-## v1.4.0 — Review Decision Sidecar (unreleased)
+## v1.5.0 — Opt-in Enhanced Risk Scoring (unreleased)
+
+- Architecture centrality from existing graph
+- Change frequency from local git log
+- Opt-in via config or CLI flags
+- Scoring preview for evaluation
+- 24 new tests
+- No engine/analyzer-rule/provider/config/governance/review behavior changes
+
+## v1.4.0 — Review Decision Sidecar (released 2026-05-20)
 
 - `ai-debt review` command with --init/--status/--validate
 - Non-canonical PET review decision sidecar

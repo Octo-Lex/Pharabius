@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -165,6 +165,131 @@ def map_units(
         console.print(f"  {ut:.<30s} {type_counts[ut]}")
 
 
+def _set_scoring_override(root: Path, enabled: bool) -> None:
+    """Write a temporary scoring override that analyzer will pick up via config."""
+    import yaml
+
+    config_path = root / ".ai-debt" / "config.yaml"
+    data: dict[str, Any] = {}
+    if config_path.exists():
+        try:
+            data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        except Exception:
+            data = {}
+    if not isinstance(data, dict):
+        data = {}
+    rs = data.get("risk_scoring", {})
+    rs["enhanced"] = enabled
+    rs["use_architecture_centrality"] = enabled
+    rs["use_change_frequency"] = enabled
+    data["risk_scoring"] = rs
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(yaml.dump(data, default_flow_style=False), encoding="utf-8")
+
+
+def _run_scoring_preview(root: Path) -> None:
+    """Run enhanced scoring as a preview without mutating canonical artifacts."""
+    import hashlib
+    import json
+
+    from pharabius.core.config import load_config
+    from pharabius.core.scoring import enhance_risk_breakdown, recalculate_risk_score
+
+    config = load_config(root)
+    rs = config.risk_scoring
+
+    # Temporarily enable for preview
+    use_centrality = rs.use_architecture_centrality or rs.enhanced
+    use_frequency = rs.use_change_frequency or rs.enhanced
+
+    if not use_centrality and not use_frequency:
+        # Force enable both for preview
+        use_centrality = True
+        use_frequency = True
+
+    debt_path = root / ".ai-debt" / "debt-register.json"
+    if not debt_path.exists():
+        console.print("[bold red]No debt-register.json found. Run analyze first.[/bold red]")
+        raise typer.Exit(code=1)
+
+    register_data = json.loads(debt_path.read_text(encoding="utf-8"))
+    hash_before = hashlib.sha256(debt_path.read_bytes()).hexdigest()
+
+    changes: list[dict[str, Any]] = []
+    for finding in register_data.get("findings", []):
+        fid = finding["id"]
+        old_score = finding["risk_score"]
+        finding["priority"]
+        locations = finding.get("locations", [])
+
+        enhanced = enhance_risk_breakdown(
+            root,
+            locations,
+            use_centrality=use_centrality,
+            use_frequency=use_frequency,
+            max_git_commits=rs.max_git_commits,
+            git_timeout=rs.git_timeout_seconds,
+        )
+
+        new_score = recalculate_risk_score(
+            {
+                "technical_severity": 1,
+                "architecture_centrality": 1,
+                "blast_radius": 1,
+                "change_frequency": 1,
+                "test_gap": 0,
+                "security_exposure": 0,
+                "compliance_exposure": 0,
+                "dependency_risk": 0,
+                "operational_exposure": 0,
+                "business_critical_proxy": 1,
+                "remediation_simplicity": -1,
+                "confidence_modifier": 0,
+            },
+            enhanced,
+        )
+
+        if new_score != old_score:
+            changes.append(
+                {
+                    "finding_id": fid,
+                    "old_score": old_score,
+                    "new_score": new_score,
+                    "architecture_centrality": enhanced["architecture_centrality"],
+                    "change_frequency": enhanced["change_frequency"],
+                }
+            )
+
+    # Verify no mutation
+    hash_after = hashlib.sha256(debt_path.read_bytes()).hexdigest()
+    assert hash_before == hash_after, "Canonical artifact mutated during preview!"
+
+    console.print("[bold green]Scoring Preview[/bold green]")
+    console.print(f"Repository: {root}")
+    console.print(f"Centrality: {'enabled' if use_centrality else 'disabled'}")
+    console.print(f"Frequency:  {'enabled' if use_frequency else 'disabled'}")
+    console.print(f"Total findings: {len(register_data.get('findings', []))}")
+    console.print(f"Scores would change: {len(changes)}")
+    if changes:
+        for c in changes:
+            console.print(
+                f"  {c['finding_id']}: {c['old_score']} -> {c['new_score']} "
+                f"(centrality={c['architecture_centrality']['level']}, "
+                f"frequency={c['change_frequency']['level']})"
+            )
+    else:
+        console.print("  No score changes.")
+
+    # Write preview sidecar
+    preview_path = root / ".ai-debt" / "reports" / "scoring-preview.json"
+    preview_path.parent.mkdir(parents=True, exist_ok=True)
+    preview_path.write_text(
+        json.dumps({"changes": changes}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    console.print(f"Preview: {preview_path}")
+
+
 @app.command()
 def analyze(
     repository_root: Annotated[
@@ -182,6 +307,20 @@ def analyze(
             help="Run deterministic analysis only. AI mode is not implemented yet.",
         ),
     ] = True,
+    enhanced_scoring: Annotated[
+        bool | None,
+        typer.Option(
+            "--enhanced-scoring/--no-enhanced-scoring",
+            help="Override config enhanced scoring setting.",
+        ),
+    ] = None,
+    scoring_preview: Annotated[
+        bool,
+        typer.Option(
+            "--scoring-preview",
+            help="Show projected scoring changes without mutating canonical artifacts.",
+        ),
+    ] = False,
 ) -> None:
     """
     Convert normalized evidence into deterministic technical debt findings.
@@ -190,6 +329,14 @@ def analyze(
         raise typer.BadParameter("AI analysis is not implemented yet. Use --no-ai.")
 
     resolved_root = (repository_root or Path.cwd()).resolve()
+
+    # Apply CLI override for enhanced scoring
+    if enhanced_scoring is not None:
+        _set_scoring_override(resolved_root, enhanced_scoring)
+
+    if scoring_preview:
+        _run_scoring_preview(resolved_root)
+        return
 
     register = write_debt_register(resolved_root)
 
