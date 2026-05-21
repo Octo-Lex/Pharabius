@@ -70,7 +70,7 @@ class RiskScoringConfig(BaseModel):
 
     model_config = {"extra": "ignore"}
 
-    version: str = "1.0"
+    schema_version: str = "1.0"
     enhanced: bool = False
     use_architecture_centrality: bool = False
     use_change_frequency: bool = False
