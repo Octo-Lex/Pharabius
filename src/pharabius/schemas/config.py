@@ -56,6 +56,31 @@ class OutputConfig(BaseModel):
     formats: list[str] = Field(default_factory=lambda: ["markdown", "json"])
 
 
+class PriorityBandsConfig(BaseModel):
+    """Priority band thresholds. Each is [min, max] inclusive."""
+
+    low: list[int] = Field(default_factory=lambda: [0, 10])
+    medium: list[int] = Field(default_factory=lambda: [11, 20])
+    high: list[int] = Field(default_factory=lambda: [21, 35])
+    critical: list[int] = Field(default_factory=lambda: [36, 100])
+
+
+class RiskScoringConfig(BaseModel):
+    """Risk scoring settings. Enhanced scoring is disabled by default."""
+
+    model_config = {"extra": "ignore"}
+
+    schema_version: str = "1.0"
+    enhanced: bool = False
+    use_architecture_centrality: bool = False
+    use_change_frequency: bool = False
+    max_git_commits: int = 1000
+    max_git_paths: int = 5000
+    git_timeout_seconds: int = 10
+    graph_timeout_seconds: int = 5
+    priority_bands: PriorityBandsConfig = Field(default_factory=PriorityBandsConfig)
+
+
 class PoliciesConfig(BaseModel):
     """Policy flags. All default to safe/true."""
 
@@ -82,3 +107,4 @@ class PharabiusConfig(BaseModel):
     ai: AIConfig = Field(default_factory=AIConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     policies: PoliciesConfig = Field(default_factory=PoliciesConfig)
+    risk_scoring: RiskScoringConfig = Field(default_factory=RiskScoringConfig)

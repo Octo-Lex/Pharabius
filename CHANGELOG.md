@@ -2,7 +2,44 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [1.4.0] - Unreleased
+## [1.5.0] - Unreleased
+
+### Added
+
+- Opt-in enhanced risk scoring with architecture centrality and git change frequency
+  - `config.yaml` `risk_scoring.enhanced: true` to enable
+  - `--enhanced-scoring` / `--no-enhanced-scoring` CLI flags on `analyze`
+  - `--scoring-preview` for non-mutating sidecar projection
+- Architecture centrality from `architecture-graph.json` (fan-in, cycle participation, hub detection)
+- Change frequency from local `git log` (commit counts per path)
+- Factor scale uses existing risk model: Low=1, Medium=3, High=5, Critical=8 (reserved)
+- Provenance per finding: level, value, source, reason for each factor
+- `risk_scoring` config section in `config.yaml` (not governance.yaml)
+- Performance controls: `max_git_commits`, `max_git_paths`, `git_timeout_seconds`, `graph_timeout_seconds`
+- Safe fallback for missing graph, non-git repos, shallow clones
+- Scoring preview sidecar: `.ai-debt/reports/scoring-preview.json`
+- `schemas/config.py`: `RiskScoringConfig`, `PriorityBandsConfig` sub-models
+- `core/scoring.py`: CentralitySignal, ChangeFrequencySignal, enhance_risk_breakdown
+- 24 new scoring tests
+
+### Changed
+
+- Version bumped to 1.5.0
+- `_score()` in analyzer tolerates mixed-type risk_breakdown dicts
+- `config.yaml` init template includes full `risk_scoring` section
+
+### Not Changed
+
+- Default behavior identical to v1.4.0 (enhanced=false)
+- No analyzer rule changes
+- No provider behavior changes
+- No governance behavior changes
+- No review sidecar changes
+- No remediation/code modification behavior
+- No AI-generated canonical findings
+- No run/enrich integration
+
+## [1.4.0] - Released 2026-05-20
 
 ### Added
 
