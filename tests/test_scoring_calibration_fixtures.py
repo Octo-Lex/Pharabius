@@ -1,26 +1,31 @@
+import json
+import pytest
 from pathlib import Path
 
-import pytest
-from fixtures import FIXTURES_DIR
+from ai_debt_toolkit.scoring.centrality import compute_centrality_signals
+from ai_debt_toolkit.scoring.constants import FACTOR_SCALE
 
-from pharabius.scoring import FACTOR_SCALE
-from pharabius.scoring.centrality import compute_centrality_signals
-from pharabius.utils import _load_json
+FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "scoring_calibration"
 
 
-def _iter_fixtures(subdir: str):
-    """Yield (fixture_name, data) tuples from a subdirectory."""
-    fixtures_path = FIXTURES_DIR / subdir
-    for path in sorted(fixtures_path.glob("*.json")):
-        name = path.stem
-        data = _load_json(path)
-        yield name, data
+def _load_json(path: Path) -> dict:
+    """Load JSON file, raise AssertionError if invalid."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        raise AssertionError(f"Invalid fixture file: {path}") from e
 
 
-class TestFixtureIntegrity:
-    """Sanity checks on fixture file structure and content."""
+def _iter_fixtures(subdir: str) -> list[tuple[str, dict]]:
+    """Yield (case_id, data) tuples from a fixture subdirectory."""
+    files = sorted((FIXTURES_DIR / subdir).glob("*.json"))
+    return [(f.stem, _load_json(f)) for f in files]
 
-    def test_all_architecture_centrality_fixtures_are_valid_json(self) -> None:
+
+class TestFixtures:
+    """Validate fixture structure and thresholds."""
+
+    def test_all_centrality_fixtures_are_valid_json(self) -> None:
         cases = _iter_fixtures("architecture_centrality")
         assert len(cases) >= 6, f"Expected >= 6 arch fixtures, got {len(cases)}"
         for _, data in cases:
@@ -59,8 +64,6 @@ class TestArchitectureCentralityCalibration:
 
     def _run_graph_case(self, case_data: dict, tmp_path: Path) -> tuple[str, int]:
         """Set up graph file, run centrality, return (level, value)."""
-        import json
-
         graph = case_data["architecture_graph"]
         locations = [loc["file"] for loc in case_data["finding_locations"]]
 
