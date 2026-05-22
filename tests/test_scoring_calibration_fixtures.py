@@ -1,3 +1,25 @@
+from pathlib import Path
+
+import pytest
+from fixtures import FIXTURES_DIR
+
+from pharabius.scoring import FACTOR_SCALE
+from pharabius.scoring.centrality import compute_centrality_signals
+from pharabius.utils import _load_json
+
+
+def _iter_fixtures(subdir: str):
+    """Yield (fixture_name, data) tuples from a subdirectory."""
+    fixtures_path = FIXTURES_DIR / subdir
+    for path in sorted(fixtures_path.glob("*.json")):
+        name = path.stem
+        data = _load_json(path)
+        yield name, data
+
+
+class TestFixtureIntegrity:
+    """Sanity checks on fixture file structure and content."""
+
     def test_all_architecture_centrality_fixtures_are_valid_json(self) -> None:
         cases = _iter_fixtures("architecture_centrality")
         assert len(cases) >= 6, f"Expected >= 6 arch fixtures, got {len(cases)}"
@@ -37,6 +59,8 @@ class TestArchitectureCentralityCalibration:
 
     def _run_graph_case(self, case_data: dict, tmp_path: Path) -> tuple[str, int]:
         """Set up graph file, run centrality, return (level, value)."""
+        import json
+
         graph = case_data["architecture_graph"]
         locations = [loc["file"] for loc in case_data["finding_locations"]]
 
