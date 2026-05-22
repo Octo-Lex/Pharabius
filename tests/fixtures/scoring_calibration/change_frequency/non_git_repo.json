@@ -1,0 +1,18 @@
+{
+  "case_id": "freq-non-git-repo",
+  "description": "Not a git repository — fallback to Low.",
+  "finding_locations": [
+    {"file": "src/main.py"}
+  ],
+  "git_history": {
+    "is_git_repo": false,
+    "is_shallow": false,
+    "commit_counts_by_path": {}
+  },
+  "expected": {
+    "change_frequency": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}

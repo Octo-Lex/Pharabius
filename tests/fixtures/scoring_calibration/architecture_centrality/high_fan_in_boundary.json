@@ -1,0 +1,34 @@
+{
+  "case_id": "arch-high-fan-in-boundary",
+  "description": "Node with fan-in 6 — High boundary (just above 5).",
+  "finding_locations": [
+    {"file": "src/hub.py"}
+  ],
+  "architecture_graph": {
+    "schema_version": "1.0",
+    "nodes": [
+      {"id": "src/hub.py", "path": "src/hub.py", "type": "python"},
+      {"id": "src/a.py", "path": "src/a.py", "type": "python"},
+      {"id": "src/b.py", "path": "src/b.py", "type": "python"},
+      {"id": "src/c.py", "path": "src/c.py", "type": "python"},
+      {"id": "src/d.py", "path": "src/d.py", "type": "python"},
+      {"id": "src/e.py", "path": "src/e.py", "type": "python"},
+      {"id": "src/f.py", "path": "src/f.py", "type": "python"}
+    ],
+    "edges": [
+      {"source": "src/a.py", "target": "src/hub.py"},
+      {"source": "src/b.py", "target": "src/hub.py"},
+      {"source": "src/c.py", "target": "src/hub.py"},
+      {"source": "src/d.py", "target": "src/hub.py"},
+      {"source": "src/e.py", "target": "src/hub.py"},
+      {"source": "src/f.py", "target": "src/hub.py"}
+    ],
+    "metrics": {"node_count": 7, "edge_count": 6, "cycle_count": 0}
+  },
+  "expected": {
+    "architecture_centrality": {
+      "level": "High",
+      "value": 5
+    }
+  }
+}

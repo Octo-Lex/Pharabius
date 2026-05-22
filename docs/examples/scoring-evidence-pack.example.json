@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "tool_version": "1.5.1-dev",
+  "generated_at": "2026-05-22T00:00:00Z",
+  "analysis_mode": "enhanced_scoring_validation",
+  "repositories": [
+    {
+      "name": "example-service",
+      "path": "../example-service",
+      "commit": "abc1234def5678901234567890123456789012",
+      "default_findings": 4,
+      "enhanced_findings": 4,
+      "finding_ids_stable": true,
+      "evidence_ids_stable": true,
+      "canonical_mutation_in_preview": false,
+      "score_changes": [
+        {
+          "finding_id": "TD-ARCH-001",
+          "title": "Central module has high dependency fan-in",
+          "category": "TD-ARCH",
+          "before_score": 18,
+          "after_score": 22,
+          "before_priority": "Medium",
+          "after_priority": "High",
+          "changed_factors": [
+            {
+              "factor": "architecture_centrality",
+              "before_level": "Low",
+              "after_level": "High",
+              "before_value": 1,
+              "after_value": 5,
+              "source": "architecture-graph.json",
+              "reason": "fan_in=8; top_10_percent_hub=true; cycle_participation=false"
+            }
+          ]
+        },
+        {
+          "finding_id": "TD-DEP-001",
+          "title": "Dependency manifest detected without lockfile",
+          "category": "TD-DEP",
+          "before_score": 15,
+          "after_score": 8,
+          "before_priority": "Medium",
+          "after_priority": "Medium",
+          "changed_factors": [
+            {
+              "factor": "change_frequency",
+              "before_level": "Low",
+              "after_level": "Low",
+              "before_value": 1,
+              "after_value": 1,
+              "source": "git log",
+              "reason": "commits_touching_path=0; max_git_commits=1000"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "runtime_seconds": {
+        "default": 1.42,
+        "enhanced": 2.10,
+        "preview": 2.05
+      }
+    }
+  ],
+  "summary": {
+    "repositories_checked": 1,
+    "repositories_passed": 1,
+    "score_changes_total": 2,
+    "priority_changes_total": 1,
+    "preview_mutation_failures": 0,
+    "id_stability_failures": 0
+  }
+}

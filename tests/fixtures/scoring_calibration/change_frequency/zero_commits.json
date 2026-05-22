@@ -1,0 +1,18 @@
+{
+  "case_id": "freq-zero-commits",
+  "description": "Zero commits — Low.",
+  "finding_locations": [
+    {"file": "src/new_file.py"}
+  ],
+  "git_history": {
+    "is_git_repo": true,
+    "is_shallow": false,
+    "commit_counts_by_path": {"src/new_file.py": 0}
+  },
+  "expected": {
+    "change_frequency": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}

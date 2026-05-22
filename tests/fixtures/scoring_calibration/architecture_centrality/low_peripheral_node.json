@@ -1,0 +1,26 @@
+{
+  "case_id": "arch-low-peripheral-node",
+  "description": "Node with fan-in 2 and no cycle — Low.",
+  "finding_locations": [
+    {"file": "src/peripheral.py"}
+  ],
+  "architecture_graph": {
+    "schema_version": "1.0",
+    "nodes": [
+      {"id": "src/peripheral.py", "path": "src/peripheral.py", "type": "python"},
+      {"id": "src/a.py", "path": "src/a.py", "type": "python"},
+      {"id": "src/b.py", "path": "src/b.py", "type": "python"}
+    ],
+    "edges": [
+      {"source": "src/a.py", "target": "src/peripheral.py"},
+      {"source": "src/b.py", "target": "src/peripheral.py"}
+    ],
+    "metrics": {"node_count": 3, "edge_count": 2, "cycle_count": 0}
+  },
+  "expected": {
+    "architecture_centrality": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}
