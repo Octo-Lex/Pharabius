@@ -1,4 +1,32 @@
-son(self) -> None:
+"""Test fixtures and calibration expectations for scoring."""
+import json
+from pathlib import Path
+
+import pytest
+
+from pharabius.centrality import compute_centrality_signals
+from pharabius.constants import FACTOR_SCALE
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+def _iter_fixtures(category: str):
+    """Yield (filename, parsed_data) for all JSON files in a category."""
+    path = FIXTURES_DIR / category
+    for file in sorted(path.glob("*.json")):
+        data = _load_json(file)
+        yield file.name, data
+
+
+def _load_json(path: Path) -> dict:
+    """Load and parse a JSON file."""
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+class TestFixtureStructure:
+    """Verify fixture files have required keys and structure."""
+
+    def test_all_arch_centrality_fixtures_are_valid_json(self) -> None:
         cases = _iter_fixtures("architecture_centrality")
         assert len(cases) >= 6, f"Expected >= 6 arch fixtures, got {len(cases)}"
         for _, data in cases:
