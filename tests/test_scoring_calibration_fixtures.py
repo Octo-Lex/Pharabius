@@ -42,7 +42,7 @@ class TestFixtureValidity:
     def test_all_architecture_fixtures_are_valid_json(self) -> None:
         cases = _iter_fixtures("architecture_centrality")
         assert len(cases) >= 6, f"Expected >= 6 arch fixtures, got {len(cases)}"
-        for case_id, data in cases:
+        for _case_id, data in cases:
             assert "case_id" in data
             assert "description" in data
             assert "finding_locations" in data
@@ -52,7 +52,7 @@ class TestFixtureValidity:
     def test_all_frequency_fixtures_are_valid_json(self) -> None:
         cases = _iter_fixtures("change_frequency")
         assert len(cases) >= 6, f"Expected >= 6 freq fixtures, got {len(cases)}"
-        for case_id, data in cases:
+        for _case_id, data in cases:
             assert "case_id" in data
             assert "description" in data
             assert "finding_locations" in data
