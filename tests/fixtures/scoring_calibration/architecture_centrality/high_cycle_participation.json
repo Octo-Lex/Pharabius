@@ -1,0 +1,26 @@
+{
+  "case_id": "arch-high-cycle-participation",
+  "description": "Node in a cycle (SCC with 2+ nodes) — High regardless of fan-in.",
+  "finding_locations": [
+    {"file": "src/a.py"}
+  ],
+  "architecture_graph": {
+    "schema_version": "1.0",
+    "nodes": [
+      {"id": "src/a.py", "path": "src/a.py", "type": "python"},
+      {"id": "src/b.py", "path": "src/b.py", "type": "python"}
+    ],
+    "edges": [
+      {"source": "src/a.py", "target": "src/b.py"},
+      {"source": "src/b.py", "target": "src/a.py"}
+    ],
+    "strongly_connected_components": [["src/a.py", "src/b.py"]],
+    "metrics": {"node_count": 2, "edge_count": 2, "cycle_count": 1}
+  },
+  "expected": {
+    "architecture_centrality": {
+      "level": "High",
+      "value": 5
+    }
+  }
+}

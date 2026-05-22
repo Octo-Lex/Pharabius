@@ -1,0 +1,19 @@
+{
+  "case_id": "arch-empty-graph",
+  "description": "Graph exists but has no nodes — fallback to Low.",
+  "finding_locations": [
+    {"file": "src/core/service.py"}
+  ],
+  "architecture_graph": {
+    "schema_version": "1.0",
+    "nodes": [],
+    "edges": [],
+    "metrics": {"node_count": 0, "edge_count": 0, "cycle_count": 0}
+  },
+  "expected": {
+    "architecture_centrality": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}

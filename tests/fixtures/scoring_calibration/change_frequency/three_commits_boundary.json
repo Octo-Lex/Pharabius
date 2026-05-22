@@ -1,0 +1,18 @@
+{
+  "case_id": "freq-three-commits-boundary",
+  "description": "Three commits — lower Medium boundary.",
+  "finding_locations": [
+    {"file": "src/service.py"}
+  ],
+  "git_history": {
+    "is_git_repo": true,
+    "is_shallow": false,
+    "commit_counts_by_path": {"src/service.py": 3}
+  },
+  "expected": {
+    "change_frequency": {
+      "level": "Medium",
+      "value": 3
+    }
+  }
+}
