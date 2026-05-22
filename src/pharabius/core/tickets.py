@@ -247,6 +247,21 @@ def render_ticket_markdown(draft: TicketDraft) -> str:
         lines.append(f"- Highest risk score: {draft.risk_score}")
     lines.append("")
 
+    # PET Review Status
+    lines.append("## PET Review Status")
+    lines.append("")
+    if draft.review_summary:
+        lines.append(f"- Overall decision: {draft.review_decision}")
+        for decision, count in sorted(draft.review_summary.items()):
+            lines.append(f"  - {decision}: {count}")
+        if draft.excluded_linked_debt_items:
+            lines.append(
+                f"- Excluded linked findings: {', '.join(draft.excluded_linked_debt_items)}"
+            )
+    else:
+        lines.append("No PET review sidecar found. Marked as not reviewed.")
+    lines.append("")
+
     # Body sections from body_markdown (structured content)
     if draft.body_markdown:
         lines.append(draft.body_markdown)
@@ -277,12 +292,14 @@ def render_ticket_markdown(draft: TicketDraft) -> str:
 def generate_ticket_markdown_drafts(
     workspace: Path,
     output_dir: Path | None = None,
+    include_deferred: bool = False,
 ) -> list[TicketDraft]:
     """Generate Markdown ticket drafts from work packages.
 
     Args:
         workspace: Path to .ai-debt directory.
         output_dir: Override output directory. Defaults to workspace/ticket-drafts/.
+        include_deferred: Include deferred-only work packages.
 
     Returns:
         List of TicketDraft models for generated drafts.
@@ -298,6 +315,7 @@ def generate_ticket_markdown_drafts(
         return []
 
     register = _load_debt_register(workspace)
+    review_decisions = load_review_decisions(workspace)
     if output_dir is None:
         output_dir = workspace / "ticket-drafts"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -384,6 +402,34 @@ def generate_ticket_markdown_drafts(
         # Labels
         labels = ["technical-debt", "pharabius", *categories]
 
+        # Review classification
+        rv_decision, rv_include, rv_summary, rv_excluded = classify_work_package_for_ticketing(
+            parsed.linked_debt_items, review_decisions, include_deferred
+        )
+
+        if not rv_include:
+            # Write excluded draft
+            draft = TicketDraft(
+                ticket_id=ticket_id,
+                title=parsed.title,
+                source_type="work_package",
+                source_id=parsed.id,
+                artifact_path=artifact_path,
+                linked_debt_items=parsed.linked_debt_items,
+                categories=categories,
+                priority=priority,
+                risk_score=risk_score,
+                labels=sorted(set(labels)),
+                content_hash=content_hash,
+                body_markdown=body_markdown,
+                review_decision=rv_decision,
+                status="excluded",
+                review_summary=rv_summary,
+                excluded_linked_debt_items=rv_excluded,
+            )
+            drafts.append(draft)
+            continue
+
         draft = TicketDraft(
             ticket_id=ticket_id,
             title=parsed.title,
@@ -397,6 +443,9 @@ def generate_ticket_markdown_drafts(
             labels=sorted(set(labels)),
             content_hash=content_hash,
             body_markdown=body_markdown,
+            review_decision=rv_decision,
+            review_summary=rv_summary,
+            excluded_linked_debt_items=rv_excluded,
         )
 
         # Write Markdown file
@@ -559,3 +608,85 @@ def write_ticket_draft_summary(index: TicketDraftIndex, reports_dir: Path) -> Pa
     path = reports_dir / "ticket-draft-summary.md"
     path.write_text(render_ticket_draft_summary(index), encoding="utf-8")
     return path
+
+
+# ── PET Review filtering ────────────────────────────────────────────────
+
+# Decision classifications for ticket generation
+_EXCLUDE_DECISIONS = {"rejected", "duplicate", "already-fixed", "risk-accepted"}
+_FALSE_POSITIVE_DECISIONS = {"rejected", "duplicate"}
+_DEFERRED_DECISIONS = {"deferred"}
+_INCLUDE_DECISIONS = {"accepted", "needs-investigation"}
+
+
+def load_review_decisions(workspace: Path) -> dict[str, str]:
+    """Load finding_id -> review_decision from the review sidecar.
+
+    Returns empty dict if no review sidecar exists.
+    Does not mutate any files.
+    """
+    review_path = workspace / "review" / "decisions.json"
+    if not review_path.exists():
+        return {}
+    try:
+        data = json.loads(review_path.read_text(encoding="utf-8"))
+        decisions: dict[str, str] = {}
+        for d in data.get("decisions", []):
+            if isinstance(d, dict) and "finding_id" in d and "status" in d:
+                decisions[d["finding_id"]] = d["status"]
+        return decisions
+    except (json.JSONDecodeError, OSError):
+        logger.warning("Invalid review sidecar, treating as no reviews")
+        return {}
+
+
+def classify_work_package_for_ticketing(
+    linked_debt_items: list[str],
+    review_decisions: dict[str, str],
+    include_deferred: bool = False,
+) -> tuple[str, bool, dict[str, int], list[str]]:
+    """Classify a work package for ticket draft inclusion.
+
+    Returns:
+        (review_decision_label, should_include, review_summary, excluded_items)
+    """
+    if not linked_debt_items:
+        return "not_reviewed", True, {}, []
+
+    summary: dict[str, int] = {}
+    excluded: list[str] = []
+    has_include = False
+    has_deferred = False
+    all_excluded = True
+
+    for fid in linked_debt_items:
+        decision = review_decisions.get(fid, "not_reviewed")
+        summary[decision] = summary.get(decision, 0) + 1
+
+        if decision in _EXCLUDE_DECISIONS:
+            excluded.append(fid)
+        elif decision in _DEFERRED_DECISIONS:
+            has_deferred = True
+            all_excluded = False
+        elif decision in _INCLUDE_DECISIONS:
+            has_include = True
+            all_excluded = False
+        else:
+            # not_reviewed or unknown
+            all_excluded = False
+
+    # Determine overall label
+    if not review_decisions:
+        label = "not_reviewed"
+    elif len(set(summary.keys())) == 1:
+        label = next(iter(summary.keys()))
+    else:
+        label = "mixed"
+
+    # Determine inclusion
+    if (all_excluded and excluded) or (has_deferred and not has_include and not include_deferred):
+        should_include = False
+    else:
+        should_include = True
+
+    return label, should_include, summary, excluded

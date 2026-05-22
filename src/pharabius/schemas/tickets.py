@@ -56,6 +56,8 @@ class TicketDraft(BaseModel):
     external_id: None = None
     content_hash: str | None = None
     body_markdown: str = ""
+    review_summary: dict[str, int] = Field(default_factory=dict)
+    excluded_linked_debt_items: list[str] = Field(default_factory=list)
 
 
 class TicketDraftIndex(BaseModel):
