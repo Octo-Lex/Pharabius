@@ -1,4 +1,4 @@
-# Known Limitations — Pharabius v1.5.0
+# Known Limitations — Pharabius v1.5.1
 
 This document lists known limitations of Pharabius v0.1.0. These are honest constraints, not bugs.
 
@@ -394,3 +394,12 @@ Two factors default to Low (1) and are not overridden by any analysis rule:
 
 Both factors defaulting to 1 (Low) is conservative — it does not inflate scores.
 Full graph/git-backed scoring alignment requires v0.11.0+ work.
+
+## 13. Enhanced scoring calibration limitations
+
+- Enhanced scoring remains opt-in (disabled by default).
+- Architecture centrality depends on availability and quality of `architecture-graph.json`.
+- Change frequency depends on local git history; shallow clones fall back to Low.
+- Rename history may be incomplete for complex path moves.
+- Calibration evidence packs are sidecar validation artifacts, not canonical product outputs.
+- No threshold changes were made in v1.5.1; v1.5.0 thresholds remain unchanged.
