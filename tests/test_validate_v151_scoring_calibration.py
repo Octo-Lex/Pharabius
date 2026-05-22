@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
-from scripts.validate_v151_scoring_calibration import (
-    compare_default_to_enhanced,
-    extract_finding_snapshot,
-    hash_file,
-    render_evidence_pack_markdown,
+# Load script as module since 'scripts/' is not a Python package
+_script_path = (
+    Path(__file__).resolve().parent.parent / "scripts" / "validate_v151_scoring_calibration.py"
 )
+_spec = importlib.util.spec_from_file_location("validate_v151", _script_path)
+_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_module)
+
+compare_default_to_enhanced = _module.compare_default_to_enhanced
+extract_finding_snapshot = _module.extract_finding_snapshot
+hash_file = _module.hash_file
+render_evidence_pack_markdown = _module.render_evidence_pack_markdown
 
 
 class TestHashFile:
