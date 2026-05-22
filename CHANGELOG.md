@@ -2,6 +2,32 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.6.0] - Unreleased
+
+### Added
+
+- Repository-local ticket draft export via `ai-debt tickets` command
+- Markdown ticket drafts under `.ai-debt/ticket-drafts/` (one per work package)
+- Machine-readable `ticket-drafts.json` index with metadata and content hashes
+- Ticket draft summary report at `.ai-debt/reports/ticket-draft-summary.md`
+- PET review sidecar filtering: false-positive, rejected, and deferred excluded by default
+- `--include-deferred` flag to include deferred-only work packages
+- `--force` flag to overwrite existing generated drafts
+- Ticket draft schema models (TicketDraft, TicketDraftIndex) in `schemas/tickets.py`
+- Deterministic ticket ID mapping (WP-001 → TICKET-WP-001)
+
+### Safety
+
+- No external tickets are created
+- No issue tracker APIs are called
+- Canonical debt register and work packages are not mutated
+- Review sidecar decisions affect inclusion only, not scoring
+
+### Stats
+
+- 1078 tests (+82 from v1.5.1)
+- 52 source files (+2 from v1.5.1)
+
 ## [1.5.1] - Unreleased
 
 ### Added
