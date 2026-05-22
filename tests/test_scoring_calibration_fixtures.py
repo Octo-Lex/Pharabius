@@ -1,48 +1,7 @@
-"""Tests for scoring calibration fixtures (W40-S03).
-
-These tests lock current v1.5.0 threshold behavior. Any future threshold
-change must update the corresponding fixture expectations intentionally.
-"""
-
-from __future__ import annotations
-
-import json
-from pathlib import Path
-
-import pytest
-
-from pharabius.core.scoring import FACTOR_SCALE, compute_centrality_signals
-
-FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "scoring_calibration"
-
-
-# ── Fixture loading helpers ───────────────────────────────────────────
-
-
-def _load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _iter_fixtures(subdir: str) -> list[tuple[str, dict]]:
-    """Yield (case_id, fixture_data) from a subdirectory."""
-    d = FIXTURES_DIR / subdir
-    if not d.exists():
-        return []
-    results = []
-    for p in sorted(d.glob("*.json")):
-        data = _load_json(p)
-        results.append((data["case_id"], data))
-    return results
-
-
-# ── Fixture validity tests ─────────────────────────────────────────────
-
-
-class TestFixtureValidity:
-    def test_all_architecture_fixtures_are_valid_json(self) -> None:
+son(self) -> None:
         cases = _iter_fixtures("architecture_centrality")
         assert len(cases) >= 6, f"Expected >= 6 arch fixtures, got {len(cases)}"
-        for case_id, data in cases:
+        for _, data in cases:
             assert "case_id" in data
             assert "description" in data
             assert "finding_locations" in data
@@ -52,7 +11,7 @@ class TestFixtureValidity:
     def test_all_frequency_fixtures_are_valid_json(self) -> None:
         cases = _iter_fixtures("change_frequency")
         assert len(cases) >= 6, f"Expected >= 6 freq fixtures, got {len(cases)}"
-        for case_id, data in cases:
+        for _, data in cases:
             assert "case_id" in data
             assert "description" in data
             assert "finding_locations" in data
