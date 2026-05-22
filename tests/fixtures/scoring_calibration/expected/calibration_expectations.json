@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "description": "Aggregate calibration expectations locking v1.5.0 threshold behavior.",
+  "architecture_centrality_thresholds": {
+    "Low": {"conditions": ["fan_in <= 2 AND not in cycle"], "value": 1},
+    "Medium": {"conditions": ["fan_in >= 3 AND fan_in <= 5 AND not in cycle"], "value": 3},
+    "High": {"conditions": ["fan_in > 5", "OR in cycle with 2+ nodes", "OR top-10% hub"], "value": 5}
+  },
+  "change_frequency_thresholds": {
+    "Low": {"conditions": ["commits 0-2", "OR not git repo", "OR shallow clone"], "value": 1},
+    "Medium": {"conditions": ["commits 3-10"], "value": 3},
+    "High": {"conditions": ["commits > 10"], "value": 5}
+  },
+  "rule": "Update expectations ONLY in explicit threshold-tuning slices (W40-S05 or later)."
+}

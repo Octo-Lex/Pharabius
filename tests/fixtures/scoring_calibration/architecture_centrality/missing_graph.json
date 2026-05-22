@@ -1,0 +1,14 @@
+{
+  "case_id": "arch-missing-graph",
+  "description": "No architecture graph file — fallback to Low.",
+  "finding_locations": [
+    {"file": "src/core/service.py"}
+  ],
+  "architecture_graph": null,
+  "expected": {
+    "architecture_centrality": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}

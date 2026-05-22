@@ -1,0 +1,28 @@
+{
+  "case_id": "arch-medium-fan-in-boundary",
+  "description": "Node with fan-in 3 — Medium boundary.",
+  "finding_locations": [
+    {"file": "src/core/service.py"}
+  ],
+  "architecture_graph": {
+    "schema_version": "1.0",
+    "nodes": [
+      {"id": "src/core/service.py", "path": "src/core/service.py", "type": "python"},
+      {"id": "src/a.py", "path": "src/a.py", "type": "python"},
+      {"id": "src/b.py", "path": "src/b.py", "type": "python"},
+      {"id": "src/c.py", "path": "src/c.py", "type": "python"}
+    ],
+    "edges": [
+      {"source": "src/a.py", "target": "src/core/service.py"},
+      {"source": "src/b.py", "target": "src/core/service.py"},
+      {"source": "src/c.py", "target": "src/core/service.py"}
+    ],
+    "metrics": {"node_count": 4, "edge_count": 3, "cycle_count": 0}
+  },
+  "expected": {
+    "architecture_centrality": {
+      "level": "Medium",
+      "value": 3
+    }
+  }
+}

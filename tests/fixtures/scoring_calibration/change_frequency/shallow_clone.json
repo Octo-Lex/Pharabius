@@ -1,0 +1,18 @@
+{
+  "case_id": "freq-shallow-clone",
+  "description": "Shallow clone detected — fallback to Low.",
+  "finding_locations": [
+    {"file": "src/main.py"}
+  ],
+  "git_history": {
+    "is_git_repo": true,
+    "is_shallow": true,
+    "commit_counts_by_path": {"src/main.py": 50}
+  },
+  "expected": {
+    "change_frequency": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}

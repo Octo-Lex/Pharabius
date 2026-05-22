@@ -418,6 +418,177 @@ def enhance_risk_breakdown(
     return result
 
 
+# ── Scoring delta report models ───────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class ScoringDeltaRow:
+    """A single finding's scoring delta."""
+
+    finding_id: str
+    title: str
+    category: str
+    before_score: int
+    after_score: int
+    before_priority: str
+    after_priority: str
+    changed_factors: list[str]
+
+
+@dataclass(frozen=True)
+class ScoringDeltaFactorDetail:
+    """Factor-level provenance for a changed finding."""
+
+    finding_id: str
+    factor: str
+    before_level: str
+    before_value: int
+    after_level: str
+    after_value: int
+    source: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class ScoringDeltaConfig:
+    """Configuration snapshot for the delta report."""
+
+    enhanced: bool
+    use_centrality: bool
+    use_frequency: bool
+    git_cap: int
+    path_cap: int
+    git_timeout: int
+    graph_timeout: int
+
+
+@dataclass(frozen=True)
+class ScoringDeltaReport:
+    """Complete scoring delta report data."""
+
+    config: ScoringDeltaConfig
+    rows: list[ScoringDeltaRow]
+    factor_details: list[ScoringDeltaFactorDetail]
+    warnings: list[str]
+    total_findings: int
+
+
+def render_scoring_delta_markdown(report: ScoringDeltaReport) -> str:
+    """Render a human-readable scoring delta report.
+
+    This function is presentation-only. It must not mutate findings,
+    recompute risk factors, or update canonical artifacts.
+    """
+    lines: list[str] = []
+
+    # Header
+    lines.append("# Scoring Delta Report")
+    lines.append("")
+
+    # Configuration
+    lines.append("## Configuration")
+    lines.append("")
+    lines.append("| Setting | Value |")
+    lines.append("|---|---|")
+    c = report.config
+    lines.append(f"| Enhanced scoring | {'enabled' if c.enhanced else 'disabled'} |")
+    lines.append(f"| Architecture centrality | {'enabled' if c.use_centrality else 'disabled'} |")
+    lines.append(f"| Change frequency | {'enabled' if c.use_frequency else 'disabled'} |")
+    lines.append(f"| Git cap | {c.git_cap} commits |")
+    lines.append(f"| Path cap | {c.path_cap} paths |")
+    lines.append(f"| Git timeout | {c.git_timeout}s |")
+    lines.append(f"| Graph timeout | {c.graph_timeout}s |")
+    lines.append("")
+
+    # Summary
+    scores_changed = len(report.rows)
+    scores_unchanged = report.total_findings - scores_changed
+    priority_changes = sum(1 for r in report.rows if r.before_priority != r.after_priority)
+    lines.append("## Summary")
+    lines.append("")
+    lines.append("| Metric | Value |")
+    lines.append("|---|---:|")
+    lines.append(f"| Total findings | {report.total_findings} |")
+    lines.append(f"| Scores changed | {scores_changed} |")
+    lines.append(f"| Scores unchanged | {scores_unchanged} |")
+    lines.append(f"| Priority changes | {priority_changes} |")
+    lines.append(f"| Warnings | {len(report.warnings)} |")
+    lines.append("")
+
+    # Priority Movement
+    movements: dict[str, int] = {}
+    for r in report.rows:
+        if r.before_priority != r.after_priority:
+            key = f"{r.before_priority} → {r.after_priority}"
+            movements[key] = movements.get(key, 0) + 1
+    lines.append("## Priority Movement")
+    lines.append("")
+    lines.append("| Movement | Count |")
+    lines.append("|---|---:|")
+    if movements:
+        for mv, cnt in sorted(movements.items()):
+            lines.append(f"| {mv} | {cnt} |")
+    no_priority_change = report.total_findings - priority_changes
+    lines.append(f"| No priority change | {no_priority_change} |")
+    lines.append("")
+
+    # Changed Findings
+    lines.append("## Changed Findings")
+    lines.append("")
+    if report.rows:
+        lines.append("| Finding | Category | Score | Priority | Changed Factors |")
+        lines.append("|---|---|---:|---|---|")
+        for r in report.rows:
+            score_str = f"{r.before_score} → {r.after_score}"
+            pri_str = f"{r.before_priority} → {r.after_priority}"
+            factors_str = ", ".join(r.changed_factors)
+            lines.append(
+                f"| {r.finding_id} | {r.category} | {score_str} | {pri_str} | {factors_str} |"
+            )
+    else:
+        lines.append("No score changes.")
+    lines.append("")
+
+    # Factor Details
+    if report.factor_details:
+        lines.append("## Factor Details")
+        lines.append("")
+        current_finding = ""
+        for fd in report.factor_details:
+            if fd.finding_id != current_finding:
+                current_finding = fd.finding_id
+                lines.append(f"### {fd.finding_id}")
+                lines.append("")
+                lines.append("| Factor | Before | After | Source | Reason |")
+                lines.append("|---|---|---|---|---|")
+            lines.append(
+                f"| {fd.factor} | {fd.before_level} ({fd.before_value}) "
+                f"| {fd.after_level} ({fd.after_value}) "
+                f"| {fd.source} | {fd.reason} |"
+            )
+        lines.append("")
+
+    # Warnings and Fallbacks
+    lines.append("## Warnings and Fallbacks")
+    lines.append("")
+    if report.warnings:
+        for w in report.warnings:
+            lines.append(f"- {w}")
+    else:
+        lines.append("No warnings.")
+    lines.append("")
+
+    # Reviewer Notes
+    lines.append("## Reviewer Notes")
+    lines.append("")
+    lines.append("- Enhanced scoring is opt-in.")
+    lines.append("- Finding IDs and evidence IDs are expected to remain stable.")
+    lines.append("- Only risk factors, risk score, and priority may change.")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
 def recalculate_risk_score(
     base_template: dict[str, int],
     enhanced_factors: dict[str, dict[str, Any]],

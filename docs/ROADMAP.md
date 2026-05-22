@@ -1,6 +1,14 @@
 # Pharabius Roadmap
 
-## v1.5.0 — Opt-in Enhanced Risk Scoring (unreleased)
+## v1.5.1 — Scoring Calibration & Evidence Pack (unreleased)
+
+- Evidence pack format, fixtures, and field validation tooling
+- Scoring delta Markdown readability improvements
+- Calibration decision: no threshold changes (evidence did not justify tuning)
+- 64 new tests (14 evidence pack + 15 delta report + 25 calibration + 10 validation)
+- No scoring algorithm, threshold, or production behavior changes
+
+## v1.5.0 — Opt-in Enhanced Risk Scoring (released 2026-05-22)
 
 - Architecture centrality from existing graph
 - Change frequency from local git log

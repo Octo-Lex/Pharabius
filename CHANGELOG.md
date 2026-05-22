@@ -2,42 +2,66 @@
 
 All notable changes to Pharabius are documented in this file.
 
-## [1.5.0] - Unreleased
+## [1.5.1] - Unreleased
+
+### Added
+
+- Scoring evidence pack format and examples (docs/SCORING_EVIDENCE_PACK.md)
+- Field validation summary script (scripts/validate_v151_scoring_calibration.py)
+- Calibration fixtures for architecture centrality and change frequency thresholds
+  (14 boundary cases, 25 calibration tests)
+- Scoring delta Markdown report with structured sections: Configuration, Summary,
+  Priority Movement, Changed Findings, Factor Details, Warnings, Reviewer Notes
+
+### Improved
+
+- --scoring-preview now emits both scoring-preview.json and scoring-delta.md
+- scoring-delta.md readability with clearer summary, priority movement,
+  factor provenance, and warning sections
+
+### Validation
+
+- Enhanced scoring validation produces machine-readable and human-readable evidence packs
+- Preview-mode non-mutation, finding ID stability, evidence ID stability,
+  and reset/default behavior are validated by tooling
+- Calibration decision: no threshold changes in v1.5.1 (evidence did not justify tuning)
+
+### Compatibility
+
+- Enhanced scoring remains opt-in
+- Default scoring remains unchanged when enhanced scoring is disabled
+- No threshold changes from v1.5.0
+- No scoring algorithm changes
+
+### Stats
+
+- 996 tests (+64 from v1.5.0)
+- 100 files tracked
+
+## [1.5.0] - Released 2026-05-22
 
 ### Added
 
 - Opt-in enhanced risk scoring with architecture centrality and git change frequency
-  - `config.yaml` `risk_scoring.enhanced: true` to enable
-  - `--enhanced-scoring` / `--no-enhanced-scoring` CLI flags on `analyze`
-  - `--scoring-preview` for non-mutating sidecar projection
-- Architecture centrality from `architecture-graph.json` (fan-in, cycle participation, hub detection)
-- Change frequency from local `git log` (commit counts per path)
-- Factor scale uses existing risk model: Low=1, Medium=3, High=5, Critical=8 (reserved)
-- Provenance per finding: level, value, source, reason for each factor
-- `risk_scoring` config section in `config.yaml` (not governance.yaml)
-- Performance controls: `max_git_commits`, `max_git_paths`, `git_timeout_seconds`, `graph_timeout_seconds`
-- Safe fallback for missing graph, non-git repos, shallow clones
-- Scoring preview sidecar: `.ai-debt/reports/scoring-preview.json`
-- `schemas/config.py`: `RiskScoringConfig`, `PriorityBandsConfig` sub-models
-- `core/scoring.py`: CentralitySignal, ChangeFrequencySignal, enhance_risk_breakdown
+- --enhanced-scoring / --no-enhanced-scoring CLI flags on analyze
+- --scoring-preview for non-mutating sidecar projection
+- Architecture centrality from architecture-graph.json (fan-in, cycle, hub detection)
+- Change frequency from local git log (commit counts per path)
+- Factor scale: Low=1, Medium=3, High=5, Critical=8 (reserved)
+- Provenance per finding: level, value, source, reason
+- risk_scoring config section in config.yaml (not governance.yaml)
+- Performance controls: git/graph timeouts, commit/path caps
+- Scoring preview sidecar: .ai-debt/reports/scoring-preview.json
 - 24 new scoring tests
 
 ### Changed
 
-- Version bumped to 1.5.0
-- `_score()` in analyzer tolerates mixed-type risk_breakdown dicts
-- `config.yaml` init template includes full `risk_scoring` section
+- _score() in analyzer tolerates mixed-type risk_breakdown dicts
 
 ### Not Changed
 
 - Default behavior identical to v1.4.0 (enhanced=false)
-- No analyzer rule changes
-- No provider behavior changes
-- No governance behavior changes
-- No review sidecar changes
-- No remediation/code modification behavior
-- No AI-generated canonical findings
-- No run/enrich integration
+- No analyzer rule, provider, governance, or review changes
 
 ## [1.4.0] - Released 2026-05-20
 

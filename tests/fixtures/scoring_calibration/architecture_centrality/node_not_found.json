@@ -1,0 +1,21 @@
+{
+  "case_id": "arch-node-not-found",
+  "description": "Graph exists but finding location has no matching node — Low.",
+  "finding_locations": [
+    {"file": "src/orphan.py"}
+  ],
+  "architecture_graph": {
+    "schema_version": "1.0",
+    "nodes": [
+      {"id": "src/core/service.py", "path": "src/core/service.py", "type": "python"}
+    ],
+    "edges": [],
+    "metrics": {"node_count": 1, "edge_count": 0, "cycle_count": 0}
+  },
+  "expected": {
+    "architecture_centrality": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "case_id": "freq-ten-commits-boundary",
+  "description": "Ten commits — upper Medium boundary.",
+  "finding_locations": [
+    {"file": "src/service.py"}
+  ],
+  "git_history": {
+    "is_git_repo": true,
+    "is_shallow": false,
+    "commit_counts_by_path": {"src/service.py": 10}
+  },
+  "expected": {
+    "change_frequency": {
+      "level": "Medium",
+      "value": 3
+    }
+  }
+}

@@ -193,7 +193,15 @@ def _run_scoring_preview(root: Path) -> None:
     import json
 
     from pharabius.core.config import load_config
-    from pharabius.core.scoring import enhance_risk_breakdown, recalculate_risk_score
+    from pharabius.core.scoring import (
+        ScoringDeltaConfig,
+        ScoringDeltaFactorDetail,
+        ScoringDeltaReport,
+        ScoringDeltaRow,
+        enhance_risk_breakdown,
+        recalculate_risk_score,
+        render_scoring_delta_markdown,
+    )
 
     config = load_config(root)
     rs = config.risk_scoring
@@ -215,11 +223,16 @@ def _run_scoring_preview(root: Path) -> None:
     register_data = json.loads(debt_path.read_text(encoding="utf-8"))
     hash_before = hashlib.sha256(debt_path.read_bytes()).hexdigest()
 
-    changes: list[dict[str, Any]] = []
+    delta_rows: list[ScoringDeltaRow] = []
+    delta_factors: list[ScoringDeltaFactorDetail] = []
+    warnings: list[str] = []
+    changes_json: list[dict[str, Any]] = []
+    total_findings = len(register_data.get("findings", []))
+
     for finding in register_data.get("findings", []):
         fid = finding["id"]
         old_score = finding["risk_score"]
-        finding["priority"]
+        old_priority = finding["priority"]
         locations = finding.get("locations", [])
 
         enhanced = enhance_risk_breakdown(
@@ -249,8 +262,48 @@ def _run_scoring_preview(root: Path) -> None:
             enhanced,
         )
 
+        # Determine new priority (use existing band logic)
+        from pharabius.core.analyzer import _priority_for_score
+
+        new_priority = _priority_for_score(new_score)
+
+        # Track factor changes
+        changed_factor_names: list[str] = []
+        for factor_key in ("architecture_centrality", "change_frequency"):
+            fdata = enhanced[factor_key]
+            default_level = "Low"
+            default_value = 1
+            if fdata["level"] != default_level or fdata["value"] != default_value:
+                changed_factor_names.append(factor_key)
+                delta_factors.append(
+                    ScoringDeltaFactorDetail(
+                        finding_id=fid,
+                        factor=factor_key,
+                        before_level=default_level,
+                        before_value=default_value,
+                        after_level=fdata["level"],
+                        after_value=fdata["value"],
+                        source=fdata["source"],
+                        reason=fdata["reason"],
+                    )
+                )
+            if "fallback" in fdata.get("reason", "").lower():
+                warnings.append(f"{fid}: {factor_key} — {fdata['reason']}")
+
         if new_score != old_score:
-            changes.append(
+            delta_rows.append(
+                ScoringDeltaRow(
+                    finding_id=fid,
+                    title=finding.get("title", ""),
+                    category=finding.get("category", ""),
+                    before_score=old_score,
+                    after_score=new_score,
+                    before_priority=old_priority,
+                    after_priority=new_priority,
+                    changed_factors=changed_factor_names,
+                )
+            )
+            changes_json.append(
                 {
                     "finding_id": fid,
                     "old_score": old_score,
@@ -268,10 +321,10 @@ def _run_scoring_preview(root: Path) -> None:
     console.print(f"Repository: {root}")
     console.print(f"Centrality: {'enabled' if use_centrality else 'disabled'}")
     console.print(f"Frequency:  {'enabled' if use_frequency else 'disabled'}")
-    console.print(f"Total findings: {len(register_data.get('findings', []))}")
-    console.print(f"Scores would change: {len(changes)}")
-    if changes:
-        for c in changes:
+    console.print(f"Total findings: {total_findings}")
+    console.print(f"Scores would change: {len(delta_rows)}")
+    if delta_rows:
+        for c in changes_json:
             console.print(
                 f"  {c['finding_id']}: {c['old_score']} -> {c['new_score']} "
                 f"(centrality={c['architecture_centrality']['level']}, "
@@ -280,14 +333,35 @@ def _run_scoring_preview(root: Path) -> None:
     else:
         console.print("  No score changes.")
 
-    # Write preview sidecar
+    # Write JSON preview sidecar
     preview_path = root / ".ai-debt" / "reports" / "scoring-preview.json"
     preview_path.parent.mkdir(parents=True, exist_ok=True)
     preview_path.write_text(
-        json.dumps({"changes": changes}, indent=2) + "\n",
+        json.dumps({"changes": changes_json}, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    # Write Markdown delta report
+    delta_report = ScoringDeltaReport(
+        config=ScoringDeltaConfig(
+            enhanced=use_centrality or use_frequency,
+            use_centrality=use_centrality,
+            use_frequency=use_frequency,
+            git_cap=rs.max_git_commits,
+            path_cap=rs.max_git_paths,
+            git_timeout=rs.git_timeout_seconds,
+            graph_timeout=rs.graph_timeout_seconds,
+        ),
+        rows=delta_rows,
+        factor_details=delta_factors,
+        warnings=warnings,
+        total_findings=total_findings,
+    )
+    md_path = root / ".ai-debt" / "reports" / "scoring-delta.md"
+    md_path.write_text(render_scoring_delta_markdown(delta_report), encoding="utf-8")
+
     console.print(f"Preview: {preview_path}")
+    console.print(f"Delta:   {md_path}")
 
 
 @app.command()

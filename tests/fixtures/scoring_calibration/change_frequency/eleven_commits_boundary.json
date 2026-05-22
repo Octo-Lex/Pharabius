@@ -1,0 +1,18 @@
+{
+  "case_id": "freq-eleven-commits-boundary",
+  "description": "Eleven commits — lower High boundary (just above 10).",
+  "finding_locations": [
+    {"file": "src/hotspot.py"}
+  ],
+  "git_history": {
+    "is_git_repo": true,
+    "is_shallow": false,
+    "commit_counts_by_path": {"src/hotspot.py": 11}
+  },
+  "expected": {
+    "change_frequency": {
+      "level": "High",
+      "value": 5
+    }
+  }
+}

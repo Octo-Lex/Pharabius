@@ -1,0 +1,18 @@
+{
+  "case_id": "freq-two-commits-boundary",
+  "description": "Two commits — upper Low boundary.",
+  "finding_locations": [
+    {"file": "src/stable.py"}
+  ],
+  "git_history": {
+    "is_git_repo": true,
+    "is_shallow": false,
+    "commit_counts_by_path": {"src/stable.py": 2}
+  },
+  "expected": {
+    "change_frequency": {
+      "level": "Low",
+      "value": 1
+    }
+  }
+}
