@@ -58,6 +58,7 @@ class TicketDraft(BaseModel):
     body_markdown: str = ""
     review_summary: dict[str, int] = Field(default_factory=dict)
     excluded_linked_debt_items: list[str] = Field(default_factory=list)
+    completeness: TicketDraftCompleteness | None = None
 
 
 class TicketDraftIndex(BaseModel):
@@ -83,3 +84,12 @@ class TicketDraftValidationIssue(BaseModel):
     code: str
     severity: str = "warning"
     message: str
+
+
+class TicketDraftCompleteness(BaseModel):
+    """Completeness assessment for a generated ticket draft."""
+
+    status: str  # "complete", "partial", "needs_review"
+    missing_fields: list[str] = Field(default_factory=list)
+    weak_fields: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)

@@ -18,6 +18,7 @@ from typing import Any
 
 from pharabius.schemas.tickets import (
     TicketDraft,
+    TicketDraftCompleteness,
     TicketDraftIndex,
     TicketDraftSourceArtifacts,
     TicketDraftSummary,
@@ -495,6 +496,10 @@ def generate_ticket_markdown_drafts(
 
         drafts.append(draft)
 
+    # Evaluate completeness for each draft
+    for draft in drafts:
+        draft.completeness = evaluate_ticket_draft_completeness(draft)
+
     return drafts, validation_issues
 
 
@@ -602,6 +607,53 @@ def write_ticket_draft_index(index: TicketDraftIndex, output_dir: Path) -> Path:
     return path
 
 
+def evaluate_ticket_draft_completeness(draft: TicketDraft) -> TicketDraftCompleteness:
+    """Evaluate the completeness of a ticket draft."""
+    missing: list[str] = []
+    weak: list[str] = []
+    notes: list[str] = []
+
+    # Required fields
+    if not draft.title or draft.title.strip() == "":
+        missing.append("title")
+    if not draft.source_id or draft.source_id.strip() == "":
+        missing.append("source_work_package_id")
+    if not draft.body_markdown or len(draft.body_markdown.strip()) < 50:
+        missing.append("objective")
+
+    # Strongly recommended fields
+    if not draft.linked_debt_items:
+        weak.append("linked_debt_items")
+        notes.append("No linked debt items — verify this ticket is actionable")
+
+    # Check body for recommended sections
+    body = draft.body_markdown or ""
+    if "Recommended Engineering Approach" not in body:
+        weak.append("recommended_approach")
+    if "Verification Recommendations" not in body:
+        weak.append("verification_recommendations")
+    if "Definition of Done" not in body:
+        weak.append("definition_of_done")
+    if "Risks and Cautions" not in body:
+        weak.append("risks_and_cautions")
+    if not draft.priority:
+        weak.append("priority")
+
+    if missing:
+        status = "needs_review"
+    elif weak:
+        status = "partial"
+    else:
+        status = "complete"
+
+    return TicketDraftCompleteness(
+        status=status,
+        missing_fields=missing,
+        weak_fields=weak,
+        notes=notes,
+    )
+
+
 def render_ticket_draft_summary(index: TicketDraftIndex) -> str:
     """Render a human-readable ticket draft summary."""
     lines: list[str] = []
@@ -677,6 +729,36 @@ def render_ticket_draft_summary(index: TicketDraftIndex) -> str:
                 f"| {review} | {d.status} | `{d.artifact_path}` |"
             )
         lines.append("")
+
+    # Draft Completeness
+    if included:
+        comp_counts = {"complete": 0, "partial": 0, "needs_review": 0}
+        for d in included:
+            if d.completeness:
+                comp_counts[d.completeness.status] = comp_counts.get(d.completeness.status, 0) + 1
+        lines.append("## Draft Completeness")
+        lines.append("")
+        lines.append("| Status | Count |")
+        lines.append("|---|---:|")
+        for status in ("complete", "partial", "needs_review"):
+            lines.append(f"| {status} | {comp_counts.get(status, 0)} |")
+        lines.append("")
+
+        has_weak = any(d.completeness and d.completeness.weak_fields for d in included)
+        has_missing = any(d.completeness and d.completeness.missing_fields for d in included)
+        if has_weak or has_missing:
+            lines.append("## Field Completeness Warnings")
+            lines.append("")
+            lines.append("| Ticket | Field | Issue |")
+            lines.append("|---|---|---|")
+            for d in included:
+                if not d.completeness:
+                    continue
+                for f in sorted(d.completeness.missing_fields):
+                    lines.append(f"| {d.ticket_id} | {f} | Missing |")
+                for f in sorted(d.completeness.weak_fields):
+                    lines.append(f"| {d.ticket_id} | {f} | Weak |")
+            lines.append("")
 
     # Skipped Items
     if skipped:
