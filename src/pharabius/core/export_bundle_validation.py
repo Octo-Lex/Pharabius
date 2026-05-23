@@ -9,8 +9,11 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
+
+from pharabius.schemas.export_bundles import TrackerBundleCompleteness
 
 logger = logging.getLogger(__name__)
 
@@ -196,3 +199,141 @@ def validate_export_bundle_manifest(
         errors=errors,
         warnings=warnings,
     )
+
+
+# --- Tracker bundle completeness ---
+
+TRACKER_EXPECTED_ARTIFACTS: dict[str, dict[str, Any]] = {
+    "jira": {
+        "files": ["README.md", "jira-ticket-drafts.md", "jira-ticket-drafts.csv"],
+        "csv_required_columns": ["Summary", "Description", "Issue Type", "Priority"],
+    },
+    "linear": {
+        "files": ["README.md", "linear-ticket-drafts.md", "linear-ticket-drafts.csv"],
+        "csv_required_columns": ["Title", "Description", "Priority"],
+    },
+    "github-issues": {
+        "files": ["README.md", "github-issues-ticket-drafts.md"],
+        "yaml_required_fields": ["title", "body", "labels"],
+        "issues_dir": "issues",
+    },
+    "azure-devops": {
+        "files": [
+            "README.md",
+            "azure-devops-ticket-drafts.md",
+            "azure-devops-ticket-drafts.csv",
+        ],
+        "csv_required_columns": ["Title", "Description", "Work Item Type", "Priority"],
+    },
+}
+
+
+def check_tracker_bundle_completeness(
+    export_bundles_dir: Path,
+    tracker: str,
+) -> TrackerBundleCompleteness:
+    """Check completeness of a specific tracker bundle.
+
+    Args:
+        export_bundles_dir: Path to .ai-debt/export-bundles/.
+        tracker: Tracker name (e.g. "jira").
+
+    Returns:
+        TrackerBundleCompleteness assessment.
+    """
+
+    config = TRACKER_EXPECTED_ARTIFACTS.get(tracker, {})
+    expected_files = config.get("files", [])
+    tracker_dir = export_bundles_dir / tracker
+
+    present: list[str] = []
+    missing: list[str] = []
+    warns: list[str] = []
+
+    for fname in expected_files:
+        fpath = tracker_dir / fname
+        if fpath.exists():
+            present.append(fname)
+        else:
+            missing.append(fname)
+
+    # Check CSV required columns
+    csv_columns = config.get("csv_required_columns", [])
+    if csv_columns:
+        # Find CSV file
+        csv_file = None
+        for f in present:
+            if f.endswith(".csv"):
+                csv_file = tracker_dir / f
+                break
+        if csv_file is not None:
+            import csv as csv_mod
+            import io
+
+            content = csv_file.read_text(encoding="utf-8")
+            reader = csv_mod.reader(io.StringIO(content))
+            rows = [r for r in reader if r]
+            if rows:
+                header = rows[0]
+                for col in csv_columns:
+                    if col not in header:
+                        warns.append(f"CSV missing required column: {col}")
+            else:
+                warns.append("CSV file is empty (no rows)")
+
+    # Check GitHub Issues YAML directory
+    issues_dir_name = config.get("issues_dir")
+    if issues_dir_name:
+        issues_dir = tracker_dir / issues_dir_name
+        if issues_dir.is_dir():
+            yaml_files = list(issues_dir.glob("*.yaml"))
+            if not yaml_files:
+                warns.append("GitHub Issues YAML directory is empty")
+            else:
+                yaml_fields = config.get("yaml_required_fields", [])
+                for yf in yaml_files[:5]:  # Check first 5
+                    content = yf.read_text(encoding="utf-8")
+                    for field in yaml_fields:
+                        if f"{field}:" not in content:
+                            warns.append(f"YAML {yf.name} missing field: {field}")
+                            break
+        else:
+            missing.append(f"{issues_dir_name}/")
+
+    # Determine status
+    if missing:
+        # Missing README or primary export → needs_review
+        critical_missing = [f for f in missing if not f.startswith("issues")]
+        if critical_missing:
+            status = "needs_review"
+        else:
+            status = "partial"
+    elif warns:
+        status = "partial"
+    else:
+        status = "complete"
+
+    return TrackerBundleCompleteness(
+        tracker=tracker,
+        status=status,
+        expected_artifacts=expected_files,
+        present_artifacts=present,
+        missing_artifacts=missing,
+        warnings=warns,
+    )
+
+
+def check_all_tracker_bundles(
+    export_bundles_dir: Path,
+) -> list[TrackerBundleCompleteness]:
+    """Check completeness of all tracker bundles.
+
+    Returns:
+        List of TrackerBundleCompleteness, one per tracker.
+    """
+    results: list[TrackerBundleCompleteness] = []
+    for tracker in SUPPORTED_TRACKERS:
+        tracker_dir = export_bundles_dir / tracker
+        if tracker_dir.is_dir():
+            results.append(check_tracker_bundle_completeness(export_bundles_dir, tracker))
+    return results
