@@ -7,13 +7,177 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import cast
 
-from pharabius.schemas.claims import OperationalClaimsRegister
+from pharabius.schemas.claims import (
+    OperationalClaim,
+    OperationalClaimsRegister,
+    OperationalClaimsRegisterSummary,
+)
 
 logger = logging.getLogger(__name__)
 
 CLAIMS_DIR = ".ai-debt/claims"
 TRACEABILITY_DIR = ".ai-debt/traceability"
+
+CATEGORY_CLAIM_TYPE: dict[str, str] = {
+    "TD-ARCH": "architecture",
+    "TD-DEP": "dependency",
+    "TD-TEST": "test",
+    "TD-SEC": "security",
+    "TD-COMP": "compliance",
+    "TD-OPS": "operational",
+    "TD-BUILD": "operational",
+    "TD-OBS": "operational",
+    "TD-DATA": "data",
+    "TD-DOC": "documentation",
+    "TD-CODE": "behavior",
+    "TD-PERF": "behavior",
+    "TD-CONFIG": "behavior",
+    "TD-PROCESS": "behavior",
+}
+
+_STATUS_ORDER = {"confirmed": 0, "inferred": 1, "gap": 2}
+
+
+def _map_claim_type(category: str) -> str:
+    """Map a finding category to a claim type."""
+    return CATEGORY_CLAIM_TYPE.get(category, "behavior")
+
+
+def _determine_status(
+    evidence_ids: list[str],
+    business_impact_basis: str | None = None,
+) -> tuple[str, str, bool, str | None]:
+    """Determine claim status, confidence, and validation fields.
+
+    Returns:
+        (status, confidence, requires_human_validation, validation_question)
+    """
+    if evidence_ids:
+        # Has evidence — check if business impact is inferred
+        if business_impact_basis and "inferred" in business_impact_basis.lower():
+            return ("inferred", "Medium", True, "Business impact basis is inferred.")
+        return ("confirmed", "High", False, None)
+    # No evidence — gap
+    return (
+        "gap",
+        "Low",
+        True,
+        "No direct evidence available. Manual validation required.",
+    )
+
+
+def generate_claims_from_findings(
+    findings: list[dict[str, object]],
+    warnings: list[str] | None = None,
+) -> list[OperationalClaim]:
+    """Generate operational claims from debt-register findings.
+
+    Args:
+        findings: List of finding dicts from debt-register.json.
+        warnings: Optional list to append warnings.
+
+    Returns:
+        Sorted list of OperationalClaim.
+    """
+    if warnings is None:
+        warnings = []
+
+    claims: list[OperationalClaim] = []
+    claim_counter = 0
+
+    for finding in findings:
+        fid = str(finding.get("id", ""))
+        category = str(finding.get("category", "TD-CODE"))
+        title = str(finding.get("title", ""))
+        description = str(finding.get("description", ""))
+        evidence_ids: list[str] = [
+            str(x) for x in cast("list[object]", finding.get("evidence_ids") or [])
+        ]
+        bib_val: object = finding.get("business_impact_basis")
+        bib = str(bib_val) if bib_val is not None else None
+        work_packages: list[str] = [
+            str(x) for x in cast("list[object]", finding.get("related_findings") or [])
+        ]
+
+        claim_counter += 1
+        claim_id = f"CLM-{claim_counter:06d}"
+
+        claim_type = _map_claim_type(category)
+        status, confidence, requires_hv, question = _determine_status(evidence_ids, bib)
+
+        statement = title
+        if description:
+            statement = f"{title}: {description[:200]}"
+
+        source = "finding"
+
+        try:
+            claim = OperationalClaim(
+                claim_id=claim_id,
+                claim_type=claim_type,  # type: ignore[arg-type]
+                statement=statement,
+                status=status,  # type: ignore[arg-type]
+                confidence=confidence,  # type: ignore[arg-type]
+                evidence_ids=evidence_ids,
+                linked_findings=[fid],
+                linked_work_packages=work_packages,
+                requires_human_validation=requires_hv,
+                validation_question=question,
+                source=source,  # type: ignore[arg-type]
+            )
+            claims.append(claim)
+        except Exception as exc:
+            warnings.append(f"Skipping claim for {fid}: {exc}")
+
+    # Deterministic sort: status, then type, then finding ID, then claim ID
+    claims.sort(
+        key=lambda c: (
+            _STATUS_ORDER.get(c.status, 99),
+            c.claim_type,
+            c.linked_findings[0] if c.linked_findings else "",
+            c.claim_id,
+        )
+    )
+
+    return claims
+
+
+def build_claims_register(
+    findings: list[dict[str, object]],
+    project_name: str | None = None,
+    repository: str | None = None,
+    branch: str | None = None,
+    commit: str | None = None,
+    generated_at: str = "",
+    warnings: list[str] | None = None,
+) -> OperationalClaimsRegister:
+    """Build a complete claims register from findings."""
+    claims = generate_claims_from_findings(findings, warnings)
+
+    summary = OperationalClaimsRegisterSummary(
+        total_claims=len(claims),
+        confirmed=sum(1 for c in claims if c.status == "confirmed"),
+        inferred=sum(1 for c in claims if c.status == "inferred"),
+        gap=sum(1 for c in claims if c.status == "gap"),
+        high_confidence=sum(1 for c in claims if c.confidence == "High"),
+        medium_confidence=sum(1 for c in claims if c.confidence == "Medium"),
+        low_confidence=sum(1 for c in claims if c.confidence == "Low"),
+        requiring_validation=sum(1 for c in claims if c.requires_human_validation),
+    )
+
+    return OperationalClaimsRegister(
+        schema_version="1.0",
+        generated_at=generated_at,
+        project_name=project_name,
+        repository=repository,
+        branch=branch,
+        commit=commit,
+        claims=claims,
+        summary=summary,
+        warnings=warnings or [],
+    )
 
 
 def render_claims_markdown(register: OperationalClaimsRegister) -> str:
