@@ -10,6 +10,16 @@ from pharabius.core.analyzer import write_debt_register
 from pharabius.core.init_workspace import initialize_workspace
 from pharabius.core.mapper import write_analysis_units
 from pharabius.core.planner import write_plan
+from pharabius.core.portfolio import (
+    collect_portfolio_repository_entries,
+    compute_category_rollup,
+    compute_readiness_rollup,
+    compute_risk_rollup,
+    write_portfolio_json,
+    write_portfolio_markdown,
+    write_repository_index,
+    write_validation_rollup,
+)
 from pharabius.core.profiler import write_repository_profile
 from pharabius.core.reporter import write_reports
 from pharabius.core.run_metadata import execute_run
@@ -1182,6 +1192,93 @@ def tickets_command(
     if excluded:
         console.print(f"  Excluded by review: {excluded}")
     console.print("  External tickets created: 0")
+
+
+@app.command()
+def portfolio(
+    repo: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--repo",
+            help="Path to a repository with .ai-debt/ outputs. Repeat for multiple.",
+        ),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Output directory for portfolio artifacts."),
+    ] = None,
+) -> None:
+    """Generate portfolio summary from one or more repositories."""
+    from importlib.metadata import version as pkg_version
+
+    from pharabius.schemas.portfolio import PortfolioSummary
+
+    # Default: current directory
+    repo_paths = list(repo) if repo else [Path(".")]
+
+    # Validate paths
+    valid_paths: list[Path] = []
+    for rp in repo_paths:
+        if not rp.is_dir():
+            console.print(f"[yellow]Warning: {rp} is not a directory. Skipping.[/yellow]")
+            continue
+        valid_paths.append(rp.resolve())
+
+    if not valid_paths:
+        console.print("[red]Error: No valid repository paths provided.[/red]")
+        raise typer.Exit(code=1)
+
+    # Collect entries
+    warnings: list[str] = []
+    entries = collect_portfolio_repository_entries(valid_paths, warnings)
+
+    if not entries:
+        console.print("[yellow]No valid .ai-debt/ outputs found in provided paths.[/yellow]")
+        raise typer.Exit(code=0)
+
+    # Compute rollups
+    risk = compute_risk_rollup(entries)
+    category = compute_category_rollup(entries)
+    readiness = compute_readiness_rollup(entries, warnings)
+
+    try:
+        tool_ver = pkg_version("pharabius")
+    except Exception:
+        tool_ver = "unknown"
+
+    summary = PortfolioSummary(
+        schema_version="1.0",
+        tool_version=tool_ver,
+        generated_at=__import__("datetime")
+        .datetime.now(__import__("datetime").UTC)
+        .replace(microsecond=0)
+        .isoformat(),
+        portfolio_id="portfolio",
+        repositories=entries,
+        risk_rollup=risk,
+        category_rollup=category,
+        readiness_rollup=readiness,
+        validation_warnings=warnings,
+    )
+
+    # Determine output directory
+    out_dir = output or valid_paths[0] / ".ai-debt" / "portfolio"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write artifacts
+    write_portfolio_json(out_dir, summary)
+    write_portfolio_markdown(out_dir, summary)
+    write_repository_index(out_dir, summary)
+    write_validation_rollup(out_dir, entries, readiness)
+
+    # Console summary
+    high_crit = sum(risk.priority_counts.get(p, 0) for p in ("Critical", "High"))
+    console.print("[bold green]Portfolio summary generated.[/bold green]")
+    console.print(f"  Repositories: {risk.total_repositories}")
+    console.print(f"  Total findings: {risk.total_findings}")
+    if high_crit:
+        console.print(f"  High/Critical findings: {high_crit}")
+    console.print(f"  Output: {out_dir}")
 
 
 if __name__ == "__main__":
