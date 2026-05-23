@@ -433,3 +433,12 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 - No automatic scheduling or CI integration for portfolio generation.
 - Portfolio does not recalculate risk scores.
 - Repositories without `.ai-debt/debt-register.json` are skipped with a warning.
+
+## 17. Operational claims limitations
+
+- Claims are specification/handoff artifacts, not implementation authority.
+- Confidence distribution is not a factual-precision measurement.
+- Inferred claims are labeled as inferred and require human validation.
+- Gap claims represent missing evidence, not confirmed absence.
+- Traceability matrices are point-in-time and reflect current artifacts.
+- Claim generation does not use AI or external data sources.
