@@ -23,12 +23,10 @@ def _make_tracker_dir(
     if files:
         for name, content in files.items():
             (td / name).write_text(content, encoding="utf-8")
-    if csv_content is not None:
-        # Find .csv filename
-        if files:
-            for name in files:
-                if name.endswith(".csv"):
-                    (td / name).write_text(csv_content, encoding="utf-8")
+    if csv_content is not None and files:
+        for name in files:
+            if name.endswith(".csv"):
+                (td / name).write_text(csv_content, encoding="utf-8")
     if yaml_files:
         issues_dir = td / "issues"
         issues_dir.mkdir(exist_ok=True)

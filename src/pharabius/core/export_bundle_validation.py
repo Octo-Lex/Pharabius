@@ -304,10 +304,7 @@ def check_tracker_bundle_completeness(
     if missing:
         # Missing README or primary export → needs_review
         critical_missing = [f for f in missing if not f.startswith("issues")]
-        if critical_missing:
-            status = "needs_review"
-        else:
-            status = "partial"
+        status = "needs_review" if critical_missing else "partial"
     elif warns:
         status = "partial"
     else:
