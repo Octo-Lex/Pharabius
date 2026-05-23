@@ -10,7 +10,9 @@ import logging
 from pathlib import Path
 
 from pharabius.schemas.portfolio import (
+    PortfolioCategoryRollup,
     PortfolioRepositoryEntry,
+    PortfolioRiskRollup,
     PortfolioSummary,
 )
 
@@ -19,9 +21,49 @@ logger = logging.getLogger(__name__)
 PORTFOLIO_DIR = ".ai-debt/portfolio"
 
 PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"]
-PORTFOLIO_SUMMARY_JSON = "portfolio-summary.json"
-PORTFOLIO_SUMMARY_MD = "portfolio-summary.md"
-REPOSITORY_INDEX_JSON = "repository-index.json"
+
+PRIORITY_WEIGHT: dict[str, int] = {"Critical": 8, "High": 5, "Medium": 3, "Low": 1}
+
+
+def compute_risk_rollup(entries: list[PortfolioRepositoryEntry]) -> PortfolioRiskRollup:
+    """Compute aggregate risk rollup from repository entries."""
+    agg: dict[str, int] = {}
+    for e in entries:
+        for pri, cnt in e.priority_counts.items():
+            agg[pri] = agg.get(pri, 0) + cnt
+    total = sum(e.total_findings for e in entries)
+    highest = _highest_priority(agg)
+    return PortfolioRiskRollup(
+        total_repositories=len(entries),
+        total_findings=total,
+        priority_counts=agg,
+        highest_priority=highest,
+    )
+
+
+def compute_category_rollup(entries: list[PortfolioRepositoryEntry]) -> PortfolioCategoryRollup:
+    """Compute aggregate category rollup from repository entries."""
+    agg: dict[str, int] = {}
+    for e in entries:
+        for cat in e.top_categories:
+            # Use top_categories as a signal; full counts not in entry
+            agg[cat] = agg.get(cat, 0) + 1
+    # Sort by count desc, category asc
+    top = sorted(agg, key=lambda c: (-agg[c], c))
+    return PortfolioCategoryRollup(category_counts=agg, top_categories=top)
+
+
+def _repo_risk_sort_key(entry: PortfolioRepositoryEntry) -> tuple[tuple[int, ...], str]:
+    """Sort key for repository risk ordering."""
+    pc = entry.priority_counts
+    priorities = tuple(-pc.get(p, 0) for p in PRIORITY_ORDER)
+    return (priorities, entry.repository_id)
+
+
+def top_risk_repositories(entries: list[PortfolioRepositoryEntry], limit: int = 10) -> list[str]:
+    """Return repository IDs ordered by risk concentration."""
+    sorted_entries = sorted(entries, key=_repo_risk_sort_key)
+    return [e.repository_id for e in sorted_entries[:limit]]
 
 
 def _highest_priority(priority_counts: dict[str, int]) -> str | None:
@@ -36,15 +78,7 @@ def extract_repository_entry(
     repo_path: Path,
     warnings: list[str] | None = None,
 ) -> PortfolioRepositoryEntry | None:
-    """Extract a portfolio entry from a repository's .ai-debt/ directory.
-
-    Args:
-        repo_path: Path to the repository root.
-        warnings: Optional list to append warnings to.
-
-    Returns:
-        PortfolioRepositoryEntry or None if the directory is unusable.
-    """
+    """Extract a portfolio entry from a repository's .ai-debt/ directory."""
     if warnings is None:
         warnings = []
 
@@ -79,25 +113,20 @@ def extract_repository_entry(
     summary = data.get("summary", {})
     findings = data.get("findings", [])
 
-    # Priority counts from summary or findings
     priority_counts: dict[str, int] = {}
     for key in ("critical", "high", "medium", "low"):
         val = summary.get(key, 0)
         if val:
             priority_counts[key.capitalize()] = val
 
-    # Category counts from findings
     category_counts: dict[str, int] = {}
     for f in findings:
         cat = f.get("category", "unknown")
         category_counts[cat] = category_counts.get(cat, 0) + 1
 
-    top_categories = sorted(category_counts, key=category_counts.get, reverse=True)[:5]  # type: ignore[arg-type]
+    top_categories = sorted(category_counts, key=lambda c: category_counts[c], reverse=True)[:5]
 
-    # Detect ticket drafts
     has_ticket_drafts = (ai_debt / "ticket-drafts" / "ticket-drafts.json").exists()
-
-    # Detect export bundles
     has_export_bundles = (ai_debt / "export-bundles" / "manifest.json").exists()
 
     return PortfolioRepositoryEntry(
@@ -121,15 +150,7 @@ def collect_portfolio_repository_entries(
     repo_paths: list[Path],
     warnings: list[str] | None = None,
 ) -> list[PortfolioRepositoryEntry]:
-    """Collect portfolio entries from multiple repositories.
-
-    Args:
-        repo_paths: List of repository root paths.
-        warnings: Optional list to append warnings to.
-
-    Returns:
-        Sorted list of PortfolioRepositoryEntry.
-    """
+    """Collect portfolio entries from multiple repositories."""
     if warnings is None:
         warnings = []
 
@@ -148,6 +169,11 @@ def collect_portfolio_repository_entries(
 
     entries.sort(key=lambda e: e.repository_id)
     return entries
+
+
+PORTFOLIO_SUMMARY_JSON = "portfolio-summary.json"
+PORTFOLIO_SUMMARY_MD = "portfolio-summary.md"
+REPOSITORY_INDEX_JSON = "repository-index.json"
 
 
 def write_portfolio_json(portfolio_dir: Path, summary: PortfolioSummary) -> Path:
