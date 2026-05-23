@@ -57,7 +57,6 @@ class TestValidClaim:
 
 class TestValidationErrors:
     def test_confirmed_without_evidence(self) -> None:
-        c = _claim(evidence_ids=[])
         # Pydantic already rejects at creation; test validation layer directly
         # Create without validation bypass
         claim = OperationalClaim(

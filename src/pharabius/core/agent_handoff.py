@@ -22,7 +22,6 @@ def render_agent_handoff_contract(
 
     confirmed = [c for c in claims if c.status == "confirmed"]
     inferred = [c for c in claims if c.status == "inferred"]
-    gap_claims = [c for c in claims if c.status == "gap"]
     blocking = [g for g in gaps if g.severity == "blocking"]
 
     lines: list[str] = []
@@ -117,10 +116,12 @@ def render_agent_handoff_contract(
     lines.append("")
     forbidden = [
         "Do not modify production code based solely on this artifact.",
-        "Do not change authentication, authorization, data retention, payment, migration, or public API behavior without human approval.",
+        "Do not change authentication, authorization, data retention, "
+        "payment, migration, or public API behavior without human approval.",
         "Do not treat inferred claims as confirmed facts.",
         "Do not proceed on work packages with blocking gaps.",
-        "Do not call external systems or create issues unless separately authorized by the Product Engineering Team.",
+        "Do not call external systems or create issues unless "
+        "separately authorized by the Product Engineering Team.",
     ]
     for f in forbidden:
         lines.append(f"- {f}")
