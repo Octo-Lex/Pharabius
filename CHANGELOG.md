@@ -2,6 +2,28 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.7.0] - Unreleased
+
+### Added
+
+- Export bundle artifact contract: `schemas/export_bundles.py` with `TrackerKind`, `ExportBundleFormat`, `ExportBundleManifest`
+- Core export bundle module: `core/export_bundles.py` with path helpers and manifest writer
+- Jira Markdown/CSV export bundle generator with safe CSV escaping
+- Linear Markdown/CSV export bundle generator with conservative priority mapping
+- GitHub Issues Markdown/YAML export bundle generator with per-issue YAML files
+- Azure DevOps Markdown/CSV export bundle generator with semicolon-separated tags
+- Export bundle documentation (`docs/EXPORT_BUNDLES.md`)
+- Example export bundle artifacts (`docs/examples/export-bundles/`)
+
+### Safety
+
+- No external tracker API writes
+- No issue or work-item creation
+- No assignment, sprint, milestone, or area path handling
+- All artifacts are repository-local handoff files
+- No scoring behavior changes
+- No canonical artifact mutation
+
 ## [1.6.1] - Unreleased
 
 ### Added

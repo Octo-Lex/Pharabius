@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "tool_version": "1.7.0",
+  "generated_at": "2026-05-23T00:00:00Z",
+  "repository": "example-service",
+  "commit": "abc1234def567890",
+  "source_ticket_drafts": ".ai-debt/ticket-drafts/ticket-drafts.json",
+  "summary": {
+    "total_bundles": 4,
+    "total_artifacts": 8,
+    "total_tickets": 12,
+    "trackers": ["azure-devops", "github-issues", "jira", "linear"]
+  },
+  "artifacts": [
+    {
+      "tracker": "jira",
+      "format": "markdown",
+      "relative_path": "jira/jira-ticket-drafts.md",
+      "description": "Jira Markdown export",
+      "ticket_count": 12,
+      "metadata": {}
+    },
+    {
+      "tracker": "jira",
+      "format": "csv",
+      "relative_path": "jira/jira-ticket-drafts.csv",
+      "description": "Jira CSV export",
+      "ticket_count": 12,
+      "metadata": {}
+    },
+    {
+      "tracker": "linear",
+      "format": "markdown",
+      "relative_path": "linear/linear-ticket-drafts.md",
+      "description": "Linear Markdown export",
+      "ticket_count": 12,
+      "metadata": {}
+    },
+    {
+      "tracker": "linear",
+      "format": "csv",
+      "relative_path": "linear/linear-ticket-drafts.csv",
+      "description": "Linear CSV export",
+      "ticket_count": 12,
+      "metadata": {}
+    },
+    {
+      "tracker": "github-issues",
+      "format": "markdown",
+      "relative_path": "github-issues/github-issues-ticket-drafts.md",
+      "description": "GitHub Issues Markdown export",
+      "ticket_count": 12,
+      "metadata": {}
+    },
+    {
+      "tracker": "github-issues",
+      "format": "yaml",
+      "relative_path": "github-issues/issues/",
+      "description": "GitHub Issues YAML drafts",
+      "ticket_count": 12,
+      "metadata": {}
+    },
+    {
+      "tracker": "azure-devops",
+      "format": "markdown",
+      "relative_path": "azure-devops/azure-devops-ticket-drafts.md",
+      "description": "Azure DevOps Markdown export",
+      "ticket_count": 12,
+      "metadata": {}
+    },
+    {
+      "tracker": "azure-devops",
+      "format": "csv",
+      "relative_path": "azure-devops/azure-devops-ticket-drafts.csv",
+      "description": "Azure DevOps CSV export",
+      "ticket_count": 12,
+      "metadata": {}
+    }
+  ]
+}
