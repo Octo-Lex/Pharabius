@@ -2,6 +2,26 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.9.0] - Unreleased
+
+### Added
+
+- Operational Claim IR and claims register schema (10 claim types, 3 statuses, 3 confidence levels)
+- Claim generation from debt-register findings with confirmed/inferred/gap status
+- Gap and question registry artifacts (blocking vs non-blocking, 5 question categories)
+- Confidence report with distribution metrics and interpretation notes
+- Traceability matrices: evidence→finding, finding→claim, claim→work-package
+- GapItem and QuestionItem schemas
+- `docs/OPERATIONAL_CLAIMS.md` documentation and 7 example files
+
+### Safety
+
+- Operational claims are repository-local specification artifacts, not implementation authority
+- Inferred claims and gaps are explicitly labeled
+- No production code is modified
+- No canonical artifacts are mutated
+- No external APIs are called
+
 ## [1.8.0] - Unreleased
 
 ### Added

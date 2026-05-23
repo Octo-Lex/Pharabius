@@ -1,5 +1,16 @@
 # Pharabius Roadmap
 
+## v1.9.0 — Operational Claims & Gap Registry (unreleased)
+
+- Operational claim IR and claims register schema
+- Claim generation from evidence and findings
+- Gap and question registry artifacts
+- Confidence report and claim distribution metrics
+- Traceability matrices (evidence→finding→claim→work package)
+- Operational claims documentation and examples
+- 75 new tests
+- No code modification, no external APIs
+
 ## v1.8.0 — Portfolio Summary Foundation (unreleased)
 
 - Portfolio summary schemas and artifact contract
