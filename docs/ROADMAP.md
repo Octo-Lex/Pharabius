@@ -1,5 +1,15 @@
 # Pharabius Roadmap
 
+## v1.7.1 — Export Bundle Polish & Validation (unreleased)
+
+- Export bundle manifest validation (8 rules)
+- Tracker bundle completeness checks (complete/partial/needs_review)
+- Export bundle summary report
+- Tracker import workflow adoption guide
+- Richer tracker-specific examples (Jira, Linear, GitHub Issues, Azure DevOps)
+- 48 new tests
+- No external tracker API writes
+
 ## v1.7.0 — Export Bundle & External Tracker Preparation (unreleased)
 
 - Export bundle artifact contract (manifest, tracker enum, format enum)

@@ -1,0 +1,3 @@
+Title,Description,Priority,Labels,Linked Findings,Work Package,Source Ticket Draft,Review Decision,Completeness
+Reduce risk in authentication boundary,Objective: Fix the auth boundary.,High,"TD-ARCH, pharabius",TD-ARCH-001,WP-001,.ai-debt/ticket-drafts/TICKET-WP-001.md,accepted,complete
+Add integration tests for payment module,Objective: Add missing integration tests.,Medium,"TD-TEST, pharabius",TD-TEST-002,WP-002,.ai-debt/ticket-drafts/TICKET-WP-002.md,needs-investigation,partial

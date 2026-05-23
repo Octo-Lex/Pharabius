@@ -62,3 +62,14 @@ class ExportBundleManifest(BaseModel):
     source_ticket_drafts: str = ".ai-debt/ticket-drafts/ticket-drafts.json"
     summary: ExportBundleSummary = Field(default_factory=ExportBundleSummary)
     artifacts: list[ExportBundleArtifact] = Field(default_factory=list)
+
+
+class TrackerBundleCompleteness(BaseModel):
+    """Completeness assessment for a tracker export bundle."""
+
+    tracker: str
+    status: str  # "complete", "partial", "needs_review"
+    expected_artifacts: list[str] = Field(default_factory=list)
+    present_artifacts: list[str] = Field(default_factory=list)
+    missing_artifacts: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)

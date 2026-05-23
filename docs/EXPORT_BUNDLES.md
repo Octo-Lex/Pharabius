@@ -121,6 +121,7 @@ The `manifest.json` file records all generated artifacts:
 
 ## Related Documentation
 
+- [Tracker Export Workflow](TRACKER_EXPORT_WORKFLOW.md)
 - [Ticket Drafts](TICKET_DRAFTS.md)
 - [PET Ticket Workflow](PET_TICKET_WORKFLOW.md)
 - [Governance Presets](PRESET_REFERENCE.md)
