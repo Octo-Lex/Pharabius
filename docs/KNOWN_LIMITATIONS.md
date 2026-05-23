@@ -422,3 +422,5 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 - Priority mappings (e.g., Critical → Urgent for Linear) are suggestions only.
 - Default work item type (Azure DevOps: User Story) may need adjustment per project.
 - Export bundles do not modify ticket drafts, debt register, or scoring artifacts.
+- Manifest validation detects structural issues but does not repair them.
+- Completeness checks are advisory (partial/needs_review bundles remain usable).
