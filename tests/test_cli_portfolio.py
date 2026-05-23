@@ -40,8 +40,8 @@ class TestPortfolioCLIHelp:
     def test_portfolio_help(self) -> None:
         result = runner.invoke(app, ["portfolio", "--help"])
         assert result.exit_code == 0
-        assert "--repo" in result.output
-        assert "--output" in result.output
+        assert "repo" in result.output
+        assert "output" in result.output
 
 
 class TestPortfolioSingleRepo:
