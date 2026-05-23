@@ -1,22 +1,22 @@
 {
   "schema_version": "1.0",
-  "tool_version": "1.6.0-dev",
-  "generated_at": "2026-05-22T00:00:00Z",
+  "tool_version": "1.6.1-dev",
+  "generated_at": "2026-05-23T00:00:00Z",
   "repository": "example-service",
   "commit": "abc1234def5678901234567890123456789012",
   "branch": "main",
   "source_artifacts": {
     "debt_register": ".ai-debt/debt-register.json",
     "work_packages_dir": ".ai-debt/work-packages",
-    "review_sidecar": null
+    "review_sidecar": ".ai-debt/review/decisions.json"
   },
   "summary": {
-    "total_drafts": 1,
-    "included_drafts": 1,
-    "excluded_by_review": 0,
-    "deferred": 0,
-    "false_positive": 0,
-    "unreviewed": 1
+    "total_drafts": 4,
+    "included_drafts": 2,
+    "excluded_by_review": 2,
+    "deferred": 1,
+    "false_positive": 1,
+    "unreviewed": 0
   },
   "drafts": [
     {
@@ -29,13 +29,75 @@
       "categories": ["TD-ARCH", "TD-TEST"],
       "priority": "High",
       "risk_score": 24,
-      "review_decision": "not_reviewed",
+      "review_decision": "accepted",
       "status": "draft",
-      "labels": ["technical-debt", "pharabius", "TD-ARCH"],
+      "labels": ["TD-ARCH", "pharabius", "technical-debt"],
       "external_system": null,
       "external_id": null,
       "content_hash": "sha256:a1b2c3d4e5f6",
-      "body_markdown": "# Ticket: Reduce risk in authentication boundary\n\nSource: WP-001\nPriority: High\n\n## Linked findings\n- TD-ARCH-001\n- TD-TEST-002"
+      "body_markdown": "# Ticket: Reduce risk in authentication boundary\n...",
+      "review_summary": {"accepted": 2},
+      "excluded_linked_debt_items": []
+    },
+    {
+      "ticket_id": "TICKET-WP-002",
+      "title": "Address missing security header findings",
+      "source_type": "work_package",
+      "source_id": "WP-002",
+      "artifact_path": ".ai-debt/ticket-drafts/TICKET-WP-002.md",
+      "linked_debt_items": ["TD-SEC-001"],
+      "categories": ["TD-SEC"],
+      "priority": "High",
+      "risk_score": 34,
+      "review_decision": "needs-investigation",
+      "status": "draft",
+      "labels": ["TD-SEC", "pharabius", "technical-debt"],
+      "external_system": null,
+      "external_id": null,
+      "content_hash": "sha256:b2c3d4e5f6a7",
+      "body_markdown": "# Ticket: Address missing security header findings\n...",
+      "review_summary": {"needs-investigation": 1},
+      "excluded_linked_debt_items": []
+    },
+    {
+      "ticket_id": "TICKET-WP-003",
+      "title": "Upgrade CI pipeline runner images",
+      "source_type": "work_package",
+      "source_id": "WP-003",
+      "artifact_path": ".ai-debt/ticket-drafts/TICKET-WP-003.md",
+      "linked_debt_items": ["TD-OPS-001"],
+      "categories": ["TD-OPS"],
+      "priority": "Medium",
+      "risk_score": 8,
+      "review_decision": "deferred",
+      "status": "excluded",
+      "labels": ["TD-OPS", "pharabius", "technical-debt"],
+      "external_system": null,
+      "external_id": null,
+      "content_hash": "sha256:c3d4e5f6a7b8",
+      "body_markdown": "# Ticket: Upgrade CI pipeline runner images\n...",
+      "review_summary": {"deferred": 1},
+      "excluded_linked_debt_items": []
+    },
+    {
+      "ticket_id": "TICKET-WP-004",
+      "title": "Remove unused test helper module",
+      "source_type": "work_package",
+      "source_id": "WP-004",
+      "artifact_path": ".ai-debt/ticket-drafts/TICKET-WP-004.md",
+      "linked_debt_items": ["TD-COMP-001"],
+      "categories": ["TD-COMP"],
+      "priority": "Low",
+      "risk_score": 3,
+      "review_decision": "rejected",
+      "status": "excluded",
+      "labels": ["TD-COMP", "pharabius", "technical-debt"],
+      "external_system": null,
+      "external_id": null,
+      "content_hash": "sha256:d4e5f6a7b8c9",
+      "body_markdown": "# Ticket: Remove unused test helper module\n...",
+      "review_summary": {"rejected": 1},
+      "excluded_linked_debt_items": []
     }
   ]
 }

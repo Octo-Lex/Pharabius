@@ -1,6 +1,15 @@
 # Pharabius Roadmap
 
-## v1.6.0 — Ticket Draft Export (unreleased)
+## v1.6.1 — Ticket Draft Polish & Adoption Pack (unreleased)
+
+- Improved ticket draft summary report with structured sections
+- Richer ticket draft examples (4 work package scenarios)
+- Validation for malformed or missing work packages
+- Ticket draft field completeness checks (complete/partial/needs_review)
+- PET ticket workflow adoption guide
+- 39 new tests
+
+## v1.6.0 — Ticket Draft Export (released)
 
 - Repository-local ticket drafts from work packages
 - `ai-debt tickets` CLI command

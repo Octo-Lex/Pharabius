@@ -84,7 +84,7 @@ class TestContentHash:
 class TestGenerateIndex:
     def test_generates_valid_index(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         assert isinstance(index, TicketDraftIndex)
         assert index.schema_version == "1.0"
@@ -92,7 +92,7 @@ class TestGenerateIndex:
 
     def test_json_roundtrip(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         json_str = index.model_dump_json(indent=2)
         parsed = TicketDraftIndex.model_validate_json(json_str)
@@ -106,14 +106,14 @@ class TestGenerateIndex:
         (wp_dir / "WP-002-beta.md").write_text(WP_MD.replace("WP-001", "WP-002"), encoding="utf-8")
         (wp_dir / "WP-001-alpha.md").write_text(WP_MD, encoding="utf-8")
         (ws / "debt-register.json").write_text(json.dumps(REGISTER), encoding="utf-8")
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         ids = [d.ticket_id for d in index.drafts]
         assert ids == sorted(ids)
 
     def test_external_fields_null(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         for d in index.drafts:
             assert d.external_system is None
@@ -121,7 +121,7 @@ class TestGenerateIndex:
 
     def test_summary_counts(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         s = index.summary
         assert s.total_drafts == 1
@@ -131,7 +131,7 @@ class TestGenerateIndex:
 
     def test_content_hash_matches_file(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         d = index.drafts[0]
         assert d.content_hash is not None
@@ -141,7 +141,7 @@ class TestGenerateIndex:
 class TestWriteIndex:
     def test_writes_json_file(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         out = ws / "ticket-drafts"
         path = write_ticket_draft_index(index, out)
@@ -151,7 +151,7 @@ class TestWriteIndex:
 
     def test_stable_output(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         out = ws / "ticket-drafts"
         path1 = write_ticket_draft_index(index, out)
@@ -168,7 +168,7 @@ class TestWriteIndex:
 class TestWriteSummary:
     def test_writes_markdown_file(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         reports = ws / "reports"
         path = write_ticket_draft_summary(index, reports)
@@ -178,7 +178,7 @@ class TestWriteSummary:
 
     def test_summary_states_no_external_tickets(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "No external tickets were created" in md
@@ -187,7 +187,7 @@ class TestWriteSummary:
         ws = _make_workspace(tmp_path)
         reg_before = (ws / "debt-register.json").read_text(encoding="utf-8")
         wp_before = (ws / "work-packages" / "WP-001-slug.md").read_text(encoding="utf-8")
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         write_ticket_draft_index(index, ws / "ticket-drafts")
         write_ticket_draft_summary(index, ws / "reports")

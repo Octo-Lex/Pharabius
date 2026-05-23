@@ -58,6 +58,7 @@ class TicketDraft(BaseModel):
     body_markdown: str = ""
     review_summary: dict[str, int] = Field(default_factory=dict)
     excluded_linked_debt_items: list[str] = Field(default_factory=list)
+    completeness: TicketDraftCompleteness | None = None
 
 
 class TicketDraftIndex(BaseModel):
@@ -72,3 +73,23 @@ class TicketDraftIndex(BaseModel):
     source_artifacts: TicketDraftSourceArtifacts
     summary: TicketDraftSummary = Field(default_factory=TicketDraftSummary)
     drafts: list[TicketDraft] = Field(default_factory=list)
+    validation_issues: list[TicketDraftValidationIssue] = Field(default_factory=list)
+
+
+class TicketDraftValidationIssue(BaseModel):
+    """A validation issue encountered during ticket draft generation."""
+
+    source_path: str
+    work_package_id: str | None = None
+    code: str
+    severity: str = "warning"
+    message: str
+
+
+class TicketDraftCompleteness(BaseModel):
+    """Completeness assessment for a generated ticket draft."""
+
+    status: str  # "complete", "partial", "needs_review"
+    missing_fields: list[str] = Field(default_factory=list)
+    weak_fields: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
