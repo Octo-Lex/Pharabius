@@ -1,5 +1,15 @@
 # Pharabius Roadmap
 
+## v1.9.1 — Operational Claims Polish & Agent-Handoff Pack (unreleased)
+
+- Claim validation improvements (structured errors/warnings)
+- Claim quality and completeness checks
+- Richer examples for claims, gaps, traceability
+- Agent-handoff contract artifact
+- Operational claims adoption guide
+- 54 new tests
+- No code modification, no external APIs
+
 ## v1.9.0 — Operational Claims & Gap Registry (unreleased)
 
 - Operational claim IR and claims register schema

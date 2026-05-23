@@ -8,7 +8,7 @@ from pharabius.core.agent_handoff import (
     render_agent_handoff_contract,
     write_agent_handoff_contract,
 )
-from pharabius.schemas.claims import GapItem, OperationalClaim, QuestionItem
+from pharabius.schemas.claims import GapItem, OperationalClaim
 
 
 def _claim(
@@ -49,7 +49,11 @@ class TestContractStructure:
         assert "hypothesis" in md.lower()
 
     def test_contains_blocking_gaps(self) -> None:
-        gaps = [GapItem(gap_id="GAP-0001", severity="blocking", question="Check?", reason="Missing evidence")]
+        gaps = [
+            GapItem(
+                gap_id="GAP-0001", severity="blocking", question="Check?", reason="Missing evidence"
+            )
+        ]
         md = render_agent_handoff_contract([], gaps=gaps)
         assert "## Blocking Gaps" in md
         assert "GAP-0001" in md

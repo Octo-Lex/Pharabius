@@ -442,3 +442,5 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 - Gap claims represent missing evidence, not confirmed absence.
 - Traceability matrices are point-in-time and reflect current artifacts.
 - Claim generation does not use AI or external data sources.
+- Agent-handoff contract does not authorize code modification.
+- Completeness checks (complete/partial/needs_review) are advisory, not approval decisions.

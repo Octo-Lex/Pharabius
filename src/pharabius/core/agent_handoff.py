@@ -65,7 +65,7 @@ def render_agent_handoff_contract(
     if inferred:
         for c in sorted(inferred, key=lambda x: x.claim_id):
             lines.append(f"- **{c.claim_id}** ({c.claim_type}): {c.statement[:120]}")
-            lines.append(f"  - Treat as hypothesis requiring validation.")
+            lines.append("  - Treat as hypothesis requiring validation.")
     else:
         lines.append("No inferred claims.")
     lines.append("")
