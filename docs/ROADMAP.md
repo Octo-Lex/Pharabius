@@ -1,6 +1,15 @@
 # Pharabius Roadmap
 
-## v1.5.1 — Scoring Calibration & Evidence Pack (unreleased)
+## v1.6.0 — Ticket Draft Export (unreleased)
+
+- Repository-local ticket drafts from work packages
+- `ai-debt tickets` CLI command
+- Markdown drafts + JSON index + summary report
+- PET review sidecar filtering
+- No external tracker writes
+- 82 new tests
+
+## v1.5.1 — Scoring Calibration & Evidence Pack (released 2026-05-22)
 
 - Evidence pack format, fixtures, and field validation tooling
 - Scoring delta Markdown readability improvements
