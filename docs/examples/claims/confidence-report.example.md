@@ -4,19 +4,34 @@
 
 | Metric | Count |
 |---|---:|
-| Total Claims | 3 |
-| Confirmed Claims | 1 |
+| Total Claims | 5 |
+| Confirmed Claims | 2 |
 | Inferred Claims | 1 |
-| Gap Claims | 1 |
-| Claims Requiring Human Validation | 2 |
+| Gap Claims | 2 |
+| Claims Requiring Human Validation | 3 |
 
 ## Claims by Confidence
 
 | Confidence | Count |
 |---|---:|
-| High | 1 |
+| High | 2 |
 | Medium | 1 |
-| Low | 1 |
+| Low | 2 |
+
+## Gap Summary
+
+- **Blocking gaps**: 1
+- **Non-blocking gaps**: 1
+
+## Traceability Density
+
+- **Evidence-linked claims**: 3
+- **Evidence-missing claims**: 2
+- **Average evidence per claim**: 1.2
+
+## Warnings
+
+- High-priority finding TD-SEC-001 lacks confirmed claim (CLM-000004)
 
 ## Interpretation Notes
 
