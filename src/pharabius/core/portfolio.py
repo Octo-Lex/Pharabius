@@ -11,6 +11,7 @@ from pathlib import Path
 
 from pharabius.schemas.portfolio import (
     PortfolioCategoryRollup,
+    PortfolioReadinessRollup,
     PortfolioRepositoryEntry,
     PortfolioRiskRollup,
     PortfolioSummary,
@@ -64,6 +65,105 @@ def top_risk_repositories(entries: list[PortfolioRepositoryEntry], limit: int = 
     """Return repository IDs ordered by risk concentration."""
     sorted_entries = sorted(entries, key=_repo_risk_sort_key)
     return [e.repository_id for e in sorted_entries[:limit]]
+
+
+def compute_readiness_rollup(
+    entries: list[PortfolioRepositoryEntry],
+    warnings: list[str] | None = None,
+) -> PortfolioReadinessRollup:
+    """Compute readiness rollup from repository entries."""
+    if warnings is None:
+        warnings = []
+
+    status_counts: dict[str, int] = {}
+    needing_review: list[str] = []
+    with_tickets = 0
+    with_bundles = 0
+
+    for e in entries:
+        status_counts[e.validation_status] = status_counts.get(e.validation_status, 0) + 1
+        if e.validation_status in ("needs_review", "unknown"):
+            needing_review.append(e.repository_id)
+        if e.has_ticket_drafts:
+            with_tickets += 1
+        if e.has_export_bundles:
+            with_bundles += 1
+        if e.limitations:
+            for lim in e.limitations:
+                warnings.append(f"{e.repository_id}: {lim}")
+
+    return PortfolioReadinessRollup(
+        total_repositories=len(entries),
+        with_ticket_drafts=with_tickets,
+        with_export_bundles=with_bundles,
+        status_counts=status_counts,
+        repositories_needing_review=sorted(needing_review),
+        warnings=warnings,
+    )
+
+
+def render_validation_rollup_markdown(
+    entries: list[PortfolioRepositoryEntry],
+    rollup: PortfolioReadinessRollup | None = None,
+) -> str:
+    """Render validation-rollup.md content."""
+    if rollup is None:
+        rollup = compute_readiness_rollup(entries)
+
+    lines: list[str] = []
+    lines.append("# Portfolio Validation Rollup")
+    lines.append("")
+
+    # Summary
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"- **Total repositories**: {rollup.total_repositories}")
+    lines.append(f"- **With ticket drafts**: {rollup.with_ticket_drafts}")
+    lines.append(f"- **With export bundles**: {rollup.with_export_bundles}")
+    lines.append("")
+
+    # Readiness by Repository
+    if entries:
+        lines.append("## Readiness by Repository")
+        lines.append("")
+        lines.append("| Repository | Readiness | Ticket Drafts | Export Bundles | Notes |")
+        lines.append("|---|---|---|---|---|")
+        for e in sorted(entries, key=lambda x: x.repository_id):
+            notes = ", ".join(e.limitations) if e.limitations else "\u2014"
+            td = "yes" if e.has_ticket_drafts else "no"
+            eb = "yes" if e.has_export_bundles else "no"
+            lines.append(f"| {e.project_name} | {e.validation_status} | {td} | {eb} | {notes} |")
+        lines.append("")
+
+    # Repositories Needing Review
+    if rollup.repositories_needing_review:
+        lines.append("## Repositories Needing Review")
+        lines.append("")
+        for rid in rollup.repositories_needing_review:
+            lines.append(f"- {rid}")
+        lines.append("")
+
+    # Warnings
+    if rollup.warnings:
+        lines.append("## Warnings and Limitations")
+        lines.append("")
+        for w in rollup.warnings:
+            lines.append(f"- {w}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def write_validation_rollup(
+    portfolio_dir: Path,
+    entries: list[PortfolioRepositoryEntry],
+    rollup: PortfolioReadinessRollup | None = None,
+) -> Path:
+    """Write validation-rollup.md to disk."""
+    portfolio_dir.mkdir(parents=True, exist_ok=True)
+    path = portfolio_dir / "validation-rollup.md"
+    path.write_text(render_validation_rollup_markdown(entries, rollup), encoding="utf-8")
+    return path
 
 
 def _highest_priority(priority_counts: dict[str, int]) -> str | None:

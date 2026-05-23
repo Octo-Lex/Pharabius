@@ -59,8 +59,11 @@ class PortfolioReadinessRollup(BaseModel):
     model_config = {"extra": "forbid"}
 
     total_repositories: int = 0
+    with_ticket_drafts: int = 0
+    with_export_bundles: int = 0
     status_counts: dict[str, int] = Field(default_factory=dict)
     repositories_needing_review: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class PortfolioSummary(BaseModel):
