@@ -1,19 +1,27 @@
 # Question Registry
 
-**Total questions**: 2
+**Total questions**: 3
 
-## Security Compliance
+## Architecture
 
 ### Q-0001
 
-**Question**: No direct evidence available. Manual validation required.
+**Question**: Confirm retry policy with team.
 **Linked claim**: CLM-000003
-**Linked findings**: TD-SEC-001
+**Linked findings**: TD-PROCESS-001
 
-## General
+## Security Compliance
 
 ### Q-0002
 
-**Question**: Business impact basis is inferred.
-**Linked claim**: CLM-000002
-**Linked findings**: TD-DEP-001
+**Question**: Has input validation been reviewed for payment endpoints?
+**Linked claim**: CLM-000004
+**Linked findings**: TD-SEC-001
+
+## Testing Verification
+
+### Q-0003
+
+**Question**: Are refund workflow integration tests maintained elsewhere?
+**Linked claim**: CLM-000005
+**Linked findings**: TD-TEST-002

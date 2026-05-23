@@ -13,7 +13,7 @@ class TestClaimsExamples:
     def test_json_parses(self) -> None:
         data = json.loads((CLAIMS_EXAMPLES / "operational-claims.example.json").read_text())
         assert data["schema_version"] == "1.0"
-        assert len(data["claims"]) == 3
+        assert len(data["claims"]) == 5
 
     def test_json_has_confirmed_inferred_gap(self) -> None:
         data = json.loads((CLAIMS_EXAMPLES / "operational-claims.example.json").read_text())

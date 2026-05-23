@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-05-24T00:00:00+00:00",
+  "valid": false,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "confirmed_claim_missing_evidence",
+      "message": "Confirmed claims must include at least one evidence ID.",
+      "claim_id": "CLM-000007",
+      "field": "evidence_ids"
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "unknown_finding_reference",
+      "message": "Finding TD-UNKNOWN-999 not found in debt register.",
+      "claim_id": "CLM-000003",
+      "referenced_id": "TD-UNKNOWN-999",
+      "field": "linked_findings"
+    },
+    {
+      "severity": "warning",
+      "code": "inferred_claim_no_limitations",
+      "message": "Inferred claims should document limitations or basis.",
+      "claim_id": "CLM-000005",
+      "field": "limitations"
+    }
+  ]
+}
