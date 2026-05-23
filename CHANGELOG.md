@@ -2,6 +2,27 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.7.1] - Unreleased
+
+### Added
+
+- Export bundle manifest validation (missing manifest, invalid JSON, unsupported tracker, duplicate paths, missing artifact files, count mismatch)
+- Tracker bundle completeness checks (complete/partial/needs_review) for all four trackers
+- Export bundle summary report (`.ai-debt/reports/export-bundle-summary.md`)
+- Tracker import workflow adoption guide (`docs/TRACKER_EXPORT_WORKFLOW.md`)
+- Richer tracker-specific export examples for Jira, Linear, GitHub Issues, and Azure DevOps
+
+### Changed
+
+- Improved export-bundle documentation and examples
+- Added completeness and validation sections to export bundle docs
+
+### Safety
+
+- No external tracker APIs are called
+- No issues are created automatically
+- No canonical debt register or work package artifacts are mutated
+
 ## [1.7.0] - Unreleased
 
 ### Added
