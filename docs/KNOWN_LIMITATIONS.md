@@ -1,4 +1,4 @@
-# Known Limitations — Pharabius v1.5.1
+# Known Limitations — Pharabius v1.6.0
 
 This document lists known limitations of Pharabius v0.1.0. These are honest constraints, not bugs.
 
@@ -403,3 +403,11 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 - Rename history may be incomplete for complex path moves.
 - Calibration evidence packs are sidecar validation artifacts, not canonical product outputs.
 - No threshold changes were made in v1.5.1; v1.5.0 thresholds remain unchanged.
+
+## 14. Ticket draft export limitations
+
+- Ticket drafts are local files only; no Jira, Linear, GitHub Issues, or Azure DevOps API writes.
+- Markdown work package parsing is conservative; missing sections use placeholders.
+- `finding` source type is reserved for future use; v1.6.0 generates from work packages only.
+- Ticket draft content should be reviewed by Product Engineering Teams before creating real tickets.
+- Review sidecar decisions affect ticket draft inclusion only, not risk scores or canonical findings.

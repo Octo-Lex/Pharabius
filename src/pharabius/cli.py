@@ -1105,5 +1105,84 @@ def review(
                 console.print(f"  {notice.level.title()}: {notice.message}")
 
 
+@app.command("tickets")
+def tickets_command(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root directory.",
+        ),
+    ] = None,
+    include_deferred: Annotated[
+        bool,
+        typer.Option(
+            "--include-deferred",
+            help="Include deferred-only work packages in ticket drafts.",
+        ),
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Overwrite existing generated ticket draft artifacts.",
+        ),
+    ] = False,
+) -> None:
+    """Generate repository-local ticket drafts from work packages."""
+    from pharabius.core.tickets import (
+        generate_ticket_draft_index,
+        generate_ticket_markdown_drafts,
+        write_ticket_draft_index,
+        write_ticket_draft_summary,
+    )
+
+    resolved_root = repository_root or Path.cwd()
+    workspace = resolved_root / ".ai-debt"
+
+    if not workspace.exists():
+        console.print("[bold red]No .ai-debt workspace found. Run `ai-debt init` first.[/bold red]")
+        raise typer.Exit(code=1)
+
+    wp_dir = workspace / "work-packages"
+    if not wp_dir.exists() or not list(wp_dir.glob("*.md")):
+        console.print(
+            "[bold red]No work packages found. "
+            "Run `ai-debt plan` before generating ticket drafts.[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+    output_dir = workspace / "ticket-drafts"
+
+    # Check existing output
+    if not force and output_dir.exists() and list(output_dir.glob("TICKET-*.md")):
+        console.print(
+            "Ticket draft output already exists. "
+            "Re-run with --force to overwrite generated draft artifacts."
+        )
+        raise typer.Exit(code=1)
+
+    drafts = generate_ticket_markdown_drafts(
+        workspace,
+        output_dir=output_dir,
+        include_deferred=include_deferred,
+    )
+    index = generate_ticket_draft_index(workspace, drafts)
+    json_path = write_ticket_draft_index(index, output_dir)
+    summary_path = write_ticket_draft_summary(index, workspace / "reports")
+
+    included = sum(1 for d in drafts if d.status == "draft")
+    excluded = sum(1 for d in drafts if d.status == "excluded")
+
+    console.print("[bold green]Ticket drafts generated.[/bold green]")
+    console.print(f"  Markdown drafts: {included}")
+    console.print(f"  JSON index: {json_path}")
+    console.print(f"  Summary report: {summary_path}")
+    if excluded:
+        console.print(f"  Excluded by review: {excluded}")
+    console.print("  External tickets created: 0")
+
+
 if __name__ == "__main__":
     app()
