@@ -413,3 +413,12 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 - Review sidecar decisions affect ticket draft inclusion only, not risk scores or canonical findings.
 - Completeness checks identify missing fields but do not enrich content automatically.
 - Malformed work packages are skipped with validation warnings rather than failing the command.
+
+## 15. Export bundle limitations
+
+- Export bundles are repository-local handoff artifacts. Pharabius v1.7.x does not call Jira, Linear, GitHub Issues, or Azure DevOps APIs.
+- No automatic issue or work-item creation from export bundles.
+- No assignment, sprint, milestone, cycle, area path, or iteration path handling.
+- Priority mappings (e.g., Critical → Urgent for Linear) are suggestions only.
+- Default work item type (Azure DevOps: User Story) may need adjustment per project.
+- Export bundles do not modify ticket drafts, debt register, or scoring artifacts.

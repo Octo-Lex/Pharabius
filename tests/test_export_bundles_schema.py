@@ -187,3 +187,31 @@ class TestNoCanonicalMutation:
         m = ExportBundleManifest()
         write_export_bundle_manifest(output_dir, m)
         assert reg.read_text(encoding="utf-8") == '{"findings": []}'
+
+
+class TestExampleManifest:
+    def test_example_manifest_validates(self) -> None:
+        import json
+        from pathlib import Path
+
+        example = Path("docs/examples/export-bundles/manifest.example.json")
+        if not example.exists():
+            return
+        data = json.loads(example.read_text(encoding="utf-8"))
+        m = ExportBundleManifest.model_validate(data)
+        assert m.schema_version == "1.0"
+        assert len(m.artifacts) == 8
+        assert len(m.summary.trackers) == 4
+
+    def test_example_github_yaml_parses(self) -> None:
+        from pathlib import Path
+
+        example = Path("docs/examples/export-bundles/TICKET-WP-001.example.yaml")
+        if not example.exists():
+            return
+        content = example.read_text(encoding="utf-8")
+        assert "schema_version: '1.0'" in content
+        assert "title:" in content
+        assert "body: |" in content
+        assert "assignee" not in content
+        assert "milestone" not in content

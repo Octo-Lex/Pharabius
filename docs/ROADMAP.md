@@ -1,5 +1,16 @@
 # Pharabius Roadmap
 
+## v1.7.0 — Export Bundle & External Tracker Preparation (unreleased)
+
+- Export bundle artifact contract (manifest, tracker enum, format enum)
+- Jira Markdown/CSV export bundle generator
+- Linear Markdown/CSV export bundle generator with priority mapping
+- GitHub Issues Markdown/YAML export bundle generator with per-issue YAML
+- Azure DevOps Markdown/CSV export bundle generator with semicolon tags
+- Export bundle documentation and examples
+- 96 new tests
+- No external tracker API writes
+
 ## v1.6.1 — Ticket Draft Polish & Adoption Pack (unreleased)
 
 - Improved ticket draft summary report with structured sections
