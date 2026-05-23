@@ -70,3 +70,7 @@ Deferred-only work packages are excluded by default because they represent inten
 - Markdown work package parsing is conservative — missing sections use placeholders
 - Content should be reviewed by PETs before creating real tickets
 - `finding` source type is reserved for future use — v1.6.0 generates from work packages only
+
+## Adoption guide
+
+For a complete PET workflow guide, see [PET Ticket Workflow](PET_TICKET_WORKFLOW.md).
