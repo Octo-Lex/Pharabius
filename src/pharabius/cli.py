@@ -1163,12 +1163,12 @@ def tickets_command(
         )
         raise typer.Exit(code=1)
 
-    drafts = generate_ticket_markdown_drafts(
+    drafts, validation_issues = generate_ticket_markdown_drafts(
         workspace,
         output_dir=output_dir,
         include_deferred=include_deferred,
     )
-    index = generate_ticket_draft_index(workspace, drafts)
+    index = generate_ticket_draft_index(workspace, drafts, validation_issues)
     json_path = write_ticket_draft_index(index, output_dir)
     summary_path = write_ticket_draft_summary(index, workspace / "reports")
 

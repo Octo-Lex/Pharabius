@@ -21,6 +21,7 @@ from pharabius.schemas.tickets import (
     TicketDraftIndex,
     TicketDraftSourceArtifacts,
     TicketDraftSummary,
+    TicketDraftValidationIssue,
 )
 
 logger = logging.getLogger(__name__)
@@ -293,7 +294,7 @@ def generate_ticket_markdown_drafts(
     workspace: Path,
     output_dir: Path | None = None,
     include_deferred: bool = False,
-) -> list[TicketDraft]:
+) -> tuple[list[TicketDraft], list[TicketDraftValidationIssue]]:
     """Generate Markdown ticket drafts from work packages.
 
     Args:
@@ -302,17 +303,31 @@ def generate_ticket_markdown_drafts(
         include_deferred: Include deferred-only work packages.
 
     Returns:
-        List of TicketDraft models for generated drafts.
+        Tuple of (drafts, validation_issues).
     """
     wp_dir = workspace / "work-packages"
     if not wp_dir.exists() or not wp_dir.is_dir():
         logger.warning("No work-packages directory found")
-        return []
+        return [], [
+            TicketDraftValidationIssue(
+                source_path=str(wp_dir),
+                code="missing_work_packages_directory",
+                severity="warning",
+                message="Work packages directory not found",
+            )
+        ]
 
     wp_files = sorted(wp_dir.glob("*.md"))
     if not wp_files:
         logger.warning("No work package files found")
-        return []
+        return [], [
+            TicketDraftValidationIssue(
+                source_path=str(wp_dir),
+                code="empty_work_packages_directory",
+                severity="warning",
+                message="Work packages directory is empty",
+            )
+        ]
 
     register = _load_debt_register(workspace)
     review_decisions = load_review_decisions(workspace)
@@ -321,8 +336,34 @@ def generate_ticket_markdown_drafts(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     drafts: list[TicketDraft] = []
+    validation_issues: list[TicketDraftValidationIssue] = []
     for wp_path in wp_files:
-        parsed = parse_work_package_markdown(wp_path)
+        try:
+            parsed = parse_work_package_markdown(wp_path)
+        except Exception as exc:
+            logger.warning("Failed to parse work package %s: %s", wp_path.name, exc)
+            validation_issues.append(
+                TicketDraftValidationIssue(
+                    source_path=str(wp_path),
+                    code="unreadable_work_package",
+                    severity="warning",
+                    message=f"Failed to parse: {exc}",
+                )
+            )
+            continue
+
+        if not parsed.id or not parsed.id.startswith("WP-"):
+            validation_issues.append(
+                TicketDraftValidationIssue(
+                    source_path=str(wp_path),
+                    work_package_id=parsed.id or None,
+                    code="missing_work_package_id",
+                    severity="warning",
+                    message=f"Invalid work package ID: {parsed.id}",
+                )
+            )
+            continue
+
         ticket_id = ticket_id_for_work_package(parsed.id)
         artifact_path = str(output_dir / ticket_filename(ticket_id))
 
@@ -454,7 +495,7 @@ def generate_ticket_markdown_drafts(
 
         drafts.append(draft)
 
-    return drafts
+    return drafts, validation_issues
 
 
 # ── JSON index and summary generation ───────────────────────────────────
@@ -500,6 +541,7 @@ def _get_repo_metadata(workspace: Path) -> tuple[str | None, str | None, str | N
 def generate_ticket_draft_index(
     workspace: Path,
     drafts: list[TicketDraft],
+    validation_issues: list[TicketDraftValidationIssue] | None = None,
 ) -> TicketDraftIndex:
     """Generate a TicketDraftIndex from generated drafts."""
     from datetime import datetime
@@ -548,6 +590,7 @@ def generate_ticket_draft_index(
             unreviewed=unreviewed,
         ),
         drafts=sorted(drafts, key=lambda d: d.ticket_id),
+        validation_issues=validation_issues or [],
     )
 
 
@@ -644,6 +687,17 @@ def render_ticket_draft_summary(index: TicketDraftIndex) -> str:
         for d in sorted(skipped, key=lambda x: x.source_id):
             reason = d.review_decision or "unknown"
             lines.append(f"| {d.source_id} | {reason} |")
+        lines.append("")
+
+    # Validation Issues
+    if index.validation_issues:
+        lines.append("## Validation Issues")
+        lines.append("")
+        lines.append("| Source | Code | Severity | Message |")
+        lines.append("|---|---|---|---|")
+        for vi in index.validation_issues:
+            src = vi.work_package_id or vi.source_path
+            lines.append(f"| {src} | {vi.code} | {vi.severity} | {vi.message} |")
         lines.append("")
 
     # Warnings and Limitations

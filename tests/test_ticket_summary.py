@@ -74,7 +74,7 @@ def _make_workspace(tmp_path: Path, review_decisions: list[dict] | None = None) 
 class TestSummaryReportStructure:
     def test_contains_generation_summary(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Generation Summary" in md
@@ -83,7 +83,7 @@ class TestSummaryReportStructure:
 
     def test_contains_output_artifacts(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Output Artifacts" in md
@@ -91,7 +91,7 @@ class TestSummaryReportStructure:
 
     def test_contains_draft_table(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Drafts" in md
@@ -99,7 +99,7 @@ class TestSummaryReportStructure:
 
     def test_contains_warnings_section(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Warnings and Limitations" in md
@@ -110,7 +110,7 @@ class TestSummaryReportStructure:
             tmp_path,
             [{"finding_id": "TD-DEP-001", "status": "rejected"}],
         )
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Skipped Items" in md
@@ -119,7 +119,7 @@ class TestSummaryReportStructure:
 
     def test_no_skipped_section_when_all_included(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Skipped Items" not in md
@@ -129,7 +129,7 @@ class TestSummaryReportStructure:
             tmp_path,
             [{"finding_id": "TD-DEP-001", "status": "accepted"}],
         )
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Review Decision Summary" in md
@@ -138,14 +138,14 @@ class TestSummaryReportStructure:
 
     def test_no_review_section_when_no_reviews(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "## Review Decision Summary" not in md
 
     def test_unreviewed_count_in_warnings(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md = render_ticket_draft_summary(index)
         assert "have not been reviewed" in md
@@ -154,7 +154,7 @@ class TestSummaryReportStructure:
 class TestSummaryDeterminism:
     def test_deterministic_output(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         md1 = render_ticket_draft_summary(index)
         md2 = render_ticket_draft_summary(index)
@@ -164,7 +164,7 @@ class TestSummaryDeterminism:
     def test_does_not_mutate_debt_register(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
         reg_before = (ws / "debt-register.json").read_text(encoding="utf-8")
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         render_ticket_draft_summary(index)
         assert (ws / "debt-register.json").read_text(encoding="utf-8") == reg_before
@@ -172,7 +172,7 @@ class TestSummaryDeterminism:
     def test_does_not_mutate_work_packages(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
         wp_before = (ws / "work-packages" / "WP-001-slug.md").read_text(encoding="utf-8")
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         index = generate_ticket_draft_index(ws, drafts)
         render_ticket_draft_summary(index)
         assert (ws / "work-packages" / "WP-001-slug.md").read_text() == wp_before

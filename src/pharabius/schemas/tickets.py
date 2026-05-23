@@ -72,3 +72,14 @@ class TicketDraftIndex(BaseModel):
     source_artifacts: TicketDraftSourceArtifacts
     summary: TicketDraftSummary = Field(default_factory=TicketDraftSummary)
     drafts: list[TicketDraft] = Field(default_factory=list)
+    validation_issues: list[TicketDraftValidationIssue] = Field(default_factory=list)
+
+
+class TicketDraftValidationIssue(BaseModel):
+    """A validation issue encountered during ticket draft generation."""
+
+    source_path: str
+    work_package_id: str | None = None
+    code: str
+    severity: str = "warning"
+    message: str
