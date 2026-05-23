@@ -10,15 +10,144 @@ import logging
 from pathlib import Path
 
 from pharabius.schemas.portfolio import (
+    PortfolioRepositoryEntry,
     PortfolioSummary,
 )
 
 logger = logging.getLogger(__name__)
 
 PORTFOLIO_DIR = ".ai-debt/portfolio"
+
+PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"]
 PORTFOLIO_SUMMARY_JSON = "portfolio-summary.json"
 PORTFOLIO_SUMMARY_MD = "portfolio-summary.md"
 REPOSITORY_INDEX_JSON = "repository-index.json"
+
+
+def _highest_priority(priority_counts: dict[str, int]) -> str | None:
+    """Return the highest priority with a non-zero count."""
+    for p in PRIORITY_ORDER:
+        if priority_counts.get(p, 0) > 0:
+            return p
+    return None
+
+
+def extract_repository_entry(
+    repo_path: Path,
+    warnings: list[str] | None = None,
+) -> PortfolioRepositoryEntry | None:
+    """Extract a portfolio entry from a repository's .ai-debt/ directory.
+
+    Args:
+        repo_path: Path to the repository root.
+        warnings: Optional list to append warnings to.
+
+    Returns:
+        PortfolioRepositoryEntry or None if the directory is unusable.
+    """
+    if warnings is None:
+        warnings = []
+
+    ai_debt = repo_path / ".ai-debt"
+    if not ai_debt.is_dir():
+        warnings.append(f"Missing .ai-debt/ in {repo_path}")
+        return None
+
+    debt_register_path = ai_debt / "debt-register.json"
+    if not debt_register_path.exists():
+        warnings.append(f"Missing debt-register.json in {repo_path}")
+        return PortfolioRepositoryEntry(
+            repository_id=repo_path.name,
+            project_name=repo_path.name,
+            repository_path=str(repo_path),
+            validation_status="needs_review",
+            limitations=["Missing debt-register.json"],
+        )
+
+    try:
+        data = json.loads(debt_register_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        warnings.append(f"Malformed debt-register.json in {repo_path}: {exc}")
+        return PortfolioRepositoryEntry(
+            repository_id=repo_path.name,
+            project_name=repo_path.name,
+            repository_path=str(repo_path),
+            validation_status="needs_review",
+            limitations=["Malformed debt-register.json"],
+        )
+
+    summary = data.get("summary", {})
+    findings = data.get("findings", [])
+
+    # Priority counts from summary or findings
+    priority_counts: dict[str, int] = {}
+    for key in ("critical", "high", "medium", "low"):
+        val = summary.get(key, 0)
+        if val:
+            priority_counts[key.capitalize()] = val
+
+    # Category counts from findings
+    category_counts: dict[str, int] = {}
+    for f in findings:
+        cat = f.get("category", "unknown")
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    top_categories = sorted(category_counts, key=category_counts.get, reverse=True)[:5]  # type: ignore[arg-type]
+
+    # Detect ticket drafts
+    has_ticket_drafts = (ai_debt / "ticket-drafts" / "ticket-drafts.json").exists()
+
+    # Detect export bundles
+    has_export_bundles = (ai_debt / "export-bundles" / "manifest.json").exists()
+
+    return PortfolioRepositoryEntry(
+        repository_id=data.get("repository", repo_path.name) or repo_path.name,
+        project_name=data.get("project_name", repo_path.name) or repo_path.name,
+        repository_path=str(repo_path),
+        branch=data.get("branch"),
+        commit=data.get("commit"),
+        generated_at=data.get("generated_at"),
+        total_findings=summary.get("total_findings", len(findings)),
+        priority_counts=priority_counts,
+        top_categories=top_categories,
+        highest_priority=_highest_priority(priority_counts),
+        has_ticket_drafts=has_ticket_drafts,
+        has_export_bundles=has_export_bundles,
+        validation_status="complete",
+    )
+
+
+def collect_portfolio_repository_entries(
+    repo_paths: list[Path],
+    warnings: list[str] | None = None,
+) -> list[PortfolioRepositoryEntry]:
+    """Collect portfolio entries from multiple repositories.
+
+    Args:
+        repo_paths: List of repository root paths.
+        warnings: Optional list to append warnings to.
+
+    Returns:
+        Sorted list of PortfolioRepositoryEntry.
+    """
+    if warnings is None:
+        warnings = []
+
+    entries: list[PortfolioRepositoryEntry] = []
+    seen_ids: set[str] = set()
+
+    for rp in repo_paths:
+        entry = extract_repository_entry(rp, warnings)
+        if entry is None:
+            continue
+        if entry.repository_id in seen_ids:
+            warnings.append(f"Duplicate repository_id: {entry.repository_id}")
+            continue
+        seen_ids.add(entry.repository_id)
+        entries.append(entry)
+
+    entries.sort(key=lambda e: e.repository_id)
+    return entries
 
 
 def write_portfolio_json(portfolio_dir: Path, summary: PortfolioSummary) -> Path:
