@@ -406,8 +406,10 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 
 ## 14. Ticket draft export limitations
 
-- Ticket drafts are local files only; no Jira, Linear, GitHub Issues, or Azure DevOps API writes.
+- Ticket drafts are repository-local planning artifacts. Pharabius v1.6.x does not create, sync, assign, or update external tracker tickets.
 - Markdown work package parsing is conservative; missing sections use placeholders.
 - `finding` source type is reserved for future use; v1.6.0 generates from work packages only.
 - Ticket draft content should be reviewed by Product Engineering Teams before creating real tickets.
 - Review sidecar decisions affect ticket draft inclusion only, not risk scores or canonical findings.
+- Completeness checks identify missing fields but do not enrich content automatically.
+- Malformed work packages are skipped with validation warnings rather than failing the command.
