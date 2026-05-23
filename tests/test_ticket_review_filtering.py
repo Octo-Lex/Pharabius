@@ -157,7 +157,7 @@ class TestClassifyWorkPackage:
 class TestReviewFilteringIntegration:
     def test_no_sidecar_includes_all_as_not_reviewed(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert len(drafts) == 1
         assert drafts[0].review_decision == "not_reviewed"
         assert drafts[0].status == "draft"
@@ -167,7 +167,7 @@ class TestReviewFilteringIntegration:
             tmp_path,
             [{"finding_id": "TD-DEP-001", "status": "accepted"}],
         )
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert len(drafts) == 1
         assert drafts[0].review_decision == "accepted"
         assert drafts[0].status == "draft"
@@ -177,7 +177,7 @@ class TestReviewFilteringIntegration:
             tmp_path,
             [{"finding_id": "TD-DEP-001", "status": "rejected"}],
         )
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert len(drafts) == 1
         assert drafts[0].status == "excluded"
 
@@ -186,7 +186,7 @@ class TestReviewFilteringIntegration:
             tmp_path,
             [{"finding_id": "TD-DEP-001", "status": "deferred"}],
         )
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert len(drafts) == 1
         assert drafts[0].status == "excluded"
 
@@ -195,7 +195,7 @@ class TestReviewFilteringIntegration:
             tmp_path,
             [{"finding_id": "TD-DEP-001", "status": "deferred"}],
         )
-        drafts = generate_ticket_markdown_drafts(ws, include_deferred=True)
+        drafts, _ = generate_ticket_markdown_drafts(ws, include_deferred=True)
         assert len(drafts) == 1
         assert drafts[0].status == "draft"
         assert drafts[0].review_decision == "deferred"
@@ -206,8 +206,10 @@ class TestReviewFilteringIntegration:
             tmp_path / "b",
             [{"finding_id": "TD-DEP-001", "status": "accepted"}],
         )
-        d1 = generate_ticket_markdown_drafts(ws_no_review)[0]
-        d2 = generate_ticket_markdown_drafts(ws_accepted)[0]
+        d1, _ = generate_ticket_markdown_drafts(ws_no_review)
+        d1 = d1[0]
+        d2, _ = generate_ticket_markdown_drafts(ws_accepted)
+        d2 = d2[0]
         assert d1.risk_score == d2.risk_score
         assert d1.priority == d2.priority
 

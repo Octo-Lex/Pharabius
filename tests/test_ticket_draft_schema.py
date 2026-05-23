@@ -199,12 +199,12 @@ class TestExampleJSON:
         data = json.loads(path.read_text(encoding="utf-8"))
         idx = TicketDraftIndex.model_validate(data)
         assert idx.schema_version == "1.0"
-        assert len(idx.drafts) == 1
-        assert idx.drafts[0].ticket_id == "TICKET-WP-001"
+        assert len(idx.drafts) >= 1
+        assert idx.drafts[0].ticket_id.startswith("TICKET-")
         assert idx.drafts[0].external_system is None
 
     def test_example_markdown_exists(self) -> None:
         path = EXAMPLES_DIR / "ticket-draft.example.md"
         assert path.exists()
         content = path.read_text(encoding="utf-8")
-        assert "local planning artifact" in content.lower()
+        assert "repository-local" in content.lower()

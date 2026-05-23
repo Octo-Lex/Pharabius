@@ -2,6 +2,33 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.6.1] - Unreleased
+
+### Added
+
+- Improved ticket draft summary report with generation summary, output artifacts, review decision summary, skipped items, validation issues, completeness counts, and field completeness warnings.
+- Richer ticket draft examples demonstrating accepted, needs-investigation, deferred, and rejected work packages.
+- Validation behavior for malformed or missing work packages (missing directory, empty directory, unreadable files, invalid IDs).
+- Ticket draft field completeness checks (complete/partial/needs_review) with missing and weak field detection.
+- Product Engineering Team ticket workflow adoption guide (`docs/PET_TICKET_WORKFLOW.md`).
+- `TicketDraftValidationIssue` schema for tracking validation issues in ticket draft generation.
+- `TicketDraftCompleteness` schema for field-level completeness assessment.
+
+### Changed
+
+- `generate_ticket_markdown_drafts` now returns `tuple[list[TicketDraft], list[TicketDraftValidationIssue]]` (was `list[TicketDraft]`).
+- `generate_ticket_draft_index` accepts optional `validation_issues` parameter.
+- `TicketDraft` schema gains optional `completeness` field.
+- `TicketDraftIndex` schema gains `validation_issues` field.
+- Summary report renderer adds structured sections replacing flat metrics table.
+
+### Safety
+
+- No changes to scoring behavior.
+- No changes to canonical debt register behavior.
+- No external ticketing API writes.
+- No autonomous remediation.
+
 ## [1.6.0] - Unreleased
 
 ### Added

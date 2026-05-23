@@ -18,9 +18,11 @@ from typing import Any
 
 from pharabius.schemas.tickets import (
     TicketDraft,
+    TicketDraftCompleteness,
     TicketDraftIndex,
     TicketDraftSourceArtifacts,
     TicketDraftSummary,
+    TicketDraftValidationIssue,
 )
 
 logger = logging.getLogger(__name__)
@@ -293,7 +295,7 @@ def generate_ticket_markdown_drafts(
     workspace: Path,
     output_dir: Path | None = None,
     include_deferred: bool = False,
-) -> list[TicketDraft]:
+) -> tuple[list[TicketDraft], list[TicketDraftValidationIssue]]:
     """Generate Markdown ticket drafts from work packages.
 
     Args:
@@ -302,17 +304,31 @@ def generate_ticket_markdown_drafts(
         include_deferred: Include deferred-only work packages.
 
     Returns:
-        List of TicketDraft models for generated drafts.
+        Tuple of (drafts, validation_issues).
     """
     wp_dir = workspace / "work-packages"
     if not wp_dir.exists() or not wp_dir.is_dir():
         logger.warning("No work-packages directory found")
-        return []
+        return [], [
+            TicketDraftValidationIssue(
+                source_path=str(wp_dir),
+                code="missing_work_packages_directory",
+                severity="warning",
+                message="Work packages directory not found",
+            )
+        ]
 
     wp_files = sorted(wp_dir.glob("*.md"))
     if not wp_files:
         logger.warning("No work package files found")
-        return []
+        return [], [
+            TicketDraftValidationIssue(
+                source_path=str(wp_dir),
+                code="empty_work_packages_directory",
+                severity="warning",
+                message="Work packages directory is empty",
+            )
+        ]
 
     register = _load_debt_register(workspace)
     review_decisions = load_review_decisions(workspace)
@@ -321,8 +337,34 @@ def generate_ticket_markdown_drafts(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     drafts: list[TicketDraft] = []
+    validation_issues: list[TicketDraftValidationIssue] = []
     for wp_path in wp_files:
-        parsed = parse_work_package_markdown(wp_path)
+        try:
+            parsed = parse_work_package_markdown(wp_path)
+        except Exception as exc:
+            logger.warning("Failed to parse work package %s: %s", wp_path.name, exc)
+            validation_issues.append(
+                TicketDraftValidationIssue(
+                    source_path=str(wp_path),
+                    code="unreadable_work_package",
+                    severity="warning",
+                    message=f"Failed to parse: {exc}",
+                )
+            )
+            continue
+
+        if not parsed.id or not parsed.id.startswith("WP-"):
+            validation_issues.append(
+                TicketDraftValidationIssue(
+                    source_path=str(wp_path),
+                    work_package_id=parsed.id or None,
+                    code="missing_work_package_id",
+                    severity="warning",
+                    message=f"Invalid work package ID: {parsed.id}",
+                )
+            )
+            continue
+
         ticket_id = ticket_id_for_work_package(parsed.id)
         artifact_path = str(output_dir / ticket_filename(ticket_id))
 
@@ -454,7 +496,11 @@ def generate_ticket_markdown_drafts(
 
         drafts.append(draft)
 
-    return drafts
+    # Evaluate completeness for each draft
+    for draft in drafts:
+        draft.completeness = evaluate_ticket_draft_completeness(draft)
+
+    return drafts, validation_issues
 
 
 # ── JSON index and summary generation ───────────────────────────────────
@@ -500,6 +546,7 @@ def _get_repo_metadata(workspace: Path) -> tuple[str | None, str | None, str | N
 def generate_ticket_draft_index(
     workspace: Path,
     drafts: list[TicketDraft],
+    validation_issues: list[TicketDraftValidationIssue] | None = None,
 ) -> TicketDraftIndex:
     """Generate a TicketDraftIndex from generated drafts."""
     from datetime import datetime
@@ -548,6 +595,7 @@ def generate_ticket_draft_index(
             unreviewed=unreviewed,
         ),
         drafts=sorted(drafts, key=lambda d: d.ticket_id),
+        validation_issues=validation_issues or [],
     )
 
 
@@ -559,12 +607,57 @@ def write_ticket_draft_index(index: TicketDraftIndex, output_dir: Path) -> Path:
     return path
 
 
+def evaluate_ticket_draft_completeness(draft: TicketDraft) -> TicketDraftCompleteness:
+    """Evaluate the completeness of a ticket draft."""
+    missing: list[str] = []
+    weak: list[str] = []
+    notes: list[str] = []
+
+    # Required fields
+    if not draft.title or draft.title.strip() == "":
+        missing.append("title")
+    if not draft.source_id or draft.source_id.strip() == "":
+        missing.append("source_work_package_id")
+    if not draft.body_markdown or len(draft.body_markdown.strip()) < 50:
+        missing.append("objective")
+
+    # Strongly recommended fields
+    if not draft.linked_debt_items:
+        weak.append("linked_debt_items")
+        notes.append("No linked debt items — verify this ticket is actionable")
+
+    # Check body for recommended sections
+    body = draft.body_markdown or ""
+    if "Recommended Engineering Approach" not in body:
+        weak.append("recommended_approach")
+    if "Verification Recommendations" not in body:
+        weak.append("verification_recommendations")
+    if "Definition of Done" not in body:
+        weak.append("definition_of_done")
+    if "Risks and Cautions" not in body:
+        weak.append("risks_and_cautions")
+    if not draft.priority:
+        weak.append("priority")
+
+    if missing:
+        status = "needs_review"
+    elif weak:
+        status = "partial"
+    else:
+        status = "complete"
+
+    return TicketDraftCompleteness(
+        status=status,
+        missing_fields=missing,
+        weak_fields=weak,
+        notes=notes,
+    )
+
+
 def render_ticket_draft_summary(index: TicketDraftIndex) -> str:
     """Render a human-readable ticket draft summary."""
     lines: list[str] = []
     lines.append("# Ticket Draft Summary")
-    lines.append("")
-    lines.append("## Status")
     lines.append("")
     lines.append(
         "Repository-local ticket drafts generated by Pharabius. No external tickets were created."
@@ -572,32 +665,134 @@ def render_ticket_draft_summary(index: TicketDraftIndex) -> str:
     lines.append("")
 
     s = index.summary
-    lines.append("## Summary")
+    included = [d for d in index.drafts if d.status == "draft"]
+    skipped = [d for d in index.drafts if d.status == "excluded"]
+    review_applied = sum(
+        len(d.review_summary) - (1 if "not_reviewed" in d.review_summary else 0)
+        for d in index.drafts
+    )
+
+    # Generation Summary
+    lines.append("## Generation Summary")
     lines.append("")
-    lines.append("| Metric | Value |")
+    lines.append("| Metric | Count |")
     lines.append("|---|---:|")
-    lines.append(f"| Total drafts | {s.total_drafts} |")
-    lines.append(f"| Included drafts | {s.included_drafts} |")
-    lines.append(f"| Excluded by review | {s.excluded_by_review} |")
-    lines.append(f"| Deferred | {s.deferred} |")
-    lines.append(f"| False positive | {s.false_positive} |")
-    lines.append(f"| Unreviewed | {s.unreviewed} |")
+    lines.append(f"| Work packages scanned | {s.total_drafts} |")
+    lines.append(f"| Ticket drafts generated | {len(included)} |")
+    lines.append(f"| Work packages skipped | {len(skipped)} |")
+    lines.append(f"| Review decisions applied | {review_applied} |")
     lines.append("")
 
-    if index.drafts:
+    # Output Artifacts
+    lines.append("## Output Artifacts")
+    lines.append("")
+    lines.append("| Artifact | Path |")
+    lines.append("|---|---|")
+    lines.append("| Ticket draft index | `.ai-debt/ticket-drafts/ticket-drafts.json` |")
+    lines.append("| Markdown drafts | `.ai-debt/ticket-drafts/*.md` |")
+    lines.append("")
+
+    # Review Decision Summary
+    if review_applied > 0:
+        review_counts: dict[str, int] = {}
+        for d in index.drafts:
+            for decision, count in d.review_summary.items():
+                review_counts[decision] = review_counts.get(decision, 0) + count
+        lines.append("## Review Decision Summary")
+        lines.append("")
+        lines.append("| Decision | Count | Behavior |")
+        lines.append("|---|---:|---|")
+        for decision in sorted(review_counts):
+            count = review_counts[decision]
+            if decision in ("accepted", "needs-investigation"):
+                behavior = "Drafted"
+            elif decision == "deferred":
+                behavior = "Skipped (use --include-deferred)"
+            elif decision in ("rejected", "duplicate", "already-fixed", "risk-accepted"):
+                behavior = "Skipped"
+            else:
+                behavior = "Drafted"
+            lines.append(f"| {decision} | {count} | {behavior} |")
+        lines.append("")
+
+    # Drafts table
+    if included:
         lines.append("## Drafts")
         lines.append("")
-        lines.append("| Ticket Draft | Source | Priority | Risk Score | Linked Debt Items | Path |")
-        lines.append("|---|---|---|---:|---|---|")
-        for d in index.drafts:
-            linked = ", ".join(d.linked_debt_items) if d.linked_debt_items else "—"
+        lines.append("| Ticket | Work Package | Priority | Review State | Status | Path |")
+        lines.append("|---|---|---|---|---|---|")
+        for d in included:
             pri = d.priority or "—"
-            score = str(d.risk_score) if d.risk_score is not None else "—"
+            review = d.review_decision or "not_reviewed"
             lines.append(
                 f"| {d.ticket_id} | {d.source_id} | {pri} "
-                f"| {score} | {linked} | `{d.artifact_path}` |"
+                f"| {review} | {d.status} | `{d.artifact_path}` |"
             )
         lines.append("")
+
+    # Draft Completeness
+    if included:
+        comp_counts = {"complete": 0, "partial": 0, "needs_review": 0}
+        for d in included:
+            if d.completeness:
+                comp_counts[d.completeness.status] = comp_counts.get(d.completeness.status, 0) + 1
+        lines.append("## Draft Completeness")
+        lines.append("")
+        lines.append("| Status | Count |")
+        lines.append("|---|---:|")
+        for status in ("complete", "partial", "needs_review"):
+            lines.append(f"| {status} | {comp_counts.get(status, 0)} |")
+        lines.append("")
+
+        has_weak = any(d.completeness and d.completeness.weak_fields for d in included)
+        has_missing = any(d.completeness and d.completeness.missing_fields for d in included)
+        if has_weak or has_missing:
+            lines.append("## Field Completeness Warnings")
+            lines.append("")
+            lines.append("| Ticket | Field | Issue |")
+            lines.append("|---|---|---|")
+            for d in included:
+                if not d.completeness:
+                    continue
+                for f in sorted(d.completeness.missing_fields):
+                    lines.append(f"| {d.ticket_id} | {f} | Missing |")
+                for f in sorted(d.completeness.weak_fields):
+                    lines.append(f"| {d.ticket_id} | {f} | Weak |")
+            lines.append("")
+
+    # Skipped Items
+    if skipped:
+        lines.append("## Skipped Items")
+        lines.append("")
+        lines.append("| Work Package | Reason |")
+        lines.append("|---|---|")
+        for d in sorted(skipped, key=lambda x: x.source_id):
+            reason = d.review_decision or "unknown"
+            lines.append(f"| {d.source_id} | {reason} |")
+        lines.append("")
+
+    # Validation Issues
+    if index.validation_issues:
+        lines.append("## Validation Issues")
+        lines.append("")
+        lines.append("| Source | Code | Severity | Message |")
+        lines.append("|---|---|---|---|")
+        for vi in index.validation_issues:
+            src = vi.work_package_id or vi.source_path
+            lines.append(f"| {src} | {vi.code} | {vi.severity} | {vi.message} |")
+        lines.append("")
+
+    # Warnings and Limitations
+    lines.append("## Warnings and Limitations")
+    lines.append("")
+    lines.append("- Ticket drafts are local planning artifacts, not external tickets.")
+    if s.unreviewed > 0:
+        lines.append(f"- {s.unreviewed} draft(s) have not been reviewed via `ai-debt review`.")
+    lines.append(
+        "- Content should be validated by Product Engineering Teams "
+        "before creating tracker tickets."
+    )
+    lines.append("")
 
     return "\n".join(lines)
 

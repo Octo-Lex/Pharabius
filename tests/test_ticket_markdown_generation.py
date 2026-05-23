@@ -131,34 +131,34 @@ class TestParseWorkPackage:
 class TestGenerateTicketMarkdownDrafts:
     def test_generates_one_draft(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, REGISTER)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert len(drafts) == 1
         assert drafts[0].ticket_id == "TICKET-WP-001"
 
     def test_generates_deterministic_filename(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, REGISTER)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert drafts[0].artifact_path.endswith("TICKET-WP-001.md")
 
     def test_includes_source_work_package_id(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, REGISTER)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert drafts[0].source_id == "WP-001"
 
     def test_includes_linked_debt_items(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, REGISTER)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert "TD-DEP-001" in drafts[0].linked_debt_items
 
     def test_includes_priority_and_risk_score(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, REGISTER)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert drafts[0].priority == "Medium"
         assert drafts[0].risk_score == 15
 
     def test_includes_categories(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, REGISTER)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert "TD-DEP" in drafts[0].categories
 
     def test_writes_markdown_file(self, tmp_path: Path) -> None:
@@ -185,22 +185,22 @@ class TestGenerateTicketMarkdownDrafts:
 
     def test_no_work_packages_returns_empty(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {})
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert drafts == []
 
     def test_handles_missing_finding_gracefully(self, tmp_path: Path) -> None:
         reg = {"findings": []}
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, reg)
-        drafts = generate_ticket_markdown_drafts(ws)
+        drafts, _ = generate_ticket_markdown_drafts(ws)
         assert len(drafts) == 1
         assert drafts[0].priority is None
         assert drafts[0].risk_score is None
 
     def test_stable_output_across_runs(self, tmp_path: Path) -> None:
         ws = _make_workspace(tmp_path, {"WP-001-slug.md": WP_MD}, REGISTER)
-        drafts1 = generate_ticket_markdown_drafts(ws)
+        drafts1, _ = generate_ticket_markdown_drafts(ws)
         content1 = (ws / "ticket-drafts" / "TICKET-WP-001.md").read_text(encoding="utf-8")
-        drafts2 = generate_ticket_markdown_drafts(ws)
+        drafts2, _ = generate_ticket_markdown_drafts(ws)
         content2 = (ws / "ticket-drafts" / "TICKET-WP-001.md").read_text(encoding="utf-8")
         assert content1 == content2
         assert drafts1[0].ticket_id == drafts2[0].ticket_id
