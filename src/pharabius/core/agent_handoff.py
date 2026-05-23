@@ -17,13 +17,14 @@ def render_agent_handoff_contract(
     questions: list[QuestionItem] | None = None,
 ) -> str:
     """Render agent-handoff-contract.md content."""
-    gaps = gaps or []
-    questions = questions or []
+    # Ensure gaps and questions are not None; type checkers consider this reassignment.
+    local_gaps = gaps or []
+    local_questions = questions or []
 
     confirmed = [c for c in claims if c.status == "confirmed"]
     inferred = [c for c in claims if c.status == "inferred"]
     gap_claims = [c for c in claims if c.status == "gap"]
-    blocking = [g for g in gaps if g.severity == "blocking"]
+    blocking = [g for g in local_gaps if g.severity == "blocking"]
 
     lines: list[str] = []
 
@@ -77,7 +78,10 @@ def render_agent_handoff_contract(
         for g in sorted(blocking, key=lambda x: x.gap_id):
             lines.append(f"- **{g.gap_id}**: {g.question}")
             if g.linked_work_packages:
-                lines.append(f"  - Work package(s): {', '.join(g.linked_work_packages)}")
+                lines.append(
+                    "  - Work package(s): "
+                    f"{', '.join(g.linked_work_packages)}"
+                )
     else:
         lines.append("No blocking gaps.")
     lines.append("")
@@ -97,9 +101,17 @@ def render_agent_handoff_contract(
     # Preservation Requirements
     lines.append("## Preservation Requirements")
     lines.append("")
-    lines.append("- All confirmed claims must remain evidence-backed in future iterations.")
-    lines.append("- Inferred claims must not be promoted to confirmed without direct evidence.")
-    lines.append("- Blocking gaps must be resolved before work package execution.")
+    lines.append(
+        "- All confirmed claims must remain "
+        "evidence-backed in future iterations."
+    )
+    lines.append(
+        "- Inferred claims must not be promoted to confirmed "
+        "without direct evidence."
+    )
+    lines.append(
+        "- Blocking gaps must be resolved before work package execution."
+    )
     lines.append("")
 
     # Allowed Uses
@@ -107,9 +119,18 @@ def render_agent_handoff_contract(
     lines.append("")
     lines.append("- Use confirmed claims as context for planning.")
     lines.append("- Use inferred claims as hypotheses requiring validation.")
-    lines.append("- Use gaps/questions to ask Product Engineering for clarification.")
-    lines.append("- Use traceability matrices to inspect evidence relationships.")
-    lines.append("- Use work packages as planning inputs, not implementation authority.")
+    lines.append(
+        "- Use gaps/questions to ask Product Engineering "
+        "for clarification."
+    )
+    lines.append(
+        "- Use traceability matrices to inspect "
+        "evidence relationships."
+    )
+    lines.append(
+        "- Use work packages as planning inputs, "
+        "not implementation authority."
+    )
     lines.append("")
 
     # Forbidden Actions
@@ -117,10 +138,12 @@ def render_agent_handoff_contract(
     lines.append("")
     forbidden = [
         "Do not modify production code based solely on this artifact.",
-        "Do not change authentication, authorization, data retention, payment, migration, or public API behavior without human approval.",
+        "Do not change authentication, authorization, data retention, "
+        "payment, migration, or public API behavior without human approval.",
         "Do not treat inferred claims as confirmed facts.",
         "Do not proceed on work packages with blocking gaps.",
-        "Do not call external systems or create issues unless separately authorized by the Product Engineering Team.",
+        "Do not call external systems or create issues unless "
+        "separately authorized by the Product Engineering Team.",
     ]
     for f in forbidden:
         lines.append(f"- {f}")
@@ -151,5 +174,7 @@ def write_agent_handoff_contract(
     """Write agent-handoff-contract.md to .ai-debt/."""
     ai_debt_dir.mkdir(parents=True, exist_ok=True)
     path = ai_debt_dir / "agent-handoff-contract.md"
-    path.write_text(render_agent_handoff_contract(claims, gaps, questions), encoding="utf-8")
+    path.write_text(
+        render_agent_handoff_contract(claims, gaps, questions), encoding="utf-8"
+    )
     return path
