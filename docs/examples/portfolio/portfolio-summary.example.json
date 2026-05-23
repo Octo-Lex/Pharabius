@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "tool_version": "1.8.0",
+  "generated_at": "2026-05-24T00:00:00+00:00",
+  "portfolio_id": "portfolio",
+  "repositories": [
+    {
+      "repository_id": "service-a",
+      "project_name": "service-a",
+      "repository_path": "/repos/service-a",
+      "branch": "main",
+      "commit": "a1b2c3d",
+      "generated_at": "2026-05-23T18:00:00+00:00",
+      "total_findings": 8,
+      "priority_counts": {"High": 3, "Medium": 3, "Low": 2},
+      "top_categories": ["TD-ARCH", "TD-DEP", "TD-TEST"],
+      "highest_priority": "High",
+      "has_ticket_drafts": true,
+      "has_export_bundles": true,
+      "validation_status": "complete",
+      "limitations": []
+    },
+    {
+      "repository_id": "service-b",
+      "project_name": "service-b",
+      "repository_path": "/repos/service-b",
+      "branch": "main",
+      "commit": "e4f5g6h",
+      "generated_at": "2026-05-23T19:00:00+00:00",
+      "total_findings": 3,
+      "priority_counts": {"Medium": 2, "Low": 1},
+      "top_categories": ["TD-DEP", "TD-OBS"],
+      "highest_priority": "Medium",
+      "has_ticket_drafts": false,
+      "has_export_bundles": false,
+      "validation_status": "partial",
+      "limitations": []
+    }
+  ],
+  "risk_rollup": {
+    "total_repositories": 2,
+    "total_findings": 11,
+    "priority_counts": {"High": 3, "Medium": 5, "Low": 3},
+    "highest_priority": "High"
+  },
+  "category_rollup": {
+    "category_counts": {"TD-ARCH": 1, "TD-DEP": 2, "TD-TEST": 1, "TD-OBS": 1},
+    "top_categories": ["TD-DEP", "TD-ARCH", "TD-OBS", "TD-TEST"]
+  },
+  "readiness_rollup": {
+    "total_repositories": 2,
+    "with_ticket_drafts": 1,
+    "with_export_bundles": 1,
+    "status_counts": {"complete": 1, "partial": 1},
+    "repositories_needing_review": [],
+    "warnings": []
+  },
+  "validation_warnings": [],
+  "limitations": []
+}
