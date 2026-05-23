@@ -6,7 +6,12 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from pharabius.schemas.claims import OperationalClaim, OperationalClaimsRegister
+from pharabius.schemas.claims import (
+    ClaimCompleteness,
+    ClaimRegisterCompleteness,
+    OperationalClaim,
+    OperationalClaimsRegister,
+)
 
 
 class ClaimValidationIssue(BaseModel):
@@ -194,3 +199,69 @@ def validate_claims_register(
 
     valid = len(all_errors) == 0
     return ClaimValidationResult(valid=valid, errors=all_errors, warnings=all_warnings)
+
+
+def assess_claim_completeness(claim: OperationalClaim) -> ClaimCompleteness:
+    """Assess a single claim's completeness."""
+    evidence_linked = bool(claim.evidence_ids)
+    finding_linked = bool(claim.linked_findings)
+    work_package_linked = bool(claim.linked_work_packages)
+    has_question = bool(claim.validation_question)
+    is_gap = claim.status == "gap"
+    is_blocking_gap = is_gap  # Gap claims represent missing evidence
+
+    warnings: list[str] = []
+
+    if claim.status == "confirmed" and evidence_linked and finding_linked:
+        status = "complete"
+    elif claim.status == "inferred" and evidence_linked:
+        status = "partial"
+        if not claim.limitations:
+            warnings.append("Inferred claim lacks documented limitations.")
+    elif is_gap:
+        status = "needs_review"
+        if has_question and work_package_linked:
+            warnings.append("Work package should not proceed until validation is complete.")
+    elif not evidence_linked:
+        status = "needs_review"
+    else:
+        status = "partial"
+
+    return ClaimCompleteness(
+        claim_id=claim.claim_id,
+        status=status,  # type: ignore[arg-type]
+        evidence_linked=evidence_linked,
+        finding_linked=finding_linked,
+        work_package_linked=work_package_linked,
+        has_validation_question=has_question,
+        blocking_gap=is_blocking_gap,
+        warnings=warnings,
+    )
+
+
+def assess_register_completeness(
+    register: OperationalClaimsRegister,
+) -> ClaimRegisterCompleteness:
+    """Assess completeness for an entire claims register."""
+    items: list[ClaimCompleteness] = []
+    warnings: list[str] = []
+
+    for claim in register.claims:
+        items.append(assess_claim_completeness(claim))
+
+    complete = sum(1 for i in items if i.status == "complete")
+    partial = sum(1 for i in items if i.status == "partial")
+    needs_review = sum(1 for i in items if i.status == "needs_review")
+
+    # Register-level warnings
+    if needs_review > 0 and not warnings:
+        warnings.append(f"{needs_review} claim(s) need human review before implementation.")
+
+    return ClaimRegisterCompleteness(
+        total_claims=len(items),
+        complete=complete,
+        partial=partial,
+        needs_review=needs_review,
+        claims=items,
+        warnings=warnings,
+    )
