@@ -1,5 +1,16 @@
 # Pharabius Roadmap
 
+## v1.8.0 — Portfolio Summary Foundation (unreleased)
+
+- Portfolio summary schemas and artifact contract
+- Repository summary aggregation from `.ai-debt/` outputs
+- Portfolio risk and category rollups
+- Portfolio readiness and validation rollups
+- `ai-debt portfolio` CLI command
+- Portfolio documentation and examples
+- 69 new tests
+- No server, dashboard, or remote crawling
+
 ## v1.7.1 — Export Bundle Polish & Validation (unreleased)
 
 - Export bundle manifest validation (8 rules)

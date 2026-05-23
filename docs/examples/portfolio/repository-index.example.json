@@ -1,0 +1,22 @@
+[
+  {
+    "repository_id": "service-a",
+    "project_name": "service-a",
+    "repository_path": "/repos/service-a",
+    "branch": "main",
+    "commit": "a1b2c3d",
+    "total_findings": 8,
+    "highest_priority": "High",
+    "validation_status": "complete"
+  },
+  {
+    "repository_id": "service-b",
+    "project_name": "service-b",
+    "repository_path": "/repos/service-b",
+    "branch": "main",
+    "commit": "e4f5g6h",
+    "total_findings": 3,
+    "highest_priority": "Medium",
+    "validation_status": "partial"
+  }
+]
