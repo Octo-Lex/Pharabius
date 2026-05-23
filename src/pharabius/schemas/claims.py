@@ -93,6 +93,40 @@ class OperationalClaim(BaseModel):
         return self
 
 
+class GapItem(BaseModel):
+    """A single gap item in the gap registry."""
+
+    model_config = {"extra": "forbid"}
+
+    gap_id: str
+    claim_id: str | None = None
+    linked_findings: list[str] = Field(default_factory=list)
+    linked_work_packages: list[str] = Field(default_factory=list)
+    severity: Literal["blocking", "non_blocking"]
+    question: str
+    reason: str
+    evidence_ids: list[str] = Field(default_factory=list)
+    recommended_owner: str | None = None
+
+
+class QuestionItem(BaseModel):
+    """A single question item in the question registry."""
+
+    model_config = {"extra": "forbid"}
+
+    question_id: str
+    claim_id: str | None = None
+    linked_findings: list[str] = Field(default_factory=list)
+    question: str
+    category: Literal[
+        "product_engineering",
+        "architecture",
+        "security_compliance",
+        "testing_verification",
+        "general",
+    ] = "general"
+
+
 class OperationalClaimsRegisterSummary(BaseModel):
     """Summary counts for the claims register."""
 

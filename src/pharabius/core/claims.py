@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import cast
 
 from pharabius.schemas.claims import (
+    GapItem,
     OperationalClaim,
     OperationalClaimsRegister,
     OperationalClaimsRegisterSummary,
+    QuestionItem,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,9 +87,8 @@ def generate_claims_from_findings(
         warnings = []
 
     claims: list[OperationalClaim] = []
-    claim_counter = 0
 
-    for finding in findings:
+    for idx, finding in enumerate(findings, 1):
         fid = str(finding.get("id", ""))
         category = str(finding.get("category", "TD-CODE"))
         title = str(finding.get("title", ""))
@@ -101,8 +102,7 @@ def generate_claims_from_findings(
             str(x) for x in cast("list[object]", finding.get("related_findings") or [])
         ]
 
-        claim_counter += 1
-        claim_id = f"CLM-{claim_counter:06d}"
+        claim_id = f"CLM-{idx:06d}"
 
         claim_type = _map_claim_type(category)
         status, confidence, requires_hv, question = _determine_status(evidence_ids, bib)
@@ -287,4 +287,115 @@ def write_gaps_markdown(claims_dir: Path, register: OperationalClaimsRegister) -
     claims_dir.mkdir(parents=True, exist_ok=True)
     path = claims_dir / "gaps.md"
     path.write_text(render_gaps_markdown(register), encoding="utf-8")
+    return path
+
+
+def extract_gaps_from_claims(
+    claims: list[OperationalClaim],
+    findings: list[dict[str, object]] | None = None,
+) -> list[GapItem]:
+    """Extract gap items from operational claims."""
+    findings = findings or []
+    # Build priority lookup
+    priority_map: dict[str, str] = {}
+    for f in findings:
+        fid = str(f.get("id", ""))
+        priority_map[fid] = str(f.get("priority", "Medium"))
+
+    gaps: list[GapItem] = []
+    gap_counter = 0
+    for claim in claims:
+        if claim.status != "gap":
+            continue
+        gap_counter += 1
+        fid = claim.linked_findings[0] if claim.linked_findings else ""
+        priority = priority_map.get(fid, "Medium")
+        severity = "blocking" if priority in ("Critical", "High") else "non_blocking"
+        gaps.append(
+            GapItem(
+                gap_id=f"GAP-{gap_counter:04d}",
+                claim_id=claim.claim_id,
+                linked_findings=claim.linked_findings,
+                linked_work_packages=claim.linked_work_packages,
+                severity=severity,  # type: ignore[arg-type]
+                question=claim.validation_question or "Manual validation required.",
+                reason=claim.statement,
+                evidence_ids=claim.evidence_ids,
+            )
+        )
+    return gaps
+
+
+def extract_questions_from_claims(
+    claims: list[OperationalClaim],
+) -> list[QuestionItem]:
+    """Extract question items from claims requiring human validation."""
+    questions: list[QuestionItem] = []
+    q_counter = 0
+
+    # Map claim types to question categories
+    cat_map: dict[str, str] = {
+        "architecture": "architecture",
+        "security": "security_compliance",
+        "compliance": "security_compliance",
+        "test": "testing_verification",
+        "behavior": "product_engineering",
+    }
+
+    for claim in claims:
+        if not claim.requires_human_validation:
+            continue
+        q_counter += 1
+        questions.append(
+            QuestionItem(
+                question_id=f"Q-{q_counter:04d}",
+                claim_id=claim.claim_id,
+                linked_findings=claim.linked_findings,
+                question=claim.validation_question or "Validation required.",
+                category=cat_map.get(claim.claim_type, "general"),  # type: ignore[arg-type]
+            )
+        )
+    return questions
+
+
+def render_questions_markdown(questions: list[QuestionItem]) -> str:
+    """Render questions as Markdown grouped by category."""
+    lines: list[str] = []
+    lines.append("# Question Registry")
+    lines.append("")
+
+    if not questions:
+        lines.append("No questions identified.")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines.append(f"**Total questions**: {len(questions)}")
+    lines.append("")
+
+    # Group by category
+    categories: dict[str, list[QuestionItem]] = {}
+    for q in questions:
+        categories.setdefault(q.category, []).append(q)
+
+    for cat_name in sorted(categories):
+        lines.append(f"## {cat_name.replace('_', ' ').title()}")
+        lines.append("")
+        for q in categories[cat_name]:
+            lines.append(f"### {q.question_id}")
+            lines.append("")
+            lines.append(f"**Question**: {q.question}")
+            if q.claim_id:
+                lines.append(f"**Linked claim**: {q.claim_id}")
+            if q.linked_findings:
+                lines.append(f"**Linked findings**: {', '.join(q.linked_findings)}")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+def write_questions_markdown(claims_dir: Path, questions: list[QuestionItem]) -> Path:
+    """Write questions.md."""
+    claims_dir.mkdir(parents=True, exist_ok=True)
+    path = claims_dir / "questions.md"
+    path.write_text(render_questions_markdown(questions), encoding="utf-8")
     return path
