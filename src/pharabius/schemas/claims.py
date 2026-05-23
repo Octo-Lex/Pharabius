@@ -127,6 +127,34 @@ class QuestionItem(BaseModel):
     ] = "general"
 
 
+class ClaimCompleteness(BaseModel):
+    """Per-claim completeness assessment."""
+
+    model_config = {"extra": "forbid"}
+
+    claim_id: str
+    status: Literal["complete", "partial", "needs_review"]
+    evidence_linked: bool = False
+    finding_linked: bool = False
+    work_package_linked: bool = False
+    has_validation_question: bool = False
+    blocking_gap: bool = False
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ClaimRegisterCompleteness(BaseModel):
+    """Register-level completeness summary."""
+
+    model_config = {"extra": "forbid"}
+
+    total_claims: int = 0
+    complete: int = 0
+    partial: int = 0
+    needs_review: int = 0
+    claims: list[ClaimCompleteness] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class OperationalClaimsRegisterSummary(BaseModel):
     """Summary counts for the claims register."""
 

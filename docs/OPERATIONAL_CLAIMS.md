@@ -92,6 +92,7 @@ Warnings flag: orphan evidence, findings without claims, and work packages with 
 
 ## Related Documentation
 
+- [Operational Claims Adoption Guide](OPERATIONAL_CLAIMS_ADOPTION.md)
 - [Portfolio Summary](PORTFOLIO.md)
 - [Review Workflow](REVIEW_WORKFLOW.md)
 - [Ticket Drafts](TICKET_DRAFTS.md)

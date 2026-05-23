@@ -1,0 +1,59 @@
+{
+  "total_claims": 5,
+  "complete": 2,
+  "partial": 1,
+  "needs_review": 2,
+  "claims": [
+    {
+      "claim_id": "CLM-000001",
+      "status": "complete",
+      "evidence_linked": true,
+      "finding_linked": true,
+      "work_package_linked": true,
+      "has_validation_question": false,
+      "blocking_gap": false,
+      "warnings": []
+    },
+    {
+      "claim_id": "CLM-000002",
+      "status": "complete",
+      "evidence_linked": true,
+      "finding_linked": true,
+      "work_package_linked": true,
+      "has_validation_question": false,
+      "blocking_gap": false,
+      "warnings": []
+    },
+    {
+      "claim_id": "CLM-000003",
+      "status": "partial",
+      "evidence_linked": true,
+      "finding_linked": true,
+      "work_package_linked": false,
+      "has_validation_question": true,
+      "blocking_gap": false,
+      "warnings": ["Inferred claim lacks documented limitations."]
+    },
+    {
+      "claim_id": "CLM-000004",
+      "status": "needs_review",
+      "evidence_linked": false,
+      "finding_linked": true,
+      "work_package_linked": true,
+      "has_validation_question": true,
+      "blocking_gap": true,
+      "warnings": ["Work package should not proceed until validation is complete."]
+    },
+    {
+      "claim_id": "CLM-000005",
+      "status": "needs_review",
+      "evidence_linked": false,
+      "finding_linked": true,
+      "work_package_linked": false,
+      "has_validation_question": true,
+      "blocking_gap": true,
+      "warnings": []
+    }
+  ],
+  "warnings": ["2 claim(s) need human review before implementation."]
+}

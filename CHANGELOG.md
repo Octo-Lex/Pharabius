@@ -2,6 +2,24 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.9.1] - Unreleased
+
+### Added
+
+- Operational claim validation (structured error/warning result with cross-reference checks)
+- Claim quality and completeness checks (complete/partial/needs_review per claim)
+- Richer claims, gaps, questions, confidence, validation, completeness, and traceability examples
+- Agent-handoff contract artifact (.ai-debt/agent-handoff-contract.md)
+- Operational claims adoption guide (docs/OPERATIONAL_CLAIMS_ADOPTION.md)
+
+### Safety
+
+- Agent-handoff contract is a safety and context artifact, not implementation authority
+- No production code is modified
+- No autonomous remediation is introduced
+- No canonical artifacts are mutated
+- No external APIs are called
+
 ## [1.9.0] - Unreleased
 
 ### Added
