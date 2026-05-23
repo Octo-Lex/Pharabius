@@ -399,3 +399,139 @@ def write_questions_markdown(claims_dir: Path, questions: list[QuestionItem]) ->
     path = claims_dir / "questions.md"
     path.write_text(render_questions_markdown(questions), encoding="utf-8")
     return path
+
+
+def compute_confidence_metrics(
+    claims: list[OperationalClaim],
+    gaps: list[GapItem] | None = None,
+) -> dict[str, int | float]:
+    """Compute confidence metrics from claims and gaps."""
+    gaps = gaps or []
+    total = len(claims)
+    confirmed = sum(1 for c in claims if c.status == "confirmed")
+    inferred = sum(1 for c in claims if c.status == "inferred")
+    gap_count = sum(1 for c in claims if c.status == "gap")
+    high = sum(1 for c in claims if c.confidence == "High")
+    medium = sum(1 for c in claims if c.confidence == "Medium")
+    low = sum(1 for c in claims if c.confidence == "Low")
+    requires_hv = sum(1 for c in claims if c.requires_human_validation)
+    blocking = sum(1 for g in gaps if g.severity == "blocking")
+    non_blocking = sum(1 for g in gaps if g.severity == "non_blocking")
+    evidence_linked = sum(1 for c in claims if c.evidence_ids)
+    evidence_missing = total - evidence_linked
+    total_evidence = sum(len(c.evidence_ids) for c in claims)
+    avg_evidence = round(total_evidence / total, 2) if total > 0 else 0.0
+
+    return {
+        "total_claims": total,
+        "confirmed_claims": confirmed,
+        "inferred_claims": inferred,
+        "gap_claims": gap_count,
+        "high_confidence": high,
+        "medium_confidence": medium,
+        "low_confidence": low,
+        "claims_requiring_human_validation": requires_hv,
+        "blocking_gaps": blocking,
+        "non_blocking_gaps": non_blocking,
+        "evidence_linked_claims": evidence_linked,
+        "evidence_missing_claims": evidence_missing,
+        "average_evidence_per_claim": avg_evidence,
+    }
+
+
+def _compute_warnings(
+    claims: list[OperationalClaim],
+) -> list[str]:
+    """Warn about high-priority findings without confirmed claims."""
+    warnings: list[str] = []
+    for c in claims:
+        if c.status != "confirmed" and c.confidence == "High":
+            fid = c.linked_findings[0] if c.linked_findings else "unknown"
+            warnings.append(f"High-priority finding {fid} lacks confirmed claim ({c.claim_id})")
+    return warnings
+
+
+def render_confidence_report(
+    claims: list[OperationalClaim],
+    gaps: list[GapItem] | None = None,
+) -> str:
+    """Render confidence-report.md content."""
+    metrics = compute_confidence_metrics(claims, gaps)
+    warnings = _compute_warnings(claims)
+
+    lines: list[str] = []
+    lines.append("# Confidence Report")
+    lines.append("")
+
+    # Summary
+    lines.append("## Summary")
+    lines.append("")
+    lines.append("| Metric | Count |")
+    lines.append("|---|---:|")
+    for key in (
+        "total_claims",
+        "confirmed_claims",
+        "inferred_claims",
+        "gap_claims",
+        "claims_requiring_human_validation",
+    ):
+        label = key.replace("_", " ").title()
+        lines.append(f"| {label} | {metrics[key]} |")
+    lines.append("")
+
+    # Claims by Confidence
+    lines.append("## Claims by Confidence")
+    lines.append("")
+    lines.append("| Confidence | Count |")
+    lines.append("|---|---:|")
+    lines.append(f"| High | {metrics['high_confidence']} |")
+    lines.append(f"| Medium | {metrics['medium_confidence']} |")
+    lines.append(f"| Low | {metrics['low_confidence']} |")
+    lines.append("")
+
+    # Gap Summary
+    lines.append("## Gap Summary")
+    lines.append("")
+    lines.append(f"- **Blocking gaps**: {metrics['blocking_gaps']}")
+    lines.append(f"- **Non-blocking gaps**: {metrics['non_blocking_gaps']}")
+    lines.append("")
+
+    # Traceability Density
+    lines.append("## Traceability Density")
+    lines.append("")
+    lines.append(f"- **Evidence-linked claims**: {metrics['evidence_linked_claims']}")
+    lines.append(f"- **Evidence-missing claims**: {metrics['evidence_missing_claims']}")
+    lines.append(f"- **Average evidence per claim**: {metrics['average_evidence_per_claim']}")
+    lines.append("")
+
+    # Warnings
+    if warnings:
+        lines.append("## Warnings")
+        lines.append("")
+        for w in warnings:
+            lines.append(f"- {w}")
+        lines.append("")
+
+    # Interpretation note
+    lines.append("## Interpretation Notes")
+    lines.append("")
+    lines.append(
+        "Confidence distribution is not a factual-precision measurement. "
+        "It indicates traceability and uncertainty posture based on "
+        "available repository evidence."
+    )
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def write_confidence_report(
+    claims_dir: Path,
+    claims: list[OperationalClaim],
+    gaps: list[GapItem] | None = None,
+) -> Path:
+    """Write confidence-report.md."""
+    claims_dir.mkdir(parents=True, exist_ok=True)
+    path = claims_dir / "confidence-report.md"
+    path.write_text(render_confidence_report(claims, gaps), encoding="utf-8")
+    return path
