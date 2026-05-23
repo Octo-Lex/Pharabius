@@ -424,3 +424,12 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 - Export bundles do not modify ticket drafts, debt register, or scoring artifacts.
 - Manifest validation detects structural issues but does not repair them.
 - Completeness checks are advisory (partial/needs_review bundles remain usable).
+
+## 16. Portfolio summary limitations
+
+- Portfolio summaries are point-in-time snapshots. Re-run after new analysis.
+- Category rollups are derived from `top_categories` per repository, not full finding counts.
+- No remote repository crawling or organization scanning.
+- No automatic scheduling or CI integration for portfolio generation.
+- Portfolio does not recalculate risk scores.
+- Repositories without `.ai-debt/debt-register.json` are skipped with a warning.

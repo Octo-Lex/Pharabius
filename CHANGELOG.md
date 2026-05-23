@@ -2,6 +2,24 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.8.0] - Unreleased
+
+### Added
+
+- Portfolio summary artifacts (schemas, aggregation, rollups, validation)
+- Portfolio repository index with per-repo risk and category summaries
+- Portfolio risk and category rollups (aggregate priority and category counts)
+- Portfolio readiness and validation rollups (readiness status, ticket/export detection)
+- `ai-debt portfolio` CLI command with `--repo` (repeatable) and `--output` options
+- Portfolio documentation (`docs/PORTFOLIO.md`) and examples
+
+### Safety
+
+- No server, dashboard, scheduler, database, or remote repository crawling
+- No external API calls
+- No canonical debt register or work package mutation
+- No scoring behavior changes
+
 ## [1.7.1] - Unreleased
 
 ### Added
