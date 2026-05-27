@@ -20,6 +20,7 @@ class TestV2DocsExist:
         "V2_DATA_MODEL_AND_DEPLOYMENT_OPTIONS.md",
         "V2_ROADMAP_DECISION_MATRIX.md",
         "V2_PLANNING_REPORT.md",
+        "V2_COMPETITIVE_GAP_ANALYSIS.md",
     ]
 
     def test_all_v2_docs_exist(self) -> None:

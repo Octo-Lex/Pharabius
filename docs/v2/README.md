@@ -13,6 +13,7 @@ This directory contains strategy, design, and decision artifacts for Pharabius v
 | [V2_DATA_MODEL_AND_DEPLOYMENT_OPTIONS.md](V2_DATA_MODEL_AND_DEPLOYMENT_OPTIONS.md) | Data model and deployment architecture options (W52-S04) |
 | [V2_ROADMAP_DECISION_MATRIX.md](V2_ROADMAP_DECISION_MATRIX.md) | Scored roadmap options (W52-S05) |
 | [V2_PLANNING_REPORT.md](V2_PLANNING_REPORT.md) | Final recommendation (W52-S06) |
+| [V2_COMPETITIVE_GAP_ANALYSIS.md](V2_COMPETITIVE_GAP_ANALYSIS.md) | Competitive landscape and honest gap assessment |
 
 ## Important
 
