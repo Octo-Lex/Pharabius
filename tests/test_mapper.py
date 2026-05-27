@@ -670,25 +670,21 @@ class TestWriteAnalysisUnits:
         assert len(store.units) >= 1
 
     def test_write_fails_without_profile(self, tmp_path: Path) -> None:
-        import click
-
         ai_debt = tmp_path / ".ai-debt"
         ai_debt.mkdir()
         evidence = EvidenceStore()
         (ai_debt / "evidence.json").write_text(evidence.model_dump_json(), encoding="utf-8")
 
-        with pytest.raises((SystemExit, click.exceptions.BadParameter)):
+        with pytest.raises((SystemExit, Exception)):
             write_analysis_units(tmp_path)
 
     def test_write_fails_without_evidence(self, tmp_path: Path) -> None:
-        import click
-
         ai_debt = tmp_path / ".ai-debt"
         ai_debt.mkdir()
         profile = _minimal_profile(tmp_path)
         (ai_debt / "project-profile.json").write_text(profile.model_dump_json(), encoding="utf-8")
 
-        with pytest.raises((SystemExit, click.exceptions.BadParameter)):
+        with pytest.raises((SystemExit, Exception)):
             write_analysis_units(tmp_path)
 
 

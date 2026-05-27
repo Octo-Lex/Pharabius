@@ -444,3 +444,4 @@ Full graph/git-backed scoring alignment requires v0.11.0+ work.
 - Claim generation does not use AI or external data sources.
 - Agent-handoff contract does not authorize code modification.
 - Completeness checks (complete/partial/needs_review) are advisory, not approval decisions.
+- v1 readiness report is a validation summary, not a quality guarantee.

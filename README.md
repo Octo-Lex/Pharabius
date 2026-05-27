@@ -42,7 +42,12 @@ See `docs/VALIDATION_MATRIX.md` for the full test plan and `docs/RELEASE_CHECKLI
 
 | Document | Description |
 |---|---|
+| [Docs Index](docs/README.md) | Full documentation index |
+| [Quickstart](docs/QUICKSTART.md) | Install, run, and understand output |
 | [CHANGELOG.md](CHANGELOG.md) | Release notes for each version |
+| [CLI Reference](docs/CLI.md) | All 17 commands with safety classifications |
+| [Artifact Contract](docs/ARTIFACT_CONTRACT.md) | Complete artifact inventory |
+| [Schema Map](docs/SCHEMA_MAP.md) | Schema to artifact mapping |
 | [SAMPLE_OUTPUT.md](docs/SAMPLE_OUTPUT.md) | Curated output snippets and examples |
 | [ADOPTION_GUIDE.md](docs/ADOPTION_GUIDE.md) | Product Engineering Team adoption workflow |
 | [GOVERNANCE.md](docs/GOVERNANCE.md) | Governance overview and safety invariants |
