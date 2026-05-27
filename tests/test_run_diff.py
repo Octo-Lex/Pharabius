@@ -94,9 +94,7 @@ class TestDiffEngine:
         before = tmp_path / "before.json"
         after = tmp_path / "after.json"
         _write_register(before, [_f("TD-001"), _f("TD-002")], "RUN-1")
-        _write_register(
-            after, [_f("TD-001"), _f("TD-003"), _f("TD-004")], "RUN-2"
-        )
+        _write_register(after, [_f("TD-001"), _f("TD-003"), _f("TD-004")], "RUN-2")
         diff = compute_run_diff(before, after)
         assert diff.summary.net_change == 1  # 2 → 3
 

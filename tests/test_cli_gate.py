@@ -80,17 +80,13 @@ class TestGateCLIOverrides:
             tmp_path / ".ai-debt" / "debt-register.json",
             [_finding(severity="Critical")],
         )
-        result = runner.invoke(
-            app, ["gate", "-r", str(tmp_path), "--max-critical", "1"]
-        )
+        result = runner.invoke(app, ["gate", "-r", str(tmp_path), "--max-critical", "1"])
         assert result.exit_code == 0
 
     def test_override_max_high(self, tmp_path: Path) -> None:
         findings = [_finding(severity="High") for _ in range(5)]
         _write_debt_register(tmp_path / ".ai-debt" / "debt-register.json", findings)
-        result = runner.invoke(
-            app, ["gate", "-r", str(tmp_path), "--max-high", "3"]
-        )
+        result = runner.invoke(app, ["gate", "-r", str(tmp_path), "--max-high", "3"])
         assert result.exit_code == 1
 
 
