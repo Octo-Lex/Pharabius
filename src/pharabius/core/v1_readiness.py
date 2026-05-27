@@ -290,15 +290,9 @@ def render_readiness_markdown(report: V1ReadinessReport) -> str:
     if report.status == "ready":
         lines.append("All required checks pass. Repository is v1-ready.")
     elif report.status == "partial":
-        lines.append(
-            "All required checks pass but warnings exist. "
-            "Review warnings before release."
-        )
+        lines.append("All required checks pass but warnings exist. Review warnings before release.")
     else:
-        lines.append(
-            "One or more required checks failed. "
-            "Address failures before release."
-        )
+        lines.append("One or more required checks failed. Address failures before release.")
     lines.append("")
 
     return "\n".join(lines)
