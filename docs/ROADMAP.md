@@ -1,5 +1,15 @@
 # Pharabius Roadmap
 
+## v1.10.0 — v1 Contract Consolidation & Release Candidate (unreleased)
+
+- Artifact contract inventory and schema map
+- CLI command surface audit and help-text consistency
+- End-to-end golden path validation
+- Documentation architecture and onboarding cleanup
+- v1 readiness report generator
+- 45 new tests
+- No new product capability, no external APIs
+
 ## v1.9.1 — Operational Claims Polish & Agent-Handoff Pack (unreleased)
 
 - Claim validation improvements (structured errors/warnings)
