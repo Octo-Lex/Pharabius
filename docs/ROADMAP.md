@@ -1,5 +1,23 @@
 # Pharabius Roadmap
 
+## v2.1 Planning
+
+- Policy engine foundation (architecture-policy.yaml enforcement)
+- IDE feedback prototype
+- Dashboard prototype
+- Temporal trend charts
+
+## v2.0 — Local CI Quality Gate (Wave 53)
+
+- Quality gate schema and evaluation engine
+- `ai-debt gate` command with pass/fail exit codes
+- Temporal diff between runs (`ai-debt diff`)
+- SARIF enhancement for GitHub Code Scanning
+- GitHub Action for CI integration
+- GitHub Action documentation
+- 64 new tests (1,690 total)
+- All 7 release gates pass
+
 ## v2.0 Planning (Wave 52 — strategy documents)
 
 - Product thesis, option map, automation boundaries

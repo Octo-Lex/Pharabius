@@ -71,8 +71,18 @@ ai-debt export        # Export bundles for trackers
 ai-debt portfolio     # Multi-repo portfolio summary
 ```
 
+## CI Commands
+
+For CI/CD integration:
+
+```
+ai-debt gate          # Quality gate (exit 0/1)
+ai-debt diff          # Compare two runs
+```
+
 ## Related Documentation
 
 - [Artifact Contract](ARTIFACT_CONTRACT.md)
 - [Schema Map](SCHEMA_MAP.md)
 - [Adoption Guide](ADOPTION_GUIDE.md)
+- [GitHub Action](GITHUB_ACTION.md)

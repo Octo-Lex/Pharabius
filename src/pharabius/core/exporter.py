@@ -236,6 +236,9 @@ def _build_sarif(
             "workPackages": wp_lookup.get(finding.id, []),
         }
 
+        # GitHub Code Scanning fingerprint for dedup
+        result["fingerprints"] = {"debtId": finding.id}
+
         results.append(result)
 
     version = _get_tool_version()
