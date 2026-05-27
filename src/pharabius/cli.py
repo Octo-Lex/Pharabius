@@ -719,6 +719,9 @@ def export(
 ) -> None:
     """
     Export findings to SARIF, CSV, or JSONL format.
+
+    Export bundles are tracker-preparation artifacts. No external APIs are
+    called and no issues are created in external systems.
     """
     from pharabius.core.exporter import export_findings
 
@@ -824,7 +827,10 @@ def enrich(
         ),
     ] = 30,
 ) -> None:
-    """Enrich findings with AI-generated explanations and rationale."""
+    """Enrich findings with AI-generated explanations and rationale.
+
+    AI enrichments are repository-local sidecar records, not canonical findings.
+    """
     from pharabius.ai.enricher import enrich_findings, format_context_preview, preview_context
 
     resolved_root = (repository_root or Path.cwd()).resolve()
@@ -1208,7 +1214,11 @@ def portfolio(
         typer.Option("--output", help="Output directory for portfolio artifacts."),
     ] = None,
 ) -> None:
-    """Generate portfolio summary from one or more repositories."""
+    """Generate portfolio summary from one or more repositories.
+
+    Portfolio summaries are read-only rollups over local .ai-debt/ artifacts.
+    No remote crawling, external APIs, or canonical mutation.
+    """
     from importlib.metadata import version as pkg_version
 
     from pharabius.schemas.portfolio import PortfolioSummary
