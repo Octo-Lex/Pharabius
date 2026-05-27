@@ -123,3 +123,28 @@ These artifacts are produced by the core analysis pipeline and serve as the sour
 | Level | Meaning |
 |---|---|
 | **Stable** | Artifact format is part of the v1 contract. Breaking changes require a major version bump. |
+
+## Required vs Optional vs Conditional
+
+**Required** artifacts are produced by every `ai-debt run` invocation. If a required artifact is missing, the v1 readiness report will report `fail` status.
+
+**Optional** artifacts are produced only when their preconditions are met. For example:
+- `architecture-graph.json` requires `ai-debt graph` to have been run
+- `review/decisions.json` requires `ai-debt review --init`
+- `ticket-drafts/*` requires `ai-debt tickets`
+- `portfolio/*` requires `ai-debt portfolio`
+- `claims/*` and `traceability/*` require the claims pipeline
+
+**Conditional** artifacts depend on analysis results. For example:
+- Work packages are generated only when findings exist
+- Export bundles are generated only when `ai-debt export` is run
+
+Missing optional artifacts produce `warning` status in the readiness report, not `fail`.
+
+## Readiness Status Semantics
+
+| Status | Meaning |
+|---|---|
+| **ready** | All required artifacts present and valid. No warnings. |
+| **partial** | All required artifacts present and valid. Some optional artifacts missing or issues found. Review before release. |
+| **needs_review** | One or more required artifacts missing or invalid. Do not release without addressing failures. |
