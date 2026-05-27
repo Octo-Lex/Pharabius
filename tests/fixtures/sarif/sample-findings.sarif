@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Pharabius",
+          "version": "2.0.0",
+          "semanticVersion": "2.0.0",
+          "rules": [
+            {
+              "id": "TD-DEP",
+              "name": "Dependency Management",
+              "shortDescription": { "text": "Dependency Management" },
+              "properties": { "category": "TD-DEP" }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "TD-DEP",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": { "text": "Missing lockfile" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/main.py" },
+                "region": { "startLine": 1 }
+              }
+            }
+          ],
+          "fingerprints": { "debtId": "TD-DEP-001" },
+          "properties": {
+            "debtId": "TD-DEP-001",
+            "category": "TD-DEP",
+            "severity": "Medium",
+            "score": 5,
+            "confidence": "High",
+            "status": "Detected",
+            "verificationStatus": "",
+            "evidenceIds": ["EVD-001"],
+            "analysisUnitIds": [],
+            "workPackages": []
+          }
+        }
+      ]
+    }
+  ]
+}

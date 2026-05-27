@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 from pharabius.core.quality_gate import evaluate_quality_gate, render_quality_gate_markdown
-from pharabius.schemas.quality_gate import QualityGateThresholds
 
 
 def _write_register(path: Path, findings: list[dict]) -> None:
