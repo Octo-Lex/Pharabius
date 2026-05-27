@@ -1400,5 +1400,91 @@ def _recommend_next_command(blocking: Sequence[V1ReadinessCheck], root: Path) ->
     return "ai-debt status"
 
 
+@app.command()
+def gate(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to check.",
+        ),
+    ] = None,
+    max_critical: Annotated[
+        int | None,
+        typer.Option(
+            "--max-critical",
+            help="Max allowed Critical findings. Override config.",
+        ),
+    ] = None,
+    max_high: Annotated[
+        int | None,
+        typer.Option(
+            "--max-high",
+            help="Max allowed High findings. Override config.",
+        ),
+    ] = None,
+    max_total: Annotated[
+        int | None,
+        typer.Option(
+            "--max-total",
+            help="Max allowed total findings. Override config.",
+        ),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Output machine-readable JSON.",
+        ),
+    ] = False,
+) -> None:
+    """Evaluate quality gate thresholds. Exits 0 on PASS, 1 on FAIL.
+
+    Reads debt-register.json and checks against configurable thresholds.
+    Read-only — does not modify any files.
+    """
+
+    from pharabius.core.quality_gate import evaluate_quality_gate
+    from pharabius.schemas.quality_gate import QualityGateThresholds
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    debt_register = resolved_root / ".ai-debt" / "debt-register.json"
+
+    # Build thresholds from CLI overrides or defaults
+    thresholds = QualityGateThresholds(
+        max_critical=max_critical if max_critical is not None else 0,
+        max_high=max_high if max_high is not None else 10,
+        max_total=max_total if max_total is not None else 50,
+    )
+
+    result = evaluate_quality_gate(debt_register, thresholds)
+
+    if json_output:
+        console.print_json(result.model_dump_json())
+    else:
+        color = "green" if result.result == "PASS" else "red"
+        console.print(f"[bold {color}]Quality Gate: {result.result}[/bold {color}]")
+
+        for rule in result.rules:
+            if rule.rule == "fail_on_categories":
+                status = "✓" if rule.passed else "✗"
+                console.print(
+                    f"  Categories: {'all clear' if rule.passed else ', '.join(rule.categories)} {status}"
+                )
+            else:
+                sev_name = rule.rule.replace("max_", "").capitalize()
+                status = "✓" if rule.passed else "✗"
+                suffix = "" if rule.passed else f" ← exceeded by {rule.actual - rule.threshold}"
+                console.print(
+                    f"  {sev_name}: {rule.actual} (max {rule.threshold}) {status}{suffix}"
+                )
+
+        if result.failed_rules:
+            console.print(f"  Failed rules: {', '.join(result.failed_rules)}")
+
+    raise typer.Exit(code=result.exit_code)
+
+
 if __name__ == "__main__":
     app()
