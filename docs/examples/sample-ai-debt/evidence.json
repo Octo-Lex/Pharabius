@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "evidence": [
+    {
+      "id": "EVD-001",
+      "type": "dependency_manifest",
+      "location": {"file": "package.json", "line": 1},
+      "content_hash": "abc123",
+      "tags": ["node", "npm"]
+    }
+  ]
+}

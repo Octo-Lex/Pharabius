@@ -1,5 +1,15 @@
 # Pharabius Roadmap
 
+## v1.10.2 — RC2 Adoption & Packaging Hardening (unreleased)
+
+- Packaging verification matrix
+- CLI onboarding diagnostics (ai-debt doctor)
+- Sample .ai-debt bundle
+- Release artifact consistency checks
+- Adoption readiness checklist
+- 28 new tests
+- No new product capability
+
 ## v1.10.1 — RC Hardening & Field Validation (unreleased)
 
 - Multi-repo v1 golden-path field validation

@@ -3,6 +3,7 @@
 ## Getting Started
 
 - [Quickstart](QUICKSTART.md) — Install, run, and understand output
+- [Adoption Checklist](ADOPTION_CHECKLIST.md) — Go/no-go checklist for teams
 - [Adoption Guide](ADOPTION_GUIDE.md) — Practical adoption walkthrough
 - [Sample Output](SAMPLE_OUTPUT.md) — Example report output
 

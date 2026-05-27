@@ -2,6 +2,23 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.10.2] - Unreleased
+
+### Added
+
+- Packaging verification matrix (scripts/validate_packaging.py)
+- CLI onboarding diagnostics: `ai-debt doctor` command (read-only)
+- Sample .ai-debt bundle (docs/examples/sample-ai-debt/)
+- Release artifact consistency checks (scripts/validate_release_consistency.py)
+- Adoption readiness checklist (docs/ADOPTION_CHECKLIST.md)
+
+### Safety
+
+- No new product capability
+- No scoring behavior changes
+- No external APIs
+- No autonomous remediation
+
 ## [1.10.1] - Unreleased
 
 ### Added
