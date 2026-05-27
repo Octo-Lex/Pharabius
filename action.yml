@@ -1,0 +1,80 @@
+name: "Pharabius Technical Debt Analysis"
+description: "Run Pharabius analysis and quality gate in CI. Produces SARIF for GitHub Code Scanning."
+author: "Elephant-Rock-Lab"
+
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  command:
+    description: "Command to run: 'gate', 'run', or 'run+gate' (run analysis then gate)"
+    required: false
+    default: "gate"
+  max-critical:
+    description: "Maximum allowed Critical findings (quality gate)"
+    required: false
+    default: "0"
+  max-high:
+    description: "Maximum allowed High findings (quality gate)"
+    required: false
+    default: "10"
+  max-total:
+    description: "Maximum allowed total findings (quality gate)"
+    required: false
+    default: "50"
+  fail-on-gate:
+    description: "Fail the workflow if quality gate does not pass"
+    required: false
+    default: "true"
+  sarif-output:
+    description: "Path to write SARIF output for GitHub Code Scanning. Empty string disables."
+    required: false
+    default: "pharabius.sarif"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Pharabius
+      shell: bash
+      run: pip install pharabius==2.0.0
+
+    - name: Run analysis
+      if: inputs.command == 'run' || inputs.command == 'run+gate'
+      shell: bash
+      run: |
+        if [ ! -d .ai-debt ]; then
+          ai-debt init
+        fi
+        ai-debt run
+
+    - name: Run quality gate
+      if: inputs.command == 'gate' || inputs.command == 'run+gate'
+      shell: bash
+      run: |
+        GATE_ARGS=""
+        if [ "${{ inputs.max-critical }}" != "" ]; then
+          GATE_ARGS="$GATE_ARGS --max-critical ${{ inputs.max-critical }}"
+        fi
+        if [ "${{ inputs.max-high }}" != "" ]; then
+          GATE_ARGS="$GATE_ARGS --max-high ${{ inputs.max-high }}"
+        fi
+        if [ "${{ inputs.max-total }}" != "" ]; then
+          GATE_ARGS="$GATE_ARGS --max-total ${{ inputs.max-total }}"
+        fi
+
+        if ai-debt gate $GATE_ARGS; then
+          echo "::notice::Quality gate PASSED"
+        else
+          if [ "${{ inputs.fail-on-gate }}" == "true" ]; then
+            echo "::error::Quality gate FAILED"
+            exit 1
+          else
+            echo "::warning::Quality gate FAILED (non-blocking)"
+          fi
+        fi
+
+    - name: Export SARIF
+      if: inputs.sarif-output != ''
+      shell: bash
+      run: ai-debt export --format sarif --output-dir "${{ inputs.sarif-output }}"
