@@ -2,6 +2,31 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.10.0] - Unreleased
+
+### Added
+
+- v1 artifact contract inventory (docs/ARTIFACT_CONTRACT.md)
+- v1 schema map (docs/SCHEMA_MAP.md)
+- End-to-end golden path validation (scripts/validate_golden_path.py)
+- v1 readiness report generator (core/v1_readiness.py)
+- CLI command reference (docs/CLI.md)
+- Documentation index (docs/README.md)
+- Quickstart guide (docs/QUICKSTART.md)
+
+### Changed
+
+- Improved CLI help-text consistency with safety language
+- Improved documentation architecture and onboarding flow
+- Consolidated v1 validation and release-readiness documentation
+
+### Safety
+
+- No new product capability added
+- No scoring behavior changes
+- No external APIs added
+- No autonomous remediation added
+
 ## [1.9.1] - Unreleased
 
 ### Added

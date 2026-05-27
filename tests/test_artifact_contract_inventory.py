@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 CONTRACT = Path("docs/ARTIFACT_CONTRACT.md")
@@ -51,7 +50,7 @@ class TestCanonicalArtifacts:
 class TestProducerConsumerMapping:
     def test_every_artifact_has_producer(self) -> None:
         text = CONTRACT.read_text()
-        rows = [l for l in text.split("\n") if l.startswith("|")]
+        rows = [line for line in text.split("\n") if line.startswith("|")]
         data_rows = [r for r in rows if not all(c in " |-:" for c in r.strip())]
         for row in data_rows:
             if ".ai-debt/" in row:

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from pharabius.core.v1_readiness import (
-    V1ReadinessReport,
     generate_readiness_report,
     render_readiness_markdown,
 )
@@ -123,6 +121,6 @@ class TestDeterminism:
         r1 = generate_readiness_report(ai)
         r2 = generate_readiness_report(ai)
         assert len(r1.checks) == len(r2.checks)
-        for c1, c2 in zip(r1.checks, r2.checks):
+        for c1, c2 in zip(r1.checks, r2.checks, strict=True):
             assert c1.name == c2.name
             assert c1.status == c2.status

@@ -33,8 +33,9 @@ def main() -> int:
     shutil.copytree(fixture, work_dir)
 
     # Import CLI
-    from pharabius.cli import app
     import typer.testing
+
+    from pharabius.cli import app
 
     runner = typer.testing.CliRunner()
 
@@ -132,7 +133,7 @@ def main() -> int:
     print(f"Commands: {passed} passed, {failed} failed")
     print(f"Artifacts: {artifacts_ok} ok, {artifacts_fail} missing/invalid")
     print(f"Source mutation: {'NONE' if src_ok else 'DETECTED'}")
-    print(f"External API calls: 0 (not tested; script has no network)")
+    print("External API calls: 0 (not tested; script has no network)")
 
     if failed > 0 or artifacts_fail > 0 or not src_ok:
         print()

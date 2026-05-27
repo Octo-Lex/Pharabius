@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pharabius.cli import app
-
 import typer.testing
+
+from pharabius.cli import app
 
 runner = typer.testing.CliRunner()
 

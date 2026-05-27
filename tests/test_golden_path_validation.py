@@ -8,9 +8,9 @@ import shutil
 from pathlib import Path
 
 import pytest
+import typer.testing
 
 from pharabius.cli import app
-import typer.testing
 
 FIXTURE = Path("tests/fixtures/golden_path_repo")
 
@@ -60,9 +60,7 @@ def _run_pipeline(work_dir: Path) -> None:
         ["portfolio", "--repo", str(work_dir)],
     ]:
         result = r.invoke(app, cmd)
-        assert result.exit_code == 0, (
-            f"Failed: {' '.join(cmd)}\n{result.output[:300]}"
-        )
+        assert result.exit_code == 0, f"Failed: {' '.join(cmd)}\n{result.output[:300]}"
 
 
 runner = typer.testing.CliRunner()
