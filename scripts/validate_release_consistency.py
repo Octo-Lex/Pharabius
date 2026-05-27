@@ -165,7 +165,7 @@ def main() -> int:
 
     root = Path(__file__).resolve().parent.parent
     dist = Path(args.dist) if args.dist else None
-    report = validate_release_consistency(args.expectedVersion, root, dist)
+    report = validate_release_consistency(args.expected_version, root, dist)
 
     print(json.dumps(report, indent=2, default=str))
     return 1 if report["status"] != "ready" else 0

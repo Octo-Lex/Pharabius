@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pharabius.core.v1_readiness import V1ReadinessCheck
 from typing import Annotated, Any
 
 import typer
@@ -1353,15 +1357,35 @@ def doctor(
         if len(opt_warnings) > 5:
             console.print(f"  ... and {len(opt_warnings) - 5} more")
 
-    # Recommend next command
+    # Recommend next command based on blocking issues
     next_cmd = _recommend_next_command(required_checks, resolved_root)
     console.print(f"\nNext recommended command: [bold]{next_cmd}[/bold]")
 
 
-def _recommend_next_command(blocking: Sequence[object], root: Path) -> str:
-    """Recommend the next command based on missing artifacts."""
+def _recommend_next_command(blocking: Sequence[V1ReadinessCheck], root: Path) -> str:
+    """Recommend the next command based on blocking readiness issues."""
     ai = root / ".ai-debt"
-    commands = [
+
+    # Map artifact paths to the command that produces them
+    artifact_to_command: dict[str, str] = {
+        "project-profile.json": "ai-debt profile",
+        "evidence.json": "ai-debt scan",
+        "analysis-units.json": "ai-debt map-units",
+        "architecture-graph.json": "ai-debt graph",
+        "debt-register.json": "ai-debt analyze",
+        "debt-register.md": "ai-debt analyze",
+        "reports/foundation-audit-report.md": "ai-debt report",
+        "remediation-roadmap.md": "ai-debt plan",
+        "handoff-summary.md": "ai-debt report",
+    }
+
+    # If blocking issues reference known artifacts, recommend the producer
+    for check in blocking:
+        if check.artifact_path and check.artifact_path in artifact_to_command:
+            return artifact_to_command[check.artifact_path]
+
+    # Fallback: check file existence in pipeline order
+    pipeline = [
         ("ai-debt profile", ai / "project-profile.json"),
         ("ai-debt scan", ai / "evidence.json"),
         ("ai-debt map-units", ai / "analysis-units.json"),
@@ -1370,7 +1394,7 @@ def _recommend_next_command(blocking: Sequence[object], root: Path) -> str:
         ("ai-debt report", ai / "reports" / "foundation-audit-report.md"),
         ("ai-debt plan", ai / "remediation-roadmap.md"),
     ]
-    for cmd, artifact in commands:
+    for cmd, artifact in pipeline:
         if not artifact.exists():
             return cmd
     return "ai-debt status"
