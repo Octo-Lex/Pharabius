@@ -8,7 +8,7 @@ This directory contains strategy, design, and decision artifacts for Pharabius v
 |---|---|
 | [V2_PRODUCT_THESIS.md](V2_PRODUCT_THESIS.md) | Core thesis for v2 expansion |
 | [V2_OPTION_MAP.md](V2_OPTION_MAP.md) | Credible v2 expansion options with value/risk analysis |
-| [V2_AUTOMATION_BOUNDARY_MODEL.md](V2_AUTOMATION_BOUNDARY_MODEL.md) | Automation boundaries for v2 (W52-S02) |
+| [V2_AUTOMATION_BOUNDARY_MODEL.md](V2_AUTOMATION_BOUNDARY_MODEL.md) | Automation levels and forbidden actions (W52-S02) |
 | [V2_EXTERNAL_INTEGRATION_RISK_MODEL.md](V2_EXTERNAL_INTEGRATION_RISK_MODEL.md) | External integration risk analysis (W52-S03) |
 | [V2_DEPLOYMENT_OPTIONS.md](V2_DEPLOYMENT_OPTIONS.md) | Data model and deployment architecture options (W52-S04) |
 | [V2_ROADMAP_DECISION_MATRIX.md](V2_ROADMAP_DECISION_MATRIX.md) | Scored roadmap options (W52-S05) |
