@@ -69,22 +69,31 @@ REQUIRED_MD = [
 
 
 def _check_artifact(
-    ai_debt: Path, rel: str, checks: list[V1ReadinessCheck], required: bool
+    ai_debt: Path,
+    rel: str,
+    checks: list[V1ReadinessCheck],
+    required: bool,
 ) -> None:
     p = ai_debt / rel
     if not p.exists():
-        status = "fail" if required else "warning"
-        msg = (
-            f"Missing required artifact: {rel}" if required else f"Missing optional artifact: {rel}"
-        )
-        checks.append(
-            V1ReadinessCheck(
-                name=f"artifact:{rel}",
-                status=status,
-                message=msg,
-                artifact_path=rel,
+        if required:
+            checks.append(
+                V1ReadinessCheck(
+                    name=f"artifact:{rel}",
+                    status="fail",
+                    message=f"Missing required artifact: {rel}",
+                    artifact_path=rel,
+                )
             )
-        )
+        else:
+            checks.append(
+                V1ReadinessCheck(
+                    name=f"artifact:{rel}",
+                    status="warning",
+                    message=f"Missing optional artifact: {rel}",
+                    artifact_path=rel,
+                )
+            )
         return
 
     if p.suffix == ".json":
@@ -99,15 +108,24 @@ def _check_artifact(
                 )
             )
         except json.JSONDecodeError:
-            status = "fail" if required else "warning"
-            checks.append(
-                V1ReadinessCheck(
-                    name=f"artifact:{rel}",
-                    status=status,
-                    message=f"Invalid JSON: {rel}",
-                    artifact_path=rel,
+            if required:
+                checks.append(
+                    V1ReadinessCheck(
+                        name=f"artifact:{rel}",
+                        status="fail",
+                        message=f"Invalid JSON: {rel}",
+                        artifact_path=rel,
+                    )
                 )
-            )
+            else:
+                checks.append(
+                    V1ReadinessCheck(
+                        name=f"artifact:{rel}",
+                        status="warning",
+                        message=f"Invalid JSON: {rel}",
+                        artifact_path=rel,
+                    )
+                )
     elif p.suffix == ".md":
         content = p.read_text().strip()
         if content:
@@ -120,15 +138,24 @@ def _check_artifact(
                 )
             )
         else:
-            status = "fail" if required else "warning"
-            checks.append(
-                V1ReadinessCheck(
-                    name=f"artifact:{rel}",
-                    status=status,
-                    message=f"Empty Markdown: {rel}",
-                    artifact_path=rel,
+            if required:
+                checks.append(
+                    V1ReadinessCheck(
+                        name=f"artifact:{rel}",
+                        status="fail",
+                        message=f"Empty Markdown: {rel}",
+                        artifact_path=rel,
+                    )
                 )
-            )
+            else:
+                checks.append(
+                    V1ReadinessCheck(
+                        name=f"artifact:{rel}",
+                        status="warning",
+                        message=f"Empty Markdown: {rel}",
+                        artifact_path=rel,
+                    )
+                )
     else:
         checks.append(
             V1ReadinessCheck(
@@ -199,11 +226,11 @@ def generate_readiness_report(ai_debt: Path) -> V1ReadinessReport:
     pass_count = sum(1 for c in checks if c.status == "pass")
 
     if fail_count > 0:
-        status: Literal["ready", "partial", "needs_review"] = "needs_review"
+        report_status: Literal["ready", "partial", "needs_review"] = "needs_review"
     elif warn_count > 0:
-        status = "partial"
+        report_status = "partial"
     else:
-        status = "ready"
+        report_status = "ready"
 
     summary = {
         "total_checks": len(checks),
@@ -214,7 +241,7 @@ def generate_readiness_report(ai_debt: Path) -> V1ReadinessReport:
 
     return V1ReadinessReport(
         generated_at=datetime.now(UTC).isoformat(),
-        status=status,
+        status=report_status,
         checks=checks,
         summary=summary,
     )
@@ -263,9 +290,15 @@ def render_readiness_markdown(report: V1ReadinessReport) -> str:
     if report.status == "ready":
         lines.append("All required checks pass. Repository is v1-ready.")
     elif report.status == "partial":
-        lines.append("All required checks pass but warnings exist. Review warnings before release.")
+        lines.append(
+            "All required checks pass but warnings exist. "
+            "Review warnings before release."
+        )
     else:
-        lines.append("One or more required checks failed. Address failures before release.")
+        lines.append(
+            "One or more required checks failed. "
+            "Address failures before release."
+        )
     lines.append("")
 
     return "\n".join(lines)
