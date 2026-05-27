@@ -2,6 +2,29 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.10.1] - Unreleased
+
+### Added
+
+- Multi-repo v1 golden-path field validation script (scripts/validate_v1_golden_path.py)
+- Artifact contract drift checks (core/artifact_contract.py)
+- v1 readiness report calibration with blocking/non-blocking severity
+- Field-validation evidence pack (docs/validation-results/field-validation-v1.10.1.md)
+
+### Changed
+
+- Improved v1 readiness explanations and documentation clarity
+- Clarified command preconditions and artifact contract expectations
+- Documented required vs optional vs conditional artifact semantics
+
+### Safety
+
+- No new product capability
+- No scoring behavior changes
+- No canonical artifact mutation
+- No external APIs
+- No autonomous remediation
+
 ## [1.10.0] - Unreleased
 
 ### Added

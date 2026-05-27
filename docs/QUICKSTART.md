@@ -54,13 +54,15 @@ ai-debt plan          # Generate remediation plan
 
 ## Post-Analysis Workflows
 
+These commands require earlier pipeline steps to have completed:
+
 ```bash
-ai-debt status        # View workspace summary
-ai-debt verify        # Cross-check findings
-ai-debt review --init # Initialize PET review sidecar
-ai-debt tickets       # Generate ticket drafts
-ai-debt export        # Export to SARIF/CSV/JSONL
-ai-debt portfolio     # Multi-repo portfolio summary
+ai-debt status        # View workspace summary (needs init + scan)
+ai-debt verify        # Cross-check findings (needs analyze)
+ai-debt review --init # Initialize PET review sidecar (needs analyze)
+ai-debt tickets       # Generate ticket drafts (needs plan)
+ai-debt export        # Export to SARIF/CSV/JSONL (needs analyze)
+ai-debt portfolio     # Multi-repo portfolio summary (needs analyze + plan)
 ```
 
 ## What Pharabius Does Not Do
