@@ -2,6 +2,23 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [1.11.0] - Unreleased
+
+### Added
+
+- v1 stability contract (docs/V1_STABILITY_CONTRACT.md)
+- Artifact contract freeze checks (scripts/validate_artifact_contract.py)
+- Safety boundary audit documentation (docs/SAFETY_BOUNDARIES.md)
+- v1 final validation evidence pack (docs/validation-results/v1-final-validation-evidence.md)
+- v1 adoption and upgrade guide (docs/V1_ADOPTION_AND_UPGRADE_GUIDE.md)
+
+### Safety
+
+- No new product capability
+- No scoring behavior changes
+- No external APIs
+- No autonomous remediation
+
 ## [1.10.2] - Unreleased
 
 ### Added
