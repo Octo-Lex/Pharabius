@@ -1400,5 +1400,190 @@ def _recommend_next_command(blocking: Sequence[V1ReadinessCheck], root: Path) ->
     return "ai-debt status"
 
 
+@app.command()
+def gate(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to check.",
+        ),
+    ] = None,
+    max_critical: Annotated[
+        int | None,
+        typer.Option(
+            "--max-critical",
+            help="Max allowed Critical findings. Override config.",
+        ),
+    ] = None,
+    max_high: Annotated[
+        int | None,
+        typer.Option(
+            "--max-high",
+            help="Max allowed High findings. Override config.",
+        ),
+    ] = None,
+    max_total: Annotated[
+        int | None,
+        typer.Option(
+            "--max-total",
+            help="Max allowed total findings. Override config.",
+        ),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Output machine-readable JSON.",
+        ),
+    ] = False,
+) -> None:
+    """Evaluate quality gate thresholds. Exits 0 on PASS, 1 on FAIL.
+
+    Reads debt-register.json and checks against configurable thresholds.
+    Read-only — does not modify any files.
+    """
+
+    from pharabius.core.quality_gate import evaluate_quality_gate
+    from pharabius.schemas.quality_gate import QualityGateThresholds
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    debt_register = resolved_root / ".ai-debt" / "debt-register.json"
+
+    # Build thresholds from CLI overrides or defaults
+    thresholds = QualityGateThresholds(
+        max_critical=max_critical if max_critical is not None else 0,
+        max_high=max_high if max_high is not None else 10,
+        max_total=max_total if max_total is not None else 50,
+    )
+
+    result = evaluate_quality_gate(debt_register, thresholds)
+
+    if json_output:
+        console.print_json(result.model_dump_json())
+    else:
+        color = "green" if result.result == "PASS" else "red"
+        console.print(f"[bold {color}]Quality Gate: {result.result}[/bold {color}]")
+
+        for rule in result.rules:
+            if rule.rule == "fail_on_categories":
+                status = "✓" if rule.passed else "✗"
+                cats = "all clear" if rule.passed else ", ".join(rule.categories)
+                console.print(f"  Categories: {cats} {status}")
+            else:
+                sev_name = rule.rule.replace("max_", "").capitalize()
+                status = "✓" if rule.passed else "✗"
+                suffix = "" if rule.passed else f" ← exceeded by {rule.actual - rule.threshold}"
+                console.print(
+                    f"  {sev_name}: {rule.actual} (max {rule.threshold}) {status}{suffix}"
+                )
+
+        if result.failed_rules:
+            console.print(f"  Failed rules: {', '.join(result.failed_rules)}")
+
+    raise typer.Exit(code=result.exit_code)
+
+
+@app.command(name="diff")
+def diff_cmd(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root.",
+        ),
+    ] = None,
+    before: Annotated[
+        Path | None,
+        typer.Option(
+            "--before",
+            help="Path to earlier run or debt register.",
+        ),
+    ] = None,
+    after: Annotated[
+        Path | None,
+        typer.Option(
+            "--after",
+            help="Path to later run or debt register.",
+        ),
+    ] = None,
+    latest: Annotated[
+        bool,
+        typer.Option(
+            "--latest",
+            help="Compare the two most recent runs automatically.",
+        ),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Output machine-readable JSON.",
+        ),
+    ] = False,
+) -> None:
+    """Compare two analysis runs. Shows what changed.
+
+    Read-only — does not modify any files.
+    """
+    from pharabius.core.differ import compute_run_diff, find_latest_runs
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    ai_debt = resolved_root / ".ai-debt"
+
+    if latest:
+        result = find_latest_runs(ai_debt)
+        if result is None:
+            console.print("[red]Need at least 2 runs to diff.[/red]")
+            raise typer.Exit(code=1)
+        before_path, after_path = result
+    elif before and after:
+        before_path = before
+        after_path = after
+    else:
+        console.print("[red]Provide --before and --after, or --latest.[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        diff_result = compute_run_diff(before_path, after_path)
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from None
+
+    if json_output:
+        console.print_json(diff_result.model_dump_json())
+    else:
+        console.print(
+            f"[bold]Run Diff: {diff_result.before_run_id} → {diff_result.after_run_id}[/bold]"
+        )
+
+        if diff_result.new_findings:
+            console.print(f"\nNew findings: {diff_result.summary.new_count} (+)")
+            for fid in diff_result.new_findings:
+                console.print(f"  {fid}")
+
+        if diff_result.resolved_findings:
+            console.print(f"\nResolved findings: {diff_result.summary.resolved_count} (-)")
+            for fid in diff_result.resolved_findings:
+                console.print(f"  {fid}")
+
+        if diff_result.severity_changes:
+            console.print(f"\nSeverity changes: {diff_result.summary.severity_change_count} (~)")
+            for ch in diff_result.severity_changes:
+                console.print(f"  {ch.id}: {ch.from_value} → {ch.to_value}")
+
+        if diff_result.confidence_changes:
+            console.print(f"\nConfidence changes: {diff_result.summary.confidence_change_count}")
+            for ch in diff_result.confidence_changes:
+                console.print(f"  {ch.id}: {ch.from_value} → {ch.to_value}")
+
+        s = diff_result.summary
+        console.print(
+            f"\nNet change: {s.net_change:+d} findings ({s.before_total} → {s.after_total})"
+        )
+
+
 if __name__ == "__main__":
     app()

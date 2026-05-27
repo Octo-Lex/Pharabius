@@ -2,6 +2,30 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.0.0] - Unreleased
+
+### Added
+
+- Quality gate schema and threshold model (schemas/quality_gate.py)
+- Quality gate evaluation engine (core/quality_gate.py)
+- `ai-debt gate` command: evaluates debt against configurable thresholds, exits 0/1 for CI
+- Temporal diff engine (core/differ.py): compares two analysis runs
+- `ai-debt diff` command: shows new/resolved/changed findings between runs
+- Run diff schema (schemas/run_diff.py): RunDiff, DiffSummary, FindingChange
+- SARIF fingerprints field for GitHub Code Scanning dedup
+- GitHub Action (action.yml): composite action for CI integration
+- Example CI workflow (.github/workflows/pharabius-example.yml)
+- GitHub Action documentation (docs/GITHUB_ACTION.md)
+
+### Breaking Changes
+
+- None — all v1.x commands and artifacts unchanged. v2.0 is additive.
+
+### CLI Commands (20 total)
+
+- New: `gate`, `diff`
+- Existing (18 from v1.x): init, profile, scan, map-units, analyze, report, plan, verify, status, graph, export, enrich, ai-status, run, review, tickets, portfolio, doctor
+
 ## [1.11.0] - Unreleased
 
 ### Added
