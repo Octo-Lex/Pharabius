@@ -23,6 +23,8 @@ class V1ReadinessCheck(BaseModel):
     status: Literal["pass", "warning", "fail", "not_applicable"]
     message: str
     artifact_path: str | None = None
+    severity: Literal["blocking", "non_blocking"] = "non_blocking"
+    recommended_action: str = ""
 
 
 class V1ReadinessReport(BaseModel):
@@ -83,6 +85,8 @@ def _check_artifact(
                     status="fail",
                     message=f"Missing required artifact: {rel}",
                     artifact_path=rel,
+                    severity="blocking",
+                    recommended_action=f"Run the pipeline command that produces {rel}.",
                 )
             )
         else:
@@ -92,6 +96,8 @@ def _check_artifact(
                     status="warning",
                     message=f"Missing optional artifact: {rel}",
                     artifact_path=rel,
+                    severity="non_blocking",
+                    recommended_action="Optional. Run the relevant command if needed.",
                 )
             )
         return
@@ -282,6 +288,37 @@ def render_readiness_markdown(report: V1ReadinessReport) -> str:
         lines.append("")
         for c in safety_checks:
             lines.append(f"- **{c.name}**: {c.message}")
+        lines.append("")
+
+    # Blocking / Non-blocking
+    blocking = [c for c in report.checks if c.severity == "blocking"]
+    non_blocking = [c for c in report.checks if c.severity == "non_blocking" and c.status != "pass"]
+
+    if blocking:
+        lines.append("### Blocking Issues")
+        lines.append("")
+        lines.append("| Code | Artifact | Recommended Action |")
+        lines.append("|---|---|---|")
+        for c in blocking:
+            art = c.artifact_path or "—"
+            action = c.recommended_action or "—"
+            lines.append(f"| {c.name} | {art} | {action} |")
+        lines.append("")
+    else:
+        lines.append("### Blocking Issues")
+        lines.append("")
+        lines.append("None.")
+        lines.append("")
+
+    if non_blocking:
+        lines.append("### Non-Blocking Issues")
+        lines.append("")
+        lines.append("| Code | Artifact | Recommended Action |")
+        lines.append("|---|---|---|")
+        for c in non_blocking:
+            art = c.artifact_path or "—"
+            action = c.recommended_action or "—"
+            lines.append(f"| {c.name} | {art} | {action} |")
         lines.append("")
 
     # Verdict
