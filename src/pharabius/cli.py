@@ -1486,5 +1486,105 @@ def gate(
     raise typer.Exit(code=result.exit_code)
 
 
+@app.command(name="diff")
+def diff_cmd(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root.",
+        ),
+    ] = None,
+    before: Annotated[
+        Path | None,
+        typer.Option(
+            "--before",
+            help="Path to earlier run or debt register.",
+        ),
+    ] = None,
+    after: Annotated[
+        Path | None,
+        typer.Option(
+            "--after",
+            help="Path to later run or debt register.",
+        ),
+    ] = None,
+    latest: Annotated[
+        bool,
+        typer.Option(
+            "--latest",
+            help="Compare the two most recent runs automatically.",
+        ),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Output machine-readable JSON.",
+        ),
+    ] = False,
+) -> None:
+    """Compare two analysis runs. Shows what changed.
+
+    Read-only — does not modify any files.
+    """
+    from pharabius.core.differ import compute_run_diff, find_latest_runs
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    ai_debt = resolved_root / ".ai-debt"
+
+    if latest:
+        result = find_latest_runs(ai_debt)
+        if result is None:
+            console.print("[red]Need at least 2 runs to diff.[/red]")
+            raise typer.Exit(code=1)
+        before_path, after_path = result
+    elif before and after:
+        before_path = before
+        after_path = after
+    else:
+        console.print("[red]Provide --before and --after, or --latest.[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        diff_result = compute_run_diff(before_path, after_path)
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
+
+    if json_output:
+        console.print_json(diff_result.model_dump_json())
+    else:
+        console.print(
+            f"[bold]Run Diff: {diff_result.before_run_id} → {diff_result.after_run_id}[/bold]"
+        )
+
+        if diff_result.new_findings:
+            console.print(f"\nNew findings: {diff_result.summary.new_count} (+)")
+            for fid in diff_result.new_findings:
+                console.print(f"  {fid}")
+
+        if diff_result.resolved_findings:
+            console.print(f"\nResolved findings: {diff_result.summary.resolved_count} (-)")
+            for fid in diff_result.resolved_findings:
+                console.print(f"  {fid}")
+
+        if diff_result.severity_changes:
+            console.print(f"\nSeverity changes: {diff_result.summary.severity_change_count} (~)")
+            for ch in diff_result.severity_changes:
+                console.print(f"  {ch.id}: {ch.from_value} → {ch.to_value}")
+
+        if diff_result.confidence_changes:
+            console.print(f"\nConfidence changes: {diff_result.summary.confidence_change_count}")
+            for ch in diff_result.confidence_changes:
+                console.print(f"  {ch.id}: {ch.from_value} → {ch.to_value}")
+
+        s = diff_result.summary
+        console.print(
+            f"\nNet change: {s.net_change:+d} findings ({s.before_total} → {s.after_total})"
+        )
+
+
 if __name__ == "__main__":
     app()
