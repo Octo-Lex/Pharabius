@@ -46,9 +46,7 @@ class TestChecksStructure:
 class TestModuleImports:
     def test_key_modules_importable(self) -> None:
         report = validate_packaging()
-        import_checks = [
-            c for c in report["checks"] if c["name"].startswith("import:")
-        ]
+        import_checks = [c for c in report["checks"] if c["name"].startswith("import:")]
         assert len(import_checks) >= 5
         for c in import_checks:
             assert c["status"] == "pass", f"Import failed: {c['name']}"

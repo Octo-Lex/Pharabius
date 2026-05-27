@@ -54,8 +54,9 @@ class TestSampleSafety:
         reg = json.loads((SAMPLE / "debt-register.json").read_text())
         for f in reg["findings"]:
             for loc in f["locations"]:
-                assert not loc["file"].startswith(("/", "C:", "Users")), \
+                assert not loc["file"].startswith(("/", "C:", "Users")), (
                     f"Absolute path in sample: {loc['file']}"
+                )
 
 
 class TestSampleMarkdown:

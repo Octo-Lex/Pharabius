@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pharabius.cli import app
 import typer.testing
+
+from pharabius.cli import app
 
 runner = typer.testing.CliRunner()
 
@@ -24,7 +25,7 @@ class TestDoctorCommand:
         for name, content in {
             "evidence.json": '{"evidence":[]}',
             "debt-register.json": '{"findings":[]}',
-            "project-profile.json": '{}',
+            "project-profile.json": "{}",
             "debt-register.md": "# Register",
             "reports/foundation-audit-report.md": "# Report",
             "remediation-roadmap.md": "# Roadmap",

@@ -56,5 +56,7 @@ class TestOverall:
     def test_source_and_cli_consistent(self) -> None:
         report = validate_release_consistency(EXPECTED, Path("."))
         # Source + CLI + installed must all match
-        critical = [c for c in report["checks"] if c["source"] in ("pyproject", "cli", "installed_metadata")]
+        critical = [
+            c for c in report["checks"] if c["source"] in ("pyproject", "cli", "installed_metadata")
+        ]
         assert all(c["status"] == "ok" for c in critical)

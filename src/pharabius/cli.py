@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Annotated, Any, Sequence
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console

@@ -12,8 +12,9 @@ import sys
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 
-from pharabius.cli import app
 import typer.testing
+
+from pharabius.cli import app
 
 
 def validate_release_consistency(
@@ -34,12 +35,14 @@ def validate_release_consistency(
             if v == expected_version:
                 checks.append({"source": "pyproject", "status": "ok", "version": v})
             else:
-                checks.append({
-                    "source": "pyproject",
-                    "status": "mismatch",
-                    "expected": expected_version,
-                    "found": v,
-                })
+                checks.append(
+                    {
+                        "source": "pyproject",
+                        "status": "mismatch",
+                        "expected": expected_version,
+                        "found": v,
+                    }
+                )
         else:
             checks.append({"source": "pyproject", "status": "error", "message": "No version found"})
     else:
@@ -51,12 +54,14 @@ def validate_release_consistency(
         if installed == expected_version:
             checks.append({"source": "installed_metadata", "status": "ok", "version": installed})
         else:
-            checks.append({
-                "source": "installed_metadata",
-                "status": "mismatch",
-                "expected": expected_version,
-                "found": installed,
-            })
+            checks.append(
+                {
+                    "source": "installed_metadata",
+                    "status": "mismatch",
+                    "expected": expected_version,
+                    "found": installed,
+                }
+            )
     except Exception as exc:
         checks.append({"source": "installed_metadata", "status": "error", "message": str(exc)})
 
@@ -66,12 +71,14 @@ def validate_release_consistency(
     if expected_version in result.output:
         checks.append({"source": "cli", "status": "ok"})
     else:
-        checks.append({
-            "source": "cli",
-            "status": "mismatch",
-            "expected": expected_version,
-            "output": result.output.strip(),
-        })
+        checks.append(
+            {
+                "source": "cli",
+                "status": "mismatch",
+                "expected": expected_version,
+                "output": result.output.strip(),
+            }
+        )
 
     # 4. Build artifacts
     if dist_dir and dist_dir.exists():
@@ -82,12 +89,14 @@ def validate_release_consistency(
             if expected_version in wheels[0].name:
                 checks.append({"source": "wheel", "status": "ok", "filename": wheels[0].name})
             else:
-                checks.append({
-                    "source": "wheel",
-                    "status": "mismatch",
-                    "expected": expected_version,
-                    "filename": wheels[0].name,
-                })
+                checks.append(
+                    {
+                        "source": "wheel",
+                        "status": "mismatch",
+                        "expected": expected_version,
+                        "filename": wheels[0].name,
+                    }
+                )
         else:
             checks.append({"source": "wheel", "status": "missing"})
 
@@ -95,12 +104,14 @@ def validate_release_consistency(
             if expected_version in sdists[0].name:
                 checks.append({"source": "sdist", "status": "ok", "filename": sdists[0].name})
             else:
-                checks.append({
-                    "source": "sdist",
-                    "status": "mismatch",
-                    "expected": expected_version,
-                    "filename": sdists[0].name,
-                })
+                checks.append(
+                    {
+                        "source": "sdist",
+                        "status": "mismatch",
+                        "expected": expected_version,
+                        "filename": sdists[0].name,
+                    }
+                )
         else:
             checks.append({"source": "sdist", "status": "missing"})
 
@@ -111,11 +122,13 @@ def validate_release_consistency(
         if expected_version in text:
             checks.append({"source": "changelog", "status": "ok"})
         else:
-            checks.append({
-                "source": "changelog",
-                "status": "missing_entry",
-                "expected": expected_version,
-            })
+            checks.append(
+                {
+                    "source": "changelog",
+                    "status": "missing_entry",
+                    "expected": expected_version,
+                }
+            )
 
     # 6. Roadmap
     roadmap = repo_root / "docs" / "ROADMAP.md"
@@ -124,11 +137,13 @@ def validate_release_consistency(
         if expected_version in text:
             checks.append({"source": "roadmap", "status": "ok"})
         else:
-            checks.append({
-                "source": "roadmap",
-                "status": "missing_entry",
-                "expected": expected_version,
-            })
+            checks.append(
+                {
+                    "source": "roadmap",
+                    "status": "missing_entry",
+                    "expected": expected_version,
+                }
+            )
 
     errors = sum(1 for c in checks if c["status"] not in ("ok", "missing"))
     return {
