@@ -1,5 +1,14 @@
 # Pharabius Roadmap
 
+## v2.0 Planning (Wave 52 — strategy documents)
+
+- Product thesis, option map, automation boundaries
+- External integration risk model
+- Data model and deployment options
+- Roadmap decision matrix with scoring
+- Recommended primary track: governed validation workflow
+- See [docs/v2/](docs/v2/) for all planning artifacts
+
 ## v1.11.0 — Final v1 Stabilization & Declaration (unreleased)
 
 - v1 stability contract and compatibility policy
