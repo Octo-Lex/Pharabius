@@ -178,3 +178,88 @@ def evaluate_quality_gate(
 def get_default_gate_config() -> QualityGateConfig:
     """Return default quality gate configuration."""
     return QualityGateConfig()
+
+
+def render_quality_gate_markdown(result: QualityGateResult) -> str:
+    """Render quality gate result as human-readable Markdown.
+
+    Does not change gate decisions. Purely a presentation function.
+    """
+    lines: list[str] = []
+
+    # Header
+    lines.append("# Pharabius Quality Gate\n")
+
+    # Result block
+    icon = "\u2705" if result.result == "PASS" else "\u274c"
+    lines.append(f"## Result: {icon} {result.result}\n")
+    lines.append(f"- **Exit code**: {result.exit_code}")
+    lines.append(f"- **Failed rules**: {len(result.failed_rules)}")
+    lines.append(f"- **Passed rules**: {len(result.rules) - len(result.failed_rules)}")
+    lines.append("")
+
+    # Blocking violations
+    blocking = [r for r in result.rules if not r.passed]
+    if blocking:
+        lines.append("## Blocking Violations\n")
+        for r in blocking:
+            if r.rule == "fail_on_categories":
+                cats = ", ".join(r.categories)
+                lines.append(f"- **{r.rule}**: {r.actual} blocked categories ({cats})")
+            else:
+                sev_name = r.rule.replace("max_", "").capitalize()
+                over = r.actual - r.threshold
+                lines.append(
+                    f"- **{sev_name} findings**: {r.actual} (max {r.threshold}, exceeded by {over})"
+                )
+        lines.append("")
+
+    # Rule summary table
+    lines.append("## Rule Summary\n")
+    lines.append("| Rule | Threshold | Actual | Status |")
+    lines.append("|------|-----------|--------|--------|")
+    for r in result.rules:
+        status = "\u2705 PASS" if r.passed else "\u274c FAIL"
+        rule_name = r.rule if r.rule != "fail_on_categories" else "blocked categories"
+        lines.append(f"| {rule_name} | {r.threshold} | {r.actual} | {status} |")
+    lines.append("")
+
+    # Severity counts
+    if result.counts:
+        lines.append("## Severity Counts\n")
+        lines.append("| Severity | Count |")
+        lines.append("|----------|-------|")
+        for sev in SEVERITY_ORDER:
+            if sev in result.counts:
+                lines.append(f"| {sev} | {result.counts[sev]} |")
+        lines.append("")
+
+    # CI Exit Behavior
+    lines.append("## CI Exit Behavior\n")
+    if result.result == "PASS":
+        lines.append("Quality gate **passed**. CI exits with code 0.")
+    else:
+        lines.append("Quality gate **failed**. CI exits with code 1.")
+        lines.append("")
+        lines.append("To fix: address blocking violations above, or adjust thresholds.")
+    lines.append("")
+
+    # Recommended actions
+    lines.append("## Recommended Actions\n")
+    if result.result == "PASS":
+        lines.append("- No action required.")
+        lines.append("- Run `ai-debt diff --latest` to compare with previous runs.")
+    else:
+        lines.append("1. Review blocking violations above.")
+        lines.append("2. Run `ai-debt report` for detailed finding descriptions.")
+        lines.append("3. Run `ai-debt plan` for remediation recommendations.")
+        lines.append("4. After fixes, re-run `ai-debt run` then `ai-debt gate`.")
+    lines.append("")
+
+    # Safety boundary
+    lines.append("## Safety Boundary\n")
+    lines.append("This report is a local artifact. Pharabius does not upload reports,")
+    lines.append("post PR comments, create issues, or modify source code.")
+    lines.append("")
+
+    return "\n".join(lines)
