@@ -670,8 +670,6 @@ class TestWriteAnalysisUnits:
         assert len(store.units) >= 1
 
     def test_write_fails_without_profile(self, tmp_path: Path) -> None:
-        import click
-
         ai_debt = tmp_path / ".ai-debt"
         ai_debt.mkdir()
         evidence = EvidenceStore()
@@ -681,8 +679,6 @@ class TestWriteAnalysisUnits:
             write_analysis_units(tmp_path)
 
     def test_write_fails_without_evidence(self, tmp_path: Path) -> None:
-        import click
-
         ai_debt = tmp_path / ".ai-debt"
         ai_debt.mkdir()
         profile = _minimal_profile(tmp_path)
