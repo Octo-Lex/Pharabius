@@ -4,6 +4,9 @@
 
 - [Quickstart](QUICKSTART.md) — Install, run, and understand output
 - [Adoption Checklist](ADOPTION_CHECKLIST.md) — Go/no-go checklist for teams
+- [v1 Stability Contract](V1_STABILITY_CONTRACT.md) — Compatibility commitments for v1.x
+- [Safety Boundaries](SAFETY_BOUNDARIES.md) — Non-negotiable safety commitments
+- [v1 Adoption & Upgrade Guide](V1_ADOPTION_AND_UPGRADE_GUIDE.md) — Adopt or upgrade to v1.11.0
 - [Adoption Guide](ADOPTION_GUIDE.md) — Practical adoption walkthrough
 - [Sample Output](SAMPLE_OUTPUT.md) — Example report output
 
