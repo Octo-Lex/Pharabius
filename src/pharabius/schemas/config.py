@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator
 
+from pharabius.schemas.quality_gate import QualityGateConfig
+
 # ── Sub-models ────────────────────────────────────────────────────────────
 
 
@@ -108,3 +110,5 @@ class PharabiusConfig(BaseModel):
     output: OutputConfig = Field(default_factory=OutputConfig)
     policies: PoliciesConfig = Field(default_factory=PoliciesConfig)
     risk_scoring: RiskScoringConfig = Field(default_factory=RiskScoringConfig)
+    # v2.0 addition
+    quality_gate: QualityGateConfig | None = None
