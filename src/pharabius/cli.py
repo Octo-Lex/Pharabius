@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -1289,6 +1290,90 @@ def portfolio(
     if high_crit:
         console.print(f"  High/Critical findings: {high_crit}")
     console.print(f"  Output: {out_dir}")
+
+
+@app.command()
+def doctor(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root to diagnose.",
+        ),
+    ] = None,
+) -> None:
+    """Diagnose workspace readiness. Read-only, no mutations.
+
+    Checks for required artifacts and recommends the next command.
+    """
+    from pharabius.core.v1_readiness import generate_readiness_report
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    ai_debt = resolved_root / ".ai-debt"
+
+    console.print("[bold]Pharabius workspace diagnostics[/bold]")
+    console.print(f"Repository: {resolved_root}")
+
+    if not ai_debt.exists():
+        console.print("\n[yellow]Status: needs_init[/yellow]")
+        console.print("No .ai-debt/ workspace found.")
+        console.print("\nNext recommended command: [bold]ai-debt init[/bold]")
+        raise typer.Exit(code=0)
+
+    report = generate_readiness_report(ai_debt)
+
+    status_color = {
+        "ready": "green",
+        "partial": "yellow",
+        "needs_review": "red",
+    }.get(report.status, "white")
+
+    console.print(f"\n[{status_color}]Status: {report.status}[/{status_color}]")
+
+    # Show required artifacts
+    required_checks = [c for c in report.checks if c.artifact_path and c.severity == "blocking"]
+    if required_checks:
+        console.print("\n[bold]Blocking issues:[/bold]")
+        for c in required_checks:
+            console.print(f"  [red]✗[/red] {c.artifact_path} — {c.recommended_action}")
+    else:
+        console.print("\n[green]All required artifacts present.[/green]")
+
+    # Show optional warnings
+    opt_warnings = [
+        c
+        for c in report.checks
+        if c.status == "warning" and c.severity == "non_blocking" and c.artifact_path
+    ]
+    if opt_warnings:
+        console.print("\n[bold]Optional artifacts missing:[/bold]")
+        for c in opt_warnings[:5]:
+            console.print(f"  [yellow]~[/yellow] {c.artifact_path}")
+        if len(opt_warnings) > 5:
+            console.print(f"  ... and {len(opt_warnings) - 5} more")
+
+    # Recommend next command
+    next_cmd = _recommend_next_command(required_checks, resolved_root)
+    console.print(f"\nNext recommended command: [bold]{next_cmd}[/bold]")
+
+
+def _recommend_next_command(blocking: Sequence[object], root: Path) -> str:
+    """Recommend the next command based on missing artifacts."""
+    ai = root / ".ai-debt"
+    commands = [
+        ("ai-debt profile", ai / "project-profile.json"),
+        ("ai-debt scan", ai / "evidence.json"),
+        ("ai-debt map-units", ai / "analysis-units.json"),
+        ("ai-debt graph", ai / "architecture-graph.json"),
+        ("ai-debt analyze", ai / "debt-register.json"),
+        ("ai-debt report", ai / "reports" / "foundation-audit-report.md"),
+        ("ai-debt plan", ai / "remediation-roadmap.md"),
+    ]
+    for cmd, artifact in commands:
+        if not artifact.exists():
+            return cmd
+    return "ai-debt status"
 
 
 if __name__ == "__main__":

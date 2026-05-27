@@ -11,6 +11,7 @@ REQUIRED_DOCS = [
     "ARTIFACT_CONTRACT.md",
     "SCHEMA_MAP.md",
     "ADOPTION_GUIDE.md",
+    "ADOPTION_CHECKLIST.md",
     "GOVERNANCE.md",
     "TICKET_DRAFTS.md",
     "EXPORT_BUNDLES.md",
