@@ -1,5 +1,15 @@
 # Pharabius Roadmap
 
+## v1.10.1 — RC Hardening & Field Validation (unreleased)
+
+- Multi-repo v1 golden-path field validation
+- Artifact contract drift checks
+- Documentation gap fixes from validation
+- v1 readiness report calibration
+- Field-validation evidence pack
+- 27 new tests
+- No new product capability
+
 ## v1.10.0 — v1 Contract Consolidation & Release Candidate (unreleased)
 
 - Artifact contract inventory and schema map

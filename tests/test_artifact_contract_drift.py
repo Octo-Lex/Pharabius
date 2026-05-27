@@ -62,30 +62,36 @@ class TestDriftReport:
 
     def test_missing_optional_is_warning(self, tmp_path: Path) -> None:
         # Only required files, no optional ones
-        ai = _make_ai_debt(tmp_path, files=[
-            "evidence.json",
-            "debt-register.json",
-            "project-profile.json",
-            "debt-register.md",
-            "reports/foundation-audit-report.md",
-            "remediation-roadmap.md",
-            "handoff-summary.md",
-        ])
+        ai = _make_ai_debt(
+            tmp_path,
+            files=[
+                "evidence.json",
+                "debt-register.json",
+                "project-profile.json",
+                "debt-register.md",
+                "reports/foundation-audit-report.md",
+                "remediation-roadmap.md",
+                "handoff-summary.md",
+            ],
+        )
         report = check_artifact_contract_drift(ai)
         assert report.warnings > 0
         codes = [i.code for i in report.issues]
         assert "optional_artifact_missing" in codes
 
     def test_missing_optional_no_error(self, tmp_path: Path) -> None:
-        ai = _make_ai_debt(tmp_path, files=[
-            "evidence.json",
-            "debt-register.json",
-            "project-profile.json",
-            "debt-register.md",
-            "reports/foundation-audit-report.md",
-            "remediation-roadmap.md",
-            "handoff-summary.md",
-        ])
+        ai = _make_ai_debt(
+            tmp_path,
+            files=[
+                "evidence.json",
+                "debt-register.json",
+                "project-profile.json",
+                "debt-register.md",
+                "reports/foundation-audit-report.md",
+                "remediation-roadmap.md",
+                "handoff-summary.md",
+            ],
+        )
         report = check_artifact_contract_drift(ai)
         assert report.errors == 0
         assert report.status == "pass_with_warnings"

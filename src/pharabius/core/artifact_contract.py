@@ -78,7 +78,6 @@ KNOWN_DIRS = {
     "architecture-graph.json",
     "runs",
     "reports",
-    "reports",
     "work-packages",
     "review",
     "ticket-drafts",
