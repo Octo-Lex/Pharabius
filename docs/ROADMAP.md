@@ -1,5 +1,15 @@
 # Pharabius Roadmap
 
+## v1.11.0 — Final v1 Stabilization & Declaration (unreleased)
+
+- v1 stability contract and compatibility policy
+- Final artifact contract freeze checks
+- Safety boundary audit and policy documentation
+- v1 final validation evidence pack
+- v1 adoption and upgrade guide
+- 29 new tests
+- No new product capability
+
 ## v1.10.2 — RC2 Adoption & Packaging Hardening (unreleased)
 
 - Packaging verification matrix
