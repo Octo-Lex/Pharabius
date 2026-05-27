@@ -117,7 +117,7 @@ class TestGateReadonly:
         ai = tmp_path / ".ai-debt"
         ai.mkdir()
         _write_debt_register(ai / "debt-register.json", [])
-        before = set(p.name for p in ai.iterdir())
+        before = {p.name for p in ai.iterdir()}
         runner.invoke(app, ["gate", "-r", str(tmp_path)])
-        after = set(p.name for p in ai.iterdir())
+        after = {p.name for p in ai.iterdir()}
         assert before == after

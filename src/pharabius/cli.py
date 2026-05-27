@@ -1469,9 +1469,8 @@ def gate(
         for rule in result.rules:
             if rule.rule == "fail_on_categories":
                 status = "✓" if rule.passed else "✗"
-                console.print(
-                    f"  Categories: {'all clear' if rule.passed else ', '.join(rule.categories)} {status}"
-                )
+                cats = "all clear" if rule.passed else ", ".join(rule.categories)
+                console.print(f"  Categories: {cats} {status}")
             else:
                 sev_name = rule.rule.replace("max_", "").capitalize()
                 status = "✓" if rule.passed else "✗"
@@ -1551,7 +1550,7 @@ def diff_cmd(
         diff_result = compute_run_diff(before_path, after_path)
     except FileNotFoundError as exc:
         console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     if json_output:
         console.print_json(diff_result.model_dump_json())
