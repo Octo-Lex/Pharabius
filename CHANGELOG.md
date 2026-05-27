@@ -2,6 +2,23 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.0.1] - Unreleased
+
+### Improved
+
+- CI quality gate adoption documentation (5 CI examples: GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, portable shell).
+- GitHub Action polished with mode input (strict/warn/advisory) and generate-sarif option.
+- Quality gate Markdown report readability (render_quality_gate_markdown).
+- SARIF fixture validation and documentation (docs/SARIF.md).
+- CI troubleshooting and failure-mode guidance (docs/CI_TROUBLESHOOTING.md).
+- Quality gate reference documentation (docs/QUALITY_GATE.md).
+
+### Safety
+
+- No external SARIF upload by default.
+- No PR comments, issue creation, tracker writes, or external API calls.
+- No autonomous remediation or source code modification.
+
 ## [2.0.0] - Unreleased
 
 ### Added
