@@ -8,7 +8,6 @@ from pharabius.core.artifact_contract import (
     KNOWN_DIRS,
     OPTIONAL_ARTIFACTS,
     REQUIRED_ARTIFACTS,
-    ArtifactContractDriftIssue,
     check_artifact_contract_drift,
 )
 

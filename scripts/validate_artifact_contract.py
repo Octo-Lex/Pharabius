@@ -15,6 +15,7 @@ _src = str(Path(__file__).resolve().parent.parent / "src")
 if _src not in sys.path:
     sys.path.insert(0, _src)
 
+# ruff: noqa: E402
 from pharabius.core.artifact_contract import (
     KNOWN_DIRS,
     OPTIONAL_ARTIFACTS,

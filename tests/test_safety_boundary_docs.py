@@ -43,9 +43,24 @@ class TestCommandClassifications:
     def test_all_commands_classified(self) -> None:
         text = SAFETY.read_text()
         commands = [
-            "init", "profile", "scan", "map-units", "analyze", "report",
-            "plan", "verify", "status", "graph", "export", "enrich",
-            "ai-status", "run", "review", "tickets", "portfolio", "doctor",
+            "init",
+            "profile",
+            "scan",
+            "map-units",
+            "analyze",
+            "report",
+            "plan",
+            "verify",
+            "status",
+            "graph",
+            "export",
+            "enrich",
+            "ai-status",
+            "run",
+            "review",
+            "tickets",
+            "portfolio",
+            "doctor",
         ]
         for cmd in commands:
             assert cmd in text, f"Command '{cmd}' not classified in safety doc"
