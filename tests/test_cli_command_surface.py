@@ -28,6 +28,8 @@ EXPECTED_COMMANDS = [
     "review",
     "tickets",
     "portfolio",
+    "gate",
+    "diff",
 ]
 
 
