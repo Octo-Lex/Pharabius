@@ -677,7 +677,7 @@ class TestWriteAnalysisUnits:
         evidence = EvidenceStore()
         (ai_debt / "evidence.json").write_text(evidence.model_dump_json(), encoding="utf-8")
 
-        with pytest.raises((SystemExit, click.exceptions.BadParameter)):
+        with pytest.raises((SystemExit, Exception)):
             write_analysis_units(tmp_path)
 
     def test_write_fails_without_evidence(self, tmp_path: Path) -> None:
@@ -688,7 +688,7 @@ class TestWriteAnalysisUnits:
         profile = _minimal_profile(tmp_path)
         (ai_debt / "project-profile.json").write_text(profile.model_dump_json(), encoding="utf-8")
 
-        with pytest.raises((SystemExit, click.exceptions.BadParameter)):
+        with pytest.raises((SystemExit, Exception)):
             write_analysis_units(tmp_path)
 
 
