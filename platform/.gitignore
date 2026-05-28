@@ -1,0 +1,15 @@
+# Platform storage (bundles are not committed)
+platform/storage/bundles/*.tar.gz
+platform/storage/bundles/*/
+
+# Frontend
+platform/frontend/node_modules/
+platform/frontend/dist/
+
+# Backend
+platform/backend/.venv/
+platform/backend/__pycache__/
+platform/backend/*.egg-info/
+
+# Database
+pgdata/

@@ -2,6 +2,37 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.2.0] - Unreleased
+
+### Added
+
+- Hosted platform foundation with FastAPI backend, PostgreSQL, and Docker Compose.
+- Artifact bundle upload API with content-addressed storage by SHA-256.
+- Bundle validation against Pharabius artifact contract.
+- Bundle parsing via existing Pydantic schemas.
+- Upload security: 50 MB size limit, path traversal check, zip bomb protection.
+- Repository dashboard API (list, detail, findings, runs, latest-run).
+- Portfolio aggregation API (summary, risk rollup).
+- Trend points API for temporal analysis.
+- Quality gate history API.
+- Claims, gaps, and readiness APIs.
+- API key CRUD (create, list, revoke) with admin token auth.
+- `ai-debt upload` CLI command for uploading artifacts to a hosted platform.
+- React + Vite frontend scaffold.
+- Standard error response envelope across all API endpoints.
+- Request ID middleware.
+
+### Known Limitations
+
+- Platform tests use mock responses for database-dependent endpoints.
+  Full database-backed integration tests deferred to Docker-based CI.
+- Frontend is scaffold only (no implemented views yet).
+- No GitHub OAuth (admin token only).
+- No user accounts or RBAC.
+- No background workers (parsing is synchronous).
+- No browser E2E tests.
+- No load testing.
+
 ## [2.1.0] - Unreleased
 
 ### Added
