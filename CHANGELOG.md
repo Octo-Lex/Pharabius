@@ -2,6 +2,49 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.3.0] - Unreleased
+
+### Added
+
+- **Hosted Finding Review Workflow**: Review findings directly in the browser.
+  - **Review decisions database model**: `review_decisions` table with soft-delete
+    and audit history. Uses same 7 `DecisionStatus` values as CLI
+    (`accepted`, `rejected`, `deferred`, `needs-investigation`, `duplicate`,
+    `already-fixed`, `risk-accepted`).
+  - **8 API endpoints**: CRUD + bulk + summary + audit log.
+    - `POST /repositories/{id}/reviews` — Create/update (idempotent by finding_id)
+    - `GET /repositories/{id}/reviews` — List decisions (exclude deleted by default)
+    - `GET /repositories/{id}/reviews/summary` — Status counts
+    - `PATCH /repositories/{id}/reviews/{decision_id}` — Update (records previous_status)
+    - `DELETE /repositories/{id}/reviews/{decision_id}` — Soft-delete (retains audit)
+    - `POST /repositories/{id}/reviews/bulk` — Bulk create/update with warnings
+    - `GET /repositories/{id}/reviews/audit-log` — Full history including tombstones
+  - **Review badges on findings table**: Each finding shows current review status
+    or "Review" link. Click opens review modal.
+  - **Review modal**: Status dropdown (7 options), reviewer name, rationale,
+    ticket URL, owner area fields.
+  - **Review summary route** (`/repositories/:id/reviews`): Summary cards,
+    decisions table, audit log with 3-tab layout.
+  - **Alembic migration**: `002_review_decisions` creates `review_decisions` table.
+  - **17 review workflow tests**: Status validation, CRUD, idempotency, soft-delete
+    audit, bulk with warnings, read accessibility, finding immutability.
+
+### Changed
+
+- Frontend version bumped to 2.3.0.
+- Backend version bumped to 2.3.0.
+- Findings table now shows review badges and progress bar.
+- Repository dashboard now has "Review Summary" link.
+
+### Design Decisions
+
+- Reviewer is free-text advisory — not verified identity.
+- Review decisions never mutate `Finding` records.
+- Soft-delete preserves audit history (deleted_at, deleted_by, delete_reason).
+- Updates record `previous_status` for audit trail.
+- Bulk endpoint produces warnings (not errors) for unknown finding IDs.
+- Read endpoints accessible without auth; write endpoints require token.
+
 ## [2.2.4] - Unreleased
 
 ### Fixed

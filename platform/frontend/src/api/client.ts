@@ -96,6 +96,63 @@ export interface UploadResult {
   findings_count: number;
 }
 
+// --- Review types ---
+
+export type DecisionStatus =
+  | "accepted"
+  | "rejected"
+  | "deferred"
+  | "needs-investigation"
+  | "duplicate"
+  | "already-fixed"
+  | "risk-accepted";
+
+export interface ReviewDecision {
+  id: string;
+  repository_id: string;
+  run_id: string | null;
+  finding_id: string;
+  status: DecisionStatus;
+  previous_status: string;
+  reviewer: string;
+  rationale: string;
+  ticket_url: string;
+  owner_area: string;
+  target_release: string;
+  notes: string;
+  created_at: string | null;
+  updated_at: string | null;
+  deleted_at: string | null;
+  deleted_by: string;
+  delete_reason: string;
+}
+
+export interface ReviewSummary {
+  total_decisions: number;
+  status_counts: Record<DecisionStatus, number>;
+}
+
+export interface BulkReviewResult {
+  created: number;
+  updated: number;
+  total: number;
+  warnings: string[];
+}
+
+export interface AuditLogEntry {
+  id: string;
+  finding_id: string;
+  status: string;
+  previous_status: string;
+  reviewer: string;
+  created_at: string | null;
+  updated_at: string | null;
+  is_deleted: boolean;
+  deleted_at?: string;
+  deleted_by?: string;
+  delete_reason?: string;
+}
+
 // --- API functions ---
 
 export function listRepositories(): Promise<{ repositories: Repository[]; total: number }> {
@@ -159,4 +216,55 @@ export async function uploadBundle(
     form.append("repository_name", repositoryName);
     xhr.send(form);
   });
+}
+
+// --- Review API ---
+
+export async function listReviewDecisions(
+  repoId: string,
+  token?: string,
+): Promise<{ decisions: ReviewDecision[]; total: number }> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetchJSON(`${BASE}/repositories/${repoId}/reviews`);
+}
+
+export function getReviewSummary(repoId: string): Promise<ReviewSummary> {
+  return fetchJSON(`${BASE}/repositories/${repoId}/reviews/summary`);
+}
+
+export async function createReviewDecision(
+  repoId: string,
+  decision: {
+    finding_id: string;
+    status: DecisionStatus;
+    reviewer?: string;
+    rationale?: string;
+    ticket_url?: string;
+    owner_area?: string;
+    target_release?: string;
+    notes?: string;
+  },
+  token: string,
+): Promise<ReviewDecision> {
+  const res = await fetch(`${BASE}/repositories/${repoId}/reviews`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(decision),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`API ${res.status}: ${body.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+export function getAuditLog(
+  repoId: string,
+  limit = 50,
+): Promise<{ entries: AuditLogEntry[]; total: number }> {
+  return fetchJSON(`${BASE}/repositories/${repoId}/reviews/audit-log?limit=${limit}`);
 }

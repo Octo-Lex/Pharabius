@@ -92,6 +92,12 @@ export default function RepositoryDashboard() {
         >
           View Findings
         </Link>
+        <Link
+          to={`/repositories/${repoId}/reviews`}
+          className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50 transition-colors"
+        >
+          Review Summary
+        </Link>
       </div>
     </div>
   );

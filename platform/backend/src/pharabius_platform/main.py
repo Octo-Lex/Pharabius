@@ -17,7 +17,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="Pharabius Platform",
-        version="2.2.2",
+        version="2.3.0",
         description="Hosted Pharabius artifact visibility and CI ingestion.",
     )
 
