@@ -2,6 +2,29 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.1.0] - Unreleased
+
+### Added
+
+- `ai-debt trend` command: temporal trend analysis across analysis runs.
+- Trend schemas (TrendPoint, TrendSummary) with trajectory classification.
+- Run history collection from `.ai-debt/runs/`.
+- Severity delta computation and trajectory heuristic (improving/stable/worsening/insufficient_data).
+- Markdown trend reports: trend-summary, risk-trends, category-trends, gate-trends.
+- JSON trend summary output.
+- `--last N` option to limit trend analysis to most recent N runs.
+- `--format json|markdown|all` option for output control.
+- Trend examples (`docs/examples/trends/`).
+- Trend documentation (`docs/TRENDS.md`).
+
+### Known Limitations
+
+- Gate results are approximated from severity counts (original thresholds not stored in run metadata).
+- Category trends unavailable unless historical debt-register snapshots exist.
+- Readiness trends unavailable (readiness not persisted per run).
+- Claims confidence trends unavailable (claims are single-current snapshot).
+- Trajectory is heuristic, not a scientific measure of engineering quality.
+
 ## [2.0.1] - Unreleased
 
 ### Improved
