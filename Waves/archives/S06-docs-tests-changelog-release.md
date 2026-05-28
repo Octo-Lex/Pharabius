@@ -1,46 +1,46 @@
-# v2.3.0 — Human Validation Workflow
+# v2.3.1 — Review Workflow Polish & Evidence Linking
 
-Goal: Turn findings, claims, gaps, readiness, and work packages into a hosted human-review workflow with review states, comments, audit history, and sign-off, without external writes or remediation.
+Goal: Improve finding-review usability by surfacing review filters, audit details, evidence links, decision completeness, and review summary clarity without expanding into claims/gaps/readiness review.
 
-Release posture: major hosted-platform workflow release. This release adds human review state and auditability inside the Pharabius platform, but must not create external issues, post PR comments, modify repositories, or perform remediation.
+Release posture: patch release for the hosted finding-review workflow.
 
 Core boundaries:
+- No claim review, gap closure tracking, readiness sign-off, or work-package review expansion
 - No OAuth / RBAC
 - No policy engine
-- No tracker writes
-- No PR comments
-- No GitHub Checks API
-- No external integrations
-- No autonomous remediation
-- No source-code modification
-- No approval automation
-- No replacement for Product Engineering Team responsibility
+- No tracker writes, PR comments, notifications, or webhooks
+- No autonomous remediation or source-code modification
+- Review decisions remain hosted workflow state, not canonical analyzer truth
+
+Guardrails:
+- Do not mutate uploaded `.ai-debt` bundles.
+- Do not mutate canonical finding records.
+- Do not change finding severity, risk score, evidence, category, or source content.
+- Preserve soft-delete and audit history from v2.3.0.
+- Keep the scope limited to finding-review usability.
 
 
 # S06 — Docs, Tests, Changelog, Release
 
-Risk: Low  
-Slice type: release finalization  
-Artifact impact: docs, changelog, roadmap, version
+Risk: Low
 
 ## Scope
 
-Finalize v2.3.0 documentation, tests, limitations, changelog, roadmap, and release notes.
+Finalize v2.3.1 documentation, tests, limitations, changelog, roadmap, and release notes.
 
-This slice should clearly explain that review decisions are hosted human workflow state, not canonical analyzer truth.
+This slice must state clearly that v2.3.1 improves finding-review usability only and does not expand into claims/gaps/readiness review.
 
 ## Goals
 
-- Bump version to `2.3.0`.
+- Bump version to `2.3.1`.
 - Update changelog.
 - Update roadmap.
-- Add human validation workflow documentation.
-- Update platform docs/navigation.
+- Update platform review docs.
 - Update known limitations.
-- Document review statuses and state transitions.
-- Document audit history behavior.
-- Document no-external-write boundary.
-- Verify all backend/frontend/CLI gates pass.
+- Verify frontend build.
+- Verify backend/platform tests.
+- Verify CLI tests unchanged.
+- Prepare release notes.
 
 ## Patch Set
 
@@ -50,84 +50,52 @@ Expected files:
 CHANGELOG.md
 docs/ROADMAP.md
 KNOWN_LIMITATIONS.md
-platform/docs/human-validation.md
-platform/docs/review-state-machine.md
+platform/docs/review-workflow.md
+platform/docs/review-statuses.md
 platform/docs/audit-history.md
+platform/docs/review-summary.md
 platform/docs/README.md
 platform/frontend/README.md
 ```
 
-Required documentation statements:
+Required limitation statements:
 
 ```text
-Review decisions do not mutate uploaded .ai-debt artifacts.
-Review decisions do not change canonical findings, risk scores, evidence, or operational claims.
-Review decisions are hosted platform workflow state.
-The platform does not create external issues, PR comments, tracker items, or remediation patches.
+v2.3.1 does not add claim review.
+v2.3.1 does not add gap closure tracking.
+v2.3.1 does not add readiness sign-off.
+v2.3.1 does not add work-package review expansion.
+v2.3.1 does not add OAuth/RBAC, policy engine, tracker writes, PR comments, or remediation.
 ```
 
 Recommended changelog entry:
 
 ```markdown
-## v2.3.0
+## v2.3.1
 
-### Added
-- Hosted human validation workflow for findings, claims, gaps, readiness, and work packages where available.
-- Review status model with accepted, rejected, needs_clarification, blocked, and validated states.
-- Review comments and audit history.
-- Review summary APIs and UI.
+### Improved
+- Added review filters for decided, undecided, and status-specific finding views.
+- Added finding and evidence context to the review modal.
+- Improved review audit timeline readability.
+- Added review completeness and summary metrics.
+- Added documentation for finding-review workflow and audit semantics.
 
 ### Safety
-- Review decisions are hosted platform workflow state and do not mutate uploaded Pharabius artifacts.
-- No tracker writes, PR comments, policy engine, OAuth/RBAC, or remediation were added.
-```
-
-## Tests
-
-Final verification:
-
-```bash
-pytest
-pytest platform/backend/tests
-npm --prefix platform/frontend run build
-python -m build
-python scripts/validate_repo.py .
-```
-
-Optional runtime validation:
-
-```bash
-platform/scripts/smoke_docker_compose.sh
+- Review decisions remain hosted workflow state and do not mutate uploaded Pharabius artifacts or canonical finding records.
+- No claim review, gap closure, readiness sign-off, policy engine, tracker writes, PR comments, or remediation were added.
 ```
 
 ## Acceptance Criteria
 
-- Version is `2.3.0`.
-- Docs explain review workflow and boundaries.
-- Backend review tests pass.
+- Version is `2.3.1`.
+- Changelog and roadmap are updated.
+- Docs clearly describe finding-review scope.
+- Backend tests pass.
 - Frontend build passes.
-- CLI tests continue passing.
-- Release notes do not overclaim governance automation.
-- No external writes or remediation exist.
-
-
-## Guardrails
-
-- Review state is hosted platform state, not canonical analyzer truth.
-- Do not mutate uploaded `.ai-debt` bundles.
-- Do not mutate local Pharabius artifacts.
-- Do not change scoring semantics.
-- Do not let review decisions change canonical finding severity, risk score, evidence, or claim content.
-- Do not create tickets, issues, PR comments, or tracker items.
-- Do not add OAuth/RBAC in this release.
-- Use admin token / existing platform auth model only.
-- Preserve audit history for review changes.
-- Keep all sign-off language human-owned, not automated approval.
-
+- CLI tests pass.
+- Release notes do not overclaim broader human validation.
 
 ## Verification Commands
-
-Run the standard gates plus platform/frontend checks:
 
 ```bash
 ruff format --check .
