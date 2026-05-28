@@ -1790,7 +1790,7 @@ def upload_cmd(
     console.print(f"Bundling .ai-debt from {resolved}...")
 
     try:
-        result = upload_bundle(url, token, ai_debt)
+        result: dict[str, Any] = upload_bundle(url, token, ai_debt)
     except httpx.HTTPStatusError as e:
         console.print(f"[red]Upload failed: {e.response.status_code}[/red]")
         console.print(e.response.text)

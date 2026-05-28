@@ -48,4 +48,5 @@ def upload_bundle(
         timeout=60.0,
     )
     response.raise_for_status()
-    return response.json()
+    result: dict[str, object] = response.json()
+    return result
