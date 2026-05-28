@@ -1442,10 +1442,14 @@ def gate(
     """Evaluate quality gate thresholds. Exits 0 on PASS, 1 on FAIL.
 
     Reads debt-register.json and checks against configurable thresholds.
-    Read-only — does not modify any files.
+    Writes quality-gate.md report to .ai-debt/reports/. Console output is
+    for human consumption; the Markdown file is for CI artifact archival.
     """
 
-    from pharabius.core.quality_gate import evaluate_quality_gate
+    from pharabius.core.quality_gate import (
+        evaluate_quality_gate,
+        render_quality_gate_markdown,
+    )
     from pharabius.schemas.quality_gate import QualityGateThresholds
 
     resolved_root = (repository_root or Path.cwd()).resolve()
@@ -1459,6 +1463,13 @@ def gate(
     )
 
     result = evaluate_quality_gate(debt_register, thresholds)
+
+    # Write Markdown report
+    reports_dir = resolved_root / ".ai-debt" / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    md_path = reports_dir / "quality-gate.md"
+    md_content = render_quality_gate_markdown(result)
+    md_path.write_text(md_content, encoding="utf-8")
 
     if json_output:
         console.print_json(result.model_dump_json())

@@ -23,6 +23,7 @@ jobs:
 
 | Input | Default | Description |
 |-------|---------|-------------|
+| `pharabius-version` | `2.0.1` | Pharabius package version to install (pinned for reproducibility) |
 | `command` | `gate` | Command to run: `gate`, `run`, or `run+gate` |
 | `mode` | `strict` | Gate mode: `strict`, `warn`, or `advisory` |
 | `max-critical` | `0` | Max allowed Critical findings |

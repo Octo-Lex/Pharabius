@@ -1,4 +1,4 @@
-"""Tests for ai-debt gate CLI command (W53-S02)."""
+"""Tests for ai-debt gate CLI command (W53-S02 + v2.0.1 correction)."""
 
 from __future__ import annotations
 
@@ -112,12 +112,80 @@ class TestGateJSON:
         assert "max_critical" in data["failed_rules"]
 
 
-class TestGateReadonly:
-    def test_gate_does_not_modify_files(self, tmp_path: Path) -> None:
-        ai = tmp_path / ".ai-debt"
-        ai.mkdir()
-        _write_debt_register(ai / "debt-register.json", [])
-        before = {p.name for p in ai.iterdir()}
+class TestGateMarkdownReport:
+    """Gate writes .ai-debt/reports/quality-gate.md."""
+
+    def test_pass_writes_quality_gate_md(self, tmp_path: Path) -> None:
+        _write_debt_register(tmp_path / ".ai-debt" / "debt-register.json", [])
         runner.invoke(app, ["gate", "-r", str(tmp_path)])
-        after = {p.name for p in ai.iterdir()}
+        md_path = tmp_path / ".ai-debt" / "reports" / "quality-gate.md"
+        assert md_path.exists()
+
+    def test_fail_writes_quality_gate_md(self, tmp_path: Path) -> None:
+        _write_debt_register(
+            tmp_path / ".ai-debt" / "debt-register.json",
+            [_finding(severity="Critical")],
+        )
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        md_path = tmp_path / ".ai-debt" / "reports" / "quality-gate.md"
+        assert md_path.exists()
+
+    def test_pass_markdown_has_result_heading(self, tmp_path: Path) -> None:
+        _write_debt_register(tmp_path / ".ai-debt" / "debt-register.json", [])
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        md = (tmp_path / ".ai-debt" / "reports" / "quality-gate.md").read_text(encoding="utf-8")
+        assert "PASS" in md
+        assert "## Result:" in md
+
+    def test_fail_markdown_has_blocking_violations(self, tmp_path: Path) -> None:
+        _write_debt_register(
+            tmp_path / ".ai-debt" / "debt-register.json",
+            [_finding(severity="Critical")],
+        )
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        md = (tmp_path / ".ai-debt" / "reports" / "quality-gate.md").read_text(encoding="utf-8")
+        assert "FAIL" in md
+        assert "Blocking Violations" in md
+
+    def test_markdown_has_recommended_actions(self, tmp_path: Path) -> None:
+        _write_debt_register(tmp_path / ".ai-debt" / "debt-register.json", [])
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        md = (tmp_path / ".ai-debt" / "reports" / "quality-gate.md").read_text(encoding="utf-8")
+        assert "Recommended Actions" in md
+
+    def test_markdown_has_safety_boundary(self, tmp_path: Path) -> None:
+        _write_debt_register(tmp_path / ".ai-debt" / "debt-register.json", [])
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        md = (tmp_path / ".ai-debt" / "reports" / "quality-gate.md").read_text(encoding="utf-8")
+        assert "Safety Boundary" in md
+
+    def test_markdown_is_deterministic(self, tmp_path: Path) -> None:
+        _write_debt_register(
+            tmp_path / ".ai-debt" / "debt-register.json",
+            [_finding(severity="Medium")],
+        )
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        md1 = (tmp_path / ".ai-debt" / "reports" / "quality-gate.md").read_text(encoding="utf-8")
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        md2 = (tmp_path / ".ai-debt" / "reports" / "quality-gate.md").read_text(encoding="utf-8")
+        assert md1 == md2
+
+    def test_missing_debt_register_still_writes_report(self, tmp_path: Path) -> None:
+        result = runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        assert result.exit_code == 1
+        md_path = tmp_path / ".ai-debt" / "reports" / "quality-gate.md"
+        assert md_path.exists()
+        md = md_path.read_text(encoding="utf-8")
+        assert "FAIL" in md
+
+
+class TestGateArtifactBoundary:
+    """Gate only writes to .ai-debt/reports/, never mutates canonical files."""
+
+    def test_does_not_modify_debt_register(self, tmp_path: Path) -> None:
+        dr = tmp_path / ".ai-debt" / "debt-register.json"
+        _write_debt_register(dr, [])
+        before = dr.read_text(encoding="utf-8")
+        runner.invoke(app, ["gate", "-r", str(tmp_path)])
+        after = dr.read_text(encoding="utf-8")
         assert before == after

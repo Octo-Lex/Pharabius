@@ -58,6 +58,15 @@ class TestActionMetadata:
         data = _load_action()
         assert "output-dir" in data["inputs"]
 
+    def test_pharabius_version_input_exists(self) -> None:
+        data = _load_action()
+        assert "pharabius-version" in data["inputs"]
+        assert data["inputs"]["pharabius-version"]["default"] == "2.0.1"
+
+    def test_install_step_uses_version_input(self) -> None:
+        content = ACTION_YML.read_text(encoding="utf-8")
+        assert "pharabius==${{ inputs.pharabius-version }}" in content
+
 
 class TestActionSafety:
     def test_no_upload_sarif_in_action(self) -> None:

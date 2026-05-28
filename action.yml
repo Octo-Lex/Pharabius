@@ -7,6 +7,10 @@ branding:
   color: "blue"
 
 inputs:
+  pharabius-version:
+    description: "Pharabius package version to install (pinned for reproducibility)"
+    required: false
+    default: "2.0.1"
   command:
     description: "Command to run: 'gate', 'run', or 'run+gate' (run analysis then gate)"
     required: false
@@ -45,7 +49,7 @@ runs:
   steps:
     - name: Install Pharabius
       shell: bash
-      run: pip install pharabius
+      run: pip install "pharabius==${{ inputs.pharabius-version }}"
 
     - name: Run analysis
       if: inputs.command == 'run' || inputs.command == 'run+gate'
