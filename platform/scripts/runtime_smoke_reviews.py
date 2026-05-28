@@ -61,12 +61,16 @@ def main() -> None:
     print(f"OK Repository: {repos[0]['name']} ({repo_id[:8]}...)")
 
     # 3. Create review decision
-    code, body = _req("POST", f"/repositories/{repo_id}/reviews", {
-        "finding_id": "TD-DEP-001",
-        "status": "accepted",
-        "reviewer": "smoke-test",
-        "rationale": "Runtime validation",
-    })
+    code, body = _req(
+        "POST",
+        f"/repositories/{repo_id}/reviews",
+        {
+            "finding_id": "TD-DEP-001",
+            "status": "accepted",
+            "reviewer": "smoke-test",
+            "rationale": "Runtime validation",
+        },
+    )
     if code != 201:
         errors.append(f"Create review: expected 201, got {code}")
     else:
@@ -76,10 +80,14 @@ def main() -> None:
         assert body["previous_status"] == ""
 
         # 4. Update decision
-        code, body = _req("PATCH", f"/repositories/{repo_id}/reviews/{decision_id}", {
-            "status": "rejected",
-            "rationale": "Updated",
-        })
+        code, body = _req(
+            "PATCH",
+            f"/repositories/{repo_id}/reviews/{decision_id}",
+            {
+                "status": "rejected",
+                "rationale": "Updated",
+            },
+        )
         if code != 200:
             errors.append(f"Update review: expected 200, got {code}")
         elif body["previous_status"] != "accepted":
@@ -88,10 +96,14 @@ def main() -> None:
             print(f"OK Update review: {body['status']} (prev: {body['previous_status']})")
 
         # 5. Soft-delete
-        code, body = _req("DELETE", f"/repositories/{repo_id}/reviews/{decision_id}", {
-            "deleted_by": "smoke-test",
-            "delete_reason": "Runtime cleanup",
-        })
+        code, body = _req(
+            "DELETE",
+            f"/repositories/{repo_id}/reviews/{decision_id}",
+            {
+                "deleted_by": "smoke-test",
+                "delete_reason": "Runtime cleanup",
+            },
+        )
         if code != 200:
             errors.append(f"Delete review: expected 200, got {code}")
         elif not body.get("deleted_at"):
@@ -108,12 +120,16 @@ def main() -> None:
         print(f"OK Audit log: {body['total']} entries ({deleted_count} deleted)")
 
     # 7. Bulk review
-    code, body = _req("POST", f"/repositories/{repo_id}/reviews/bulk", {
-        "decisions": [
-            {"finding_id": "TD-ARCH-001", "status": "deferred", "reviewer": "smoke-test"},
-            {"finding_id": "TD-FAKE-999", "status": "accepted"},
-        ],
-    })
+    code, body = _req(
+        "POST",
+        f"/repositories/{repo_id}/reviews/bulk",
+        {
+            "decisions": [
+                {"finding_id": "TD-ARCH-001", "status": "deferred", "reviewer": "smoke-test"},
+                {"finding_id": "TD-FAKE-999", "status": "accepted"},
+            ],
+        },
+    )
     if code != 200:
         errors.append(f"Bulk review: expected 200, got {code}")
     else:
