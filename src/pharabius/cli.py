@@ -1794,10 +1794,10 @@ def upload_cmd(
     except httpx.HTTPStatusError as e:
         console.print(f"[red]Upload failed: {e.response.status_code}[/red]")
         console.print(e.response.text)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     except httpx.ConnectError:
         console.print(f"[red]Cannot connect to {url}[/red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     bundle_id = result.get("bundle_id", "unknown")
     is_valid = result.get("is_valid", False)

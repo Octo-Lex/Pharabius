@@ -38,7 +38,7 @@ def upload_bundle(
     Returns the API response as a dict.
     Raises httpx.HTTPStatusError on non-2xx responses.
     """
-    data, sha256 = create_bundle_tarball(ai_debt_dir)
+    data, _sha256 = create_bundle_tarball(ai_debt_dir)
 
     response = httpx.post(
         f"{url.rstrip('/')}/api/v1/bundles",
