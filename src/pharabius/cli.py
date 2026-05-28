@@ -1660,8 +1660,23 @@ def trend(
         )
 
     if format_output in ("markdown", "all"):
+        from pharabius.core.trend_reports import (
+            render_category_trends_md,
+            render_gate_trends_md,
+            render_risk_trends_md,
+        )
+
         md_path = trends_dir / "trend-summary.md"
         md_path.write_text(_render_trend_md(summary), encoding="utf-8")
+
+        risk_path = trends_dir / "risk-trends.md"
+        risk_path.write_text(render_risk_trends_md(summary), encoding="utf-8")
+
+        cat_path = trends_dir / "category-trends.md"
+        cat_path.write_text(render_category_trends_md(summary), encoding="utf-8")
+
+        gate_path = trends_dir / "gate-trends.md"
+        gate_path.write_text(render_gate_trends_md(summary), encoding="utf-8")
 
     # Console output
     trajectory_color = {

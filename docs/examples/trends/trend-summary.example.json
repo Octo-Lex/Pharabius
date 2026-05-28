@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-05-28T00:00:00+00:00",
+  "repository": "/path/to/repo",
+  "baseline_run_id": "RUN-20260501-120000",
+  "latest_run_id": "RUN-20260528-120000",
+  "run_count": 4,
+  "points": [
+    {
+      "run_id": "RUN-20260501-120000",
+      "timestamp": "2026-05-01T12:00:00+00:00",
+      "total_findings": 12,
+      "critical": 2,
+      "high": 3,
+      "medium": 5,
+      "low": 2,
+      "gate_result": "fail",
+      "gate_approximated": true,
+      "readiness_status": "unknown",
+      "category_data_available": false
+    },
+    {
+      "run_id": "RUN-20260508-120000",
+      "timestamp": "2026-05-08T12:00:00+00:00",
+      "total_findings": 10,
+      "critical": 1,
+      "high": 3,
+      "medium": 4,
+      "low": 2,
+      "gate_result": "fail",
+      "gate_approximated": true,
+      "readiness_status": "unknown",
+      "category_data_available": false
+    },
+    {
+      "run_id": "RUN-20260515-120000",
+      "timestamp": "2026-05-15T12:00:00+00:00",
+      "total_findings": 7,
+      "critical": 0,
+      "high": 2,
+      "medium": 3,
+      "low": 2,
+      "gate_result": "pass",
+      "gate_approximated": true,
+      "readiness_status": "unknown",
+      "category_data_available": false
+    },
+    {
+      "run_id": "RUN-20260528-120000",
+      "timestamp": "2026-05-28T12:00:00+00:00",
+      "total_findings": 5,
+      "critical": 0,
+      "high": 1,
+      "medium": 2,
+      "low": 2,
+      "gate_result": "pass",
+      "gate_approximated": true,
+      "readiness_status": "unknown",
+      "category_data_available": false
+    }
+  ],
+  "deltas": {
+    "total": -7,
+    "critical": -2,
+    "high": -2,
+    "medium": -3,
+    "low": 0
+  },
+  "trajectory": "improving",
+  "warnings": [
+    "Gate results are approximated from severity counts using default thresholds. Actual gate thresholds may differ.",
+    "Category trends unavailable: run metadata does not store per-run category breakdowns.",
+    "Readiness trends unavailable: readiness status is not persisted per run."
+  ]
+}
