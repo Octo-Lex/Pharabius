@@ -97,4 +97,4 @@ class TestVersionFlag:
     def test_version_flag_works(self) -> None:
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
-        assert "2.0.1" in result.output
+        assert "2.1.0" in result.output
