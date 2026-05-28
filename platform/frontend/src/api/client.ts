@@ -42,10 +42,13 @@ export interface Finding {
   category: string;
   issue_type: string;
   title: string;
+  description: string;
   severity: string;
   confidence: string;
   risk_score: number;
   priority: string;
+  locations: string[];
+  evidence_ids: string[];
 }
 
 export interface FindingsResponse {
@@ -173,6 +176,13 @@ export function listFindings(
   if (params?.page) sp.set("page", String(params.page));
   const qs = sp.toString();
   return fetchJSON(`${BASE}/repositories/${repoId}/findings${qs ? `?${qs}` : ""}`);
+}
+
+export function getFinding(
+  repoId: string,
+  findingId: string,
+): Promise<Finding> {
+  return fetchJSON(`${BASE}/repositories/${repoId}/findings/${findingId}`);
 }
 
 export function getPortfolio(): Promise<PortfolioData> {

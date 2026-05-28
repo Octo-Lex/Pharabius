@@ -115,10 +115,13 @@ class Finding(Base):
     category: Mapped[str] = mapped_column(String(50), nullable=False)
     issue_type: Mapped[str] = mapped_column(String(50), default="technical_debt")
     title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
     severity: Mapped[str] = mapped_column(String(20), nullable=False)
     confidence: Mapped[str] = mapped_column(String(20), nullable=False)
     risk_score: Mapped[int] = mapped_column(Integer, default=0)
     priority: Mapped[str] = mapped_column(String(20), default="Medium")
+    locations: Mapped[list[str] | None] = mapped_column(JSON, default=None)
+    evidence_ids: Mapped[list[str] | None] = mapped_column(JSON, default=None)
 
     run: Mapped[Run] = relationship(back_populates="findings")
 
