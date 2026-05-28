@@ -214,3 +214,44 @@ class APIKey(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     organization: Mapped[Organization] = relationship(back_populates="api_keys")
+
+
+class ReviewDecision(Base):
+    """Review decision for a single finding.
+
+    Uses the same 7 DecisionStatus values as the CLI review sidecar:
+    accepted, rejected, deferred, needs-investigation,
+    duplicate, already-fixed, risk-accepted.
+
+    Reviewer is free-text advisory field — not verified identity.
+    Review decisions never mutate Finding records.
+    Soft-deleted records are retained for audit history.
+    """
+
+    __tablename__ = "review_decisions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    repository_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("repositories.id"), nullable=False, index=True
+    )
+    run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("runs.id"), nullable=True
+    )
+    finding_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    previous_status: Mapped[str] = mapped_column(String(30), default="")
+    reviewer: Mapped[str] = mapped_column(String(255), default="")
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    ticket_url: Mapped[str] = mapped_column(String(500), default="")
+    owner_area: Mapped[str] = mapped_column(String(255), default="")
+    target_release: Mapped[str] = mapped_column(String(100), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    deleted_by: Mapped[str] = mapped_column(String(255), default="")
+    delete_reason: Mapped[str] = mapped_column(Text, default="")
+
+    repository = relationship("Repository")
