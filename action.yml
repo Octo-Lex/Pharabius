@@ -1,5 +1,5 @@
 name: "Pharabius Technical Debt Analysis"
-description: "Run Pharabius analysis and quality gate in CI. Produces SARIF for GitHub Code Scanning."
+description: "Run Pharabius analysis and quality gate in CI. Generates local SARIF and quality gate reports. No external uploads."
 author: "Elephant-Rock-Lab"
 
 branding:
@@ -7,10 +7,18 @@ branding:
   color: "blue"
 
 inputs:
+  pharabius-version:
+    description: "Pharabius package version to install (pinned for reproducibility)"
+    required: false
+    default: "2.0.1"
   command:
     description: "Command to run: 'gate', 'run', or 'run+gate' (run analysis then gate)"
     required: false
     default: "gate"
+  mode:
+    description: "Gate mode: 'strict' (fail on any threshold breach), 'warn' (annotate but pass), 'advisory' (report only)"
+    required: false
+    default: "strict"
   max-critical:
     description: "Maximum allowed Critical findings (quality gate)"
     required: false
@@ -24,20 +32,24 @@ inputs:
     required: false
     default: "50"
   fail-on-gate:
-    description: "Fail the workflow if quality gate does not pass"
+    description: "Fail the workflow if quality gate does not pass (strict mode only)"
     required: false
     default: "true"
-  sarif-output:
-    description: "Path to write SARIF output for GitHub Code Scanning. Empty string disables."
+  generate-sarif:
+    description: "Generate local SARIF artifact file. Does not upload anywhere."
     required: false
-    default: "pharabius.sarif"
+    default: "false"
+  output-dir:
+    description: "Directory for generated reports and artifacts"
+    required: false
+    default: ".ai-debt/reports"
 
 runs:
   using: "composite"
   steps:
     - name: Install Pharabius
       shell: bash
-      run: pip install pharabius==2.0.0
+      run: pip install "pharabius==${{ inputs.pharabius-version }}"
 
     - name: Run analysis
       if: inputs.command == 'run' || inputs.command == 'run+gate'
@@ -66,15 +78,20 @@ runs:
         if ai-debt gate $GATE_ARGS; then
           echo "::notice::Quality gate PASSED"
         else
-          if [ "${{ inputs.fail-on-gate }}" == "true" ]; then
-            echo "::error::Quality gate FAILED"
+          if [ "${{ inputs.mode }}" == "strict" ] && [ "${{ inputs.fail-on-gate }}" == "true" ]; then
+            echo "::error::Quality gate FAILED (strict mode)"
             exit 1
+          elif [ "${{ inputs.mode }}" == "warn" ]; then
+            echo "::warning::Quality gate FAILED (warn mode — non-blocking)"
           else
-            echo "::warning::Quality gate FAILED (non-blocking)"
+            echo "::notice::Quality gate FAILED (advisory mode — report only)"
           fi
         fi
 
-    - name: Export SARIF
-      if: inputs.sarif-output != ''
+    - name: Generate local SARIF
+      if: inputs.generate-sarif == 'true'
       shell: bash
-      run: ai-debt export --format sarif --output-dir "${{ inputs.sarif-output }}"
+      run: |
+        mkdir -p "${{ inputs.output-dir }}"
+        ai-debt export --format sarif --output-dir "${{ inputs.output-dir }}"
+        echo "::notice::SARIF generated locally at ${{ inputs.output-dir }}/findings.sarif"

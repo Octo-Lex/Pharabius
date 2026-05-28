@@ -31,6 +31,14 @@
 - [Operational Claims Adoption](OPERATIONAL_CLAIMS_ADOPTION.md) — Claims usage guide
 - [Scoring Evidence Pack](SCORING_EVIDENCE_PACK.md) — Enhanced risk scoring
 
+## CI & Quality Gate
+
+- [Quality Gate](QUALITY_GATE.md) — Threshold-based CI quality gate
+- [GitHub Action](GITHUB_ACTION.md) — Reusable CI action wrapper
+- [SARIF Export](SARIF.md) — SARIF v2.1.0 local generation
+- [CI Troubleshooting](CI_TROUBLESHOOTING.md) — Failure-mode recovery guide
+- [CI Examples](ci/github-actions.md) — GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, portable shell
+
 ## Validation
 
 - [Release Checklist](RELEASE_CHECKLIST.md) — Pre-release verification
