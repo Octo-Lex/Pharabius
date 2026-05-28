@@ -39,6 +39,10 @@
 - [CI Troubleshooting](CI_TROUBLESHOOTING.md) — Failure-mode recovery guide
 - [CI Examples](ci/github-actions.md) — GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, portable shell
 
+## Trends
+
+- [Temporal Trends](TRENDS.md) — Track debt trajectory over time
+
 ## Validation
 
 - [Release Checklist](RELEASE_CHECKLIST.md) — Pre-release verification
