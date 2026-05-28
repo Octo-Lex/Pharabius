@@ -7,6 +7,16 @@
 - Dashboard prototype
 - Temporal trend charts
 
+## v2.0.1 — CI Gate Adoption & SARIF Polish (current)
+
+- CI example docs (GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, portable shell)
+- GitHub Action polish (mode, generate-sarif, output-dir inputs)
+- Quality gate Markdown report readability
+- SARIF fixture validation and documentation
+- CI troubleshooting guide
+- 83 new tests (1,773 total)
+- Patch release — no new product capability
+
 ## v2.0 — Local CI Quality Gate (Wave 53)
 
 - Quality gate schema and evaluation engine
