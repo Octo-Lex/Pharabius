@@ -1,6 +1,12 @@
 import { useState, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
 import { uploadBundle, type UploadResult } from "../api/client";
 import { ErrorMessage } from "../components/UI";
+
+/** Check if an error message indicates a duplicate bundle (409). */
+function isDuplicateError(msg: string): boolean {
+  return msg.includes("409") || msg.toLowerCase().includes("already uploaded");
+}
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -33,6 +39,14 @@ export default function UploadPage() {
       setUploading(false);
       setProgress(null);
     }
+  }
+
+  function resetForm() {
+    setFile(null);
+    setRepoName("");
+    setResult(null);
+    setError("");
+    setProgress(null);
   }
 
   return (
@@ -68,7 +82,7 @@ export default function UploadPage() {
         {/* Repository name */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Repository name <span className="text-muted">(optional)</span>
+            Repository name <span className="text-muted">(optional — uses project-profile.json if empty)</span>
           </label>
           <input
             type="text"
@@ -112,8 +126,24 @@ export default function UploadPage() {
           </div>
         )}
 
-        {/* Error */}
-        {error && <ErrorMessage message={error} />}
+        {/* Error — duplicate */}
+        {error && isDuplicateError(error) && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded text-sm">
+            <strong>⚠ Duplicate bundle:</strong> This artifact bundle has already been uploaded.
+            Each unique bundle can only be uploaded once.
+            <div className="mt-2">
+              <Link
+                to="/"
+                className="text-primary hover:underline text-sm"
+              >
+                → View repositories
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Error — general */}
+        {error && !isDuplicateError(error) && <ErrorMessage message={error} />}
 
         {/* Result */}
         {result && (
@@ -154,6 +184,21 @@ export default function UploadPage() {
                 </ul>
               </div>
             )}
+
+            <div className="mt-3 pt-3 border-t border-green-200 flex items-center gap-4">
+              <Link
+                to="/"
+                className="text-primary hover:underline text-sm font-medium"
+              >
+                → View repositories
+              </Link>
+              <button
+                onClick={resetForm}
+                className="text-muted hover:text-gray-700 text-sm"
+              >
+                Upload another
+              </button>
+            </div>
           </div>
         )}
       </div>
