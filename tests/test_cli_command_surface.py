@@ -31,6 +31,7 @@ EXPECTED_COMMANDS = [
     "gate",
     "diff",
     "trend",
+    "upload",
 ]
 
 
