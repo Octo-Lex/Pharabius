@@ -1596,5 +1596,146 @@ def diff_cmd(
         )
 
 
+@app.command()
+def trend(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root.",
+        ),
+    ] = None,
+    last: Annotated[
+        int | None,
+        typer.Option(
+            "--last",
+            help="Only analyze the last N runs.",
+        ),
+    ] = None,
+    format_output: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            help="Output format: json, markdown, or all.",
+        ),
+    ] = "all",
+) -> None:
+    """Analyze temporal trends across analysis runs.
+
+    Reads .ai-debt/runs/ and produces trend reports.
+    Writes .ai-debt/trends/ artifacts. Does not mutate run history.
+    """
+
+    from pharabius.core.trend_collector import collect_run_points
+    from pharabius.core.trend_engine import compute_trend
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    runs_dir = resolved_root / ".ai-debt" / "runs"
+
+    # Collect
+    warnings: list[str] = []
+    points = collect_run_points(runs_dir, warnings)
+
+    # Optionally limit to last N runs
+    if last is not None and last > 0 and len(points) > last:
+        points = points[-last:]
+
+    # Compute
+    summary = compute_trend(
+        points,
+        repository=str(resolved_root),
+        existing_warnings=warnings,
+    )
+
+    # Write output
+    trends_dir = resolved_root / ".ai-debt" / "trends"
+    trends_dir.mkdir(parents=True, exist_ok=True)
+
+    if format_output in ("json", "all"):
+        json_path = trends_dir / "trend-summary.json"
+        json_path.write_text(
+            summary.model_dump_json(indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+    if format_output in ("markdown", "all"):
+        md_path = trends_dir / "trend-summary.md"
+        md_path.write_text(_render_trend_md(summary), encoding="utf-8")
+
+    # Console output
+    trajectory_color = {
+        "improving": "green",
+        "stable": "yellow",
+        "worsening": "red",
+        "insufficient_data": "dim",
+    }.get(summary.trajectory, "white")
+    console.print(
+        f"[bold {trajectory_color}]Trajectory: {summary.trajectory}[/bold {trajectory_color}]"
+    )
+    console.print(f"Runs analyzed: {summary.run_count}")
+    if summary.deltas:
+        for key, val in summary.deltas.items():
+            sign = "+" if val > 0 else ""
+            console.print(f"  {key}: {sign}{val}")
+    if summary.warnings:
+        for w in summary.warnings:
+            console.print(f"  [dim]Warning: {w}[/dim]")
+
+
+def _render_trend_md(summary: object) -> str:
+    """Render trend summary as Markdown."""
+    from pharabius.schemas.trend import TrendSummary
+
+    assert isinstance(summary, TrendSummary)
+    lines = ["# Temporal Trend Summary\n"]
+
+    lines.append(f"**Trajectory:** {summary.trajectory}\n")
+    lines.append(f"**Runs analyzed:** {summary.run_count}")
+    lines.append(f"**Baseline:** {summary.baseline_run_id or 'N/A'}")
+    lines.append(f"**Latest:** {summary.latest_run_id or 'N/A'}")
+    lines.append("")
+
+    if summary.deltas:
+        lines.append("## Risk Movement\n")
+        lines.append("| Metric | Baseline → Latest | Delta |")
+        lines.append("|--------|-------------------|-------|")
+        for key in ["critical", "high", "medium", "low", "total"]:
+            val = summary.deltas.get(key, 0)
+            sign = "+" if val > 0 else ""
+            lines.append(f"| {key.capitalize()} | — | {sign}{val} |")
+        lines.append("")
+
+    if summary.points:
+        lines.append("## Run History\n")
+        lines.append("| Run | Timestamp | Critical | High | Total | Gate |")
+        lines.append("|-----|-----------|----------|------|-------|------|")
+        for p in summary.points:
+            gate_display: str = p.gate_result
+            if p.gate_approximated:
+                gate_display += "*"
+            lines.append(
+                f"| {p.run_id} | {p.timestamp[:10]} | {p.critical} | {p.high} "
+                f"| {p.total_findings} | {gate_display} |"
+            )
+        lines.append("")
+        lines.append("\\* Gate result approximated from severity counts.\n")
+
+    if summary.warnings:
+        lines.append("## Warnings and Limitations\n")
+        for w in summary.warnings:
+            lines.append(f"- {w}")
+        lines.append("")
+
+    lines.append("## Important\n")
+    lines.append(
+        "This report is based on available Pharabius run artifacts, "
+        "not a scientific measure of engineering quality."
+    )
+    lines.append("")
+
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     app()

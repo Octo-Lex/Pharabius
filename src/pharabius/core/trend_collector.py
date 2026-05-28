@@ -16,8 +16,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-
-from typing import Literal, cast
+from typing import Literal
 
 from pharabius.schemas.run_metadata import RunMetadata
 from pharabius.schemas.trend import TrendPoint

@@ -30,6 +30,7 @@ EXPECTED_COMMANDS = [
     "portfolio",
     "gate",
     "diff",
+    "trend",
 ]
 
 
