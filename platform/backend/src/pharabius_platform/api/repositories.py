@@ -145,10 +145,13 @@ async def list_findings(
             "category": f.category,
             "issue_type": f.issue_type,
             "title": f.title,
+            "description": f.description or "",
             "severity": f.severity,
             "confidence": f.confidence,
             "risk_score": f.risk_score,
             "priority": f.priority,
+            "locations": f.locations or [],
+            "evidence_ids": f.evidence_ids or [],
         }
         for f in findings
     ]
@@ -223,4 +226,56 @@ def _run_summary(run: Run) -> dict[str, object]:
         "low": run.low,
         "readiness_status": run.readiness_status,
         "gate_result": run.gate_result,
+    }
+
+
+@router.get("/api/v1/repositories/{repo_id}/findings/{finding_id}")
+async def get_finding(
+    repo_id: str,
+    finding_id: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, object]:
+    """Get a single finding by finding_id for a repository's latest run."""
+    from uuid import UUID
+
+    try:
+        repo_uuid = UUID(repo_id)
+    except ValueError:
+        return {"error": {"code": "invalid_id", "message": "Invalid repository ID"}}
+
+    # Get latest run for this repo
+    run_result = await session.execute(
+        select(Run)
+        .where(Run.repository_id == repo_uuid)
+        .order_by(Run.run_timestamp.desc())
+        .limit(1)
+    )
+    latest_run = run_result.scalar_one_or_none()
+    if latest_run is None:
+        return {"error": {"code": "not_found", "message": "No runs found for repository"}}
+
+    # Find by finding_id (not UUID)
+    result = await session.execute(
+        select(Finding).where(
+            Finding.run_id == latest_run.id,
+            Finding.finding_id == finding_id,
+        )
+    )
+    finding = result.scalar_one_or_none()
+    if finding is None:
+        return {"error": {"code": "not_found", "message": f"Finding {finding_id} not found"}}
+
+    return {
+        "id": str(finding.id),
+        "finding_id": finding.finding_id,
+        "category": finding.category,
+        "issue_type": finding.issue_type,
+        "title": finding.title,
+        "description": finding.description or "",
+        "severity": finding.severity,
+        "confidence": finding.confidence,
+        "risk_score": finding.risk_score,
+        "priority": finding.priority,
+        "locations": finding.locations or [],
+        "evidence_ids": finding.evidence_ids or [],
     }

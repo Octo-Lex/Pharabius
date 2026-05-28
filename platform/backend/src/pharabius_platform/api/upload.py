@@ -184,16 +184,23 @@ async def upload_bundle(
 
         # Create Finding records
         for f in findings_list:
+            locations_raw = getattr(f, "locations", None)
+            evidence_ids_raw = getattr(f, "evidence_ids", None)
+            description_raw = getattr(f, "description", "") or ""
+
             finding_record = Finding(
                 run_id=run_record.id,
                 finding_id=f.id,
                 category=f.category,
                 issue_type=getattr(f, "issue_type", "technical_debt"),
                 title=f.title,
+                description=description_raw,
                 severity=f.severity,
                 confidence=getattr(f, "confidence", "Medium"),
                 risk_score=getattr(f, "risk_score", 0),
                 priority=getattr(f, "priority", "Medium"),
+                locations=[str(loc) for loc in locations_raw] if locations_raw else None,
+                evidence_ids=[str(eid) for eid in evidence_ids_raw] if evidence_ids_raw else None,
             )
             session.add(finding_record)
 
