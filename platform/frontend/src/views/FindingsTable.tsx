@@ -192,6 +192,7 @@ export default function FindingsTable() {
   const [error, setError] = useState("");
   const [reviewModal, setReviewModal] = useState<Finding | null>(null);
   const [token, setToken] = useState(() => localStorage.getItem("pharabius_token") ?? "");
+  const [showTokenInput, setShowTokenInput] = useState(() => !localStorage.getItem("pharabius_token"));
 
   const severity = searchParams.get("severity") || "";
   const category = searchParams.get("category") || "";
@@ -273,20 +274,49 @@ export default function FindingsTable() {
       )}
 
       {/* Token input */}
-      {token === "" && (
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="password"
-            placeholder="Enter admin token to review findings"
-            value={token}
-            onChange={(e) => {
-              setToken(e.target.value);
-              localStorage.setItem("pharabius_token", e.target.value);
-            }}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm flex-1 max-w-xs"
-          />
-        </div>
-      )}
+      <div className="mb-4 flex items-center gap-2 text-sm">
+        {showTokenInput || !token ? (
+          <>
+            <input
+              type="password"
+              placeholder="Enter admin token to review findings"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-1.5 text-sm flex-1 max-w-xs"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && token) {
+                  localStorage.setItem("pharabius_token", token);
+                  setShowTokenInput(false);
+                }
+              }}
+            />
+            {token && (
+              <button
+                onClick={() => {
+                  localStorage.setItem("pharabius_token", token);
+                  setShowTokenInput(false);
+                }}
+                className="px-3 py-1.5 bg-primary text-white text-sm rounded hover:bg-primary-dark"
+              >
+                Save
+              </button>
+            )}
+            <span className="text-muted text-xs">
+              Token stored locally in your browser. Not sent to any server except the Pharabius backend.
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-muted">Token: ••••••••••</span>
+            <button
+              onClick={() => setShowTokenInput(true)}
+              className="text-primary hover:underline text-xs"
+            >
+              Change
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="flex gap-3 mb-4">
