@@ -2,6 +2,33 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.4.0] - Unreleased
+
+### Added
+
+- **Finding Detail Enrichment**: `description`, `locations`, and `evidence_ids`
+  now stored in the Finding model and returned by the API.
+- **Single-finding endpoint**: `GET /repositories/{id}/findings/{finding_id}`
+  for focused finding context.
+- **Frontend finding context**: Review modal now shows a collapsible
+  "Finding Detail" section with description, locations, and evidence IDs.
+- **Alembic migration 003**: Adds `description` (Text), `locations` (JSON),
+  `evidence_ids` (JSON) columns to the `findings` table.
+
+### Changed
+
+- Upload parser now extracts and persists `description`, `locations`,
+  `evidence_ids` from `DebtFinding` records during bundle processing.
+- Findings list API response now includes `description`, `locations`,
+  `evidence_ids` fields (with safe defaults for NULL/missing values).
+
+### Known Limitations
+
+- Locations are stored as stringified artifact locations, not normalized
+  file/line objects.
+- Evidence IDs are references to uploaded artifact evidence, not full
+  evidence content. No evidence content table or source browsing.
+
 ## [2.3.1] - Unreleased
 
 ### Fixed

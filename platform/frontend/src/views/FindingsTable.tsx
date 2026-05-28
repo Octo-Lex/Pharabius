@@ -61,6 +61,12 @@ function ReviewModal({ finding, existing, repoId, token, onClose, onSaved }: Rev
   const [ownerArea, setOwnerArea] = useState(existing?.owner_area ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showContext, setShowContext] = useState(false);
+
+  const hasDescription = finding.description && finding.description !== finding.title;
+  const hasLocations = finding.locations && finding.locations.length > 0;
+  const hasEvidence = finding.evidence_ids && finding.evidence_ids.length > 0;
+  const hasContext = hasDescription || hasLocations || hasEvidence;
 
   async function handleSave() {
     setSaving(true);
@@ -97,6 +103,51 @@ function ReviewModal({ finding, existing, repoId, token, onClose, onSaved }: Rev
         <p className="text-sm text-muted mb-4">
           {finding.finding_id}: {finding.title}
         </p>
+
+        {/* Finding context */}
+        {hasContext && (
+          <div className="mb-4 border border-gray-200 rounded p-3 bg-gray-50">
+            <button
+              type="button"
+              onClick={() => setShowContext(!showContext)}
+              className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-primary w-full text-left"
+            >
+              <span className={`transform transition-transform ${showContext ? "rotate-90" : ""}`}>&#9654;</span>
+              Finding Detail
+            </button>
+            {showContext && (
+              <div className="mt-2 space-y-2 text-sm">
+                {hasDescription && (
+                  <div>
+                    <span className="font-medium text-gray-600">Description:</span>{" "}
+                    <span className="text-gray-800">{finding.description}</span>
+                  </div>
+                )}
+                {hasLocations && (
+                  <div>
+                    <span className="font-medium text-gray-600">Locations:</span>
+                    <ul className="ml-4 mt-1 list-disc text-muted">
+                      {finding.locations.map((loc, i) => (
+                        <li key={i} className="font-mono text-xs">{loc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {hasEvidence && (
+                  <div>
+                    <span className="font-medium text-gray-600">Evidence IDs:</span>{" "}
+                    <span className="font-mono text-xs text-muted">
+                      {finding.evidence_ids.join(", ")}
+                    </span>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Evidence IDs are references to uploaded artifact evidence, not full evidence content.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {error && <ErrorMessage message={error} />}
 
