@@ -2,6 +2,46 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.2.3] - Unreleased
+
+### Added
+
+- **Frontend MVP**: 5 browser views for the hosted platform.
+  - **Repository List**: Table of repositories with latest run summary,
+    severity badges, gate result, and upload link.
+  - **Repository Dashboard**: Detail view with summary cards,
+    severity breakdown, and link to findings.
+  - **Findings Table**: Paginated table with severity and category
+    dropdown filters. Displays finding ID, title, category, severity,
+    and risk score.
+  - **Portfolio Summary**: Aggregated stats (repos, findings, critical+high),
+    severity distribution bar chart (Recharts), and per-repo gate status.
+  - **Upload Page**: File upload form with progress bar, admin token
+    input, repository name, source-derived data warning, and result
+    display showing bundle ID, validity, findings count, and parse warnings.
+- Sidebar navigation layout with routes via React Router.
+- Tailwind CSS v4 configured with custom theme colors.
+- API client module (`src/api/client.ts`) with typed fetch functions
+  for all 5 data endpoints plus upload with XHR progress tracking.
+- Loading spinner, error message, and empty state components.
+- `npm run build` produces production bundle (635 KB JS, 22 KB CSS).
+- Frontend verified against running Docker backend (API proxy works).
+
+### Changed
+
+- Frontend version bumped to 2.2.3.
+- Backend version bumped to 2.2.3.
+
+### Known Limitations
+
+- No authentication UI (admin token entered manually on upload page).
+- No API key management UI.
+- No claims/gaps/readiness views.
+- No dark mode, mobile-responsive design, or i18n.
+- No real-time updates or WebSocket.
+- No browser E2E tests.
+- 635 KB JS bundle (not code-split — Recharts included).
+
 ## [2.2.2] - Unreleased
 
 ### Added
