@@ -2,6 +2,39 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.2.4] - Unreleased
+
+### Fixed
+
+- **Repository name now preserved on upload**: `repository_name` form field was
+  silently ignored by FastAPI (treated as query param instead of form field).
+  Changed to `Form("")` so the multipart field is actually received.
+- **Profile fallback for repository name**: When no explicit `repository_name`
+  is provided, the parser reads `project_name` from `project-profile.json`
+  inside the uploaded bundle.
+- **Hash fallback with label**: When neither source provides a name, the
+  repository is named `"Unknown repository · <hash>"` instead of a bare
+  12-character hex string.
+- **Slugification**: Repository names are slugified for URL-safe identifiers
+  (lowercase, hyphens, no special characters).
+- **409 duplicate handling in frontend**: Upload page now shows a clear
+  "Duplicate bundle" warning with link to repository list, instead of
+  a raw API error string.
+- **Upload success navigation**: After successful upload, the page shows a
+  link to the repository list and an "Upload another" reset button.
+
+### Added
+
+- `_slugify()` helper in upload endpoint for safe repository slugs.
+- 14 repository identity tests covering all 3 name sources + duplicates.
+
+### Changed
+
+- Frontend version bumped to 2.2.4.
+- Backend version bumped to 2.2.4.
+- Upload page repository name placeholder now says
+  "optional — uses project-profile.json if empty".
+
 ## [2.2.3] - Unreleased
 
 ### Added
