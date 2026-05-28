@@ -7,13 +7,14 @@ Claim, Gap, and QualityGateResult records to the database.
 from __future__ import annotations
 
 import hashlib
+import re
 import tarfile
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,7 +44,7 @@ async def upload_bundle(
     file: UploadFile,
     session: Annotated[AsyncSession, Depends(get_session)],
     token: str = Depends(require_token),
-    repository_name: str = "",
+    repository_name: str = Form(""),
 ) -> dict[str, object]:
     """Upload and process an .ai-debt artifact bundle.
 
@@ -110,8 +111,15 @@ async def upload_bundle(
         session.add(org)
         await session.flush()
 
-    # 2. Get or create repository
-    repo_slug = repository_name or content_hash[:12]
+    # 2. Determine repository name with priority:
+    #    explicit repository_name > project-profile.project_name > hash fallback
+    resolved_name = repository_name.strip()
+    if not resolved_name and parsed is not None and parsed.profile is not None:
+        resolved_name = parsed.profile.project_name.strip()
+    if not resolved_name:
+        resolved_name = f"Unknown repository · {content_hash[:12]}"
+
+    repo_slug = _slugify(resolved_name)
     result = await session.execute(
         select(Repository).where(
             Repository.organization_id == org.id,
@@ -120,10 +128,9 @@ async def upload_bundle(
     )
     repo = result.scalar_one_or_none()
     if repo is None:
-        repo_name = repository_name or repo_slug
         repo = Repository(
             organization_id=org.id,
-            name=repo_name,
+            name=resolved_name,
             slug=repo_slug,
             last_uploaded_at=datetime.now(UTC),
         )
@@ -270,3 +277,20 @@ def _find_ai_debt_dir(root: Path) -> Path | None:
     if (root / "evidence.json").exists() and (root / "debt-register.json").exists():
         return root
     return None
+
+
+def _slugify(name: str) -> str:
+    """Convert a repository name to a URL-safe slug.
+
+    Rules:
+    - Lowercase
+    - Replace spaces and special chars with hyphens
+    - Collapse consecutive hyphens
+    - Strip leading/trailing hyphens
+    - If empty after slugification, use 'unnamed-repo'
+    """
+    slug = name.lower().strip()
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    slug = slug.strip("-")
+    return slug or "unnamed-repo"
