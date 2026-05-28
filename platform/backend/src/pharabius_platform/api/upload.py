@@ -60,7 +60,7 @@ async def upload_bundle(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
-            )
+            ) from None
 
         # Validate
         validation = validate_bundle(extract_path)
@@ -111,7 +111,7 @@ def _safe_extract_tar(data: bytes, dest: Path) -> None:
 
             tar.extractall(str(dest), filter="data")
     except tarfile.TarError as e:
-        raise ValueError(f"Invalid tarball: {e}")
+        raise ValueError(f"Invalid tarball: {e}") from None
     finally:
         tmp_file.unlink(missing_ok=True)
 

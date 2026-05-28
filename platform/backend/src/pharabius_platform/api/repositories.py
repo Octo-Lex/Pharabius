@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +16,7 @@ router = APIRouter(tags=["repositories"])
 
 @router.get("/api/v1/repositories")
 async def list_repositories(
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """List all repositories with latest run summary."""
     # Get all repos
@@ -51,7 +53,7 @@ async def list_repositories(
 @router.get("/api/v1/repositories/{repo_id}")
 async def get_repository(
     repo_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """Get repository detail with latest run summary."""
     from uuid import UUID
@@ -91,7 +93,7 @@ async def get_repository(
 @router.get("/api/v1/repositories/{repo_id}/findings")
 async def list_findings(
     repo_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
     severity: str | None = None,
     category: str | None = None,
     page: int = Query(default=1, ge=1),
@@ -162,7 +164,7 @@ async def list_findings(
 @router.get("/api/v1/repositories/{repo_id}/runs")
 async def list_runs(
     repo_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """List run history for a repository."""
     from uuid import UUID
@@ -184,7 +186,7 @@ async def list_runs(
 @router.get("/api/v1/repositories/{repo_id}/latest-run")
 async def get_latest_run(
     repo_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """Get latest run summary for a repository."""
     from uuid import UUID

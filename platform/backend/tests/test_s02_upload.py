@@ -72,7 +72,6 @@ def _create_sample_ai_debt(base: Path) -> Path:
 def _create_tarball(ai_debt_dir: Path) -> bytes:
     """Create a tar.gz from an .ai-debt directory."""
     buf = io.BytesIO()
-    parent = ai_debt_dir.parent
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         tar.add(str(ai_debt_dir), arcname=".ai-debt")
     return buf.getvalue()
@@ -209,7 +208,7 @@ class TestValidator:
     def test_valid_bundle(self, tmp_path: Path) -> None:
         from pharabius_platform.services.validator import validate_bundle
 
-        ai_debt = _create_sample_ai_debt(tmp_path)
+        _create_sample_ai_debt(tmp_path)
         result = validate_bundle(tmp_path)
         assert result.is_valid is True
         assert len(result.found_required) == 3

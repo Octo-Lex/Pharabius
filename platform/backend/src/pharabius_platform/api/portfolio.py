@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,12 +23,12 @@ router = APIRouter(tags=["portfolio", "trends", "gates"])
 
 @router.get("/api/v1/portfolio")
 async def get_portfolio(
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """Portfolio summary across all repositories."""
     # Get all orgs/repos
     org_result = await session.execute(select(Organization))
-    orgs = org_result.scalars().all()
+    org_result.scalars().all()
 
     repo_result = await session.execute(select(Repository))
     repos = repo_result.scalars().all()
@@ -82,7 +84,7 @@ async def get_portfolio(
 
 @router.get("/api/v1/portfolio/risk-rollup")
 async def get_risk_rollup(
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """Severity distribution across all repositories."""
     result = await session.execute(
@@ -106,7 +108,7 @@ async def get_risk_rollup(
 @router.get("/api/v1/repositories/{repo_id}/trends")
 async def get_trends(
     repo_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """Trend points for a repository."""
     from uuid import UUID
@@ -141,7 +143,7 @@ async def get_trends(
 @router.get("/api/v1/repositories/{repo_id}/gate-history")
 async def get_gate_history(
     repo_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """Quality gate pass/fail history for a repository."""
     from uuid import UUID
@@ -181,7 +183,7 @@ async def get_gate_history(
 
 @router.get("/api/v1/claims")
 async def list_claims(
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """List claims across all repositories."""
     result = await session.execute(select(Claim))
@@ -204,7 +206,7 @@ async def list_claims(
 
 @router.get("/api/v1/gaps")
 async def list_gaps(
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """List gaps across all repositories."""
     result = await session.execute(select(Gap))
@@ -225,7 +227,7 @@ async def list_gaps(
 
 @router.get("/api/v1/readiness")
 async def list_readiness(
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, object]:
     """Readiness status across all repositories."""
     result = await session.execute(select(Repository))

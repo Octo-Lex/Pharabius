@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -55,8 +56,8 @@ def _hash_key(key: str) -> str:
 @router.post("/api/v1/api-keys", status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     request: CreateAPIKeyRequest,
-    session: AsyncSession = Depends(get_session),
-    admin: str = Depends(require_admin),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[str, Depends(require_admin)],
 ) -> dict[str, object]:
     """Create a new API key."""
     if request.key_type not in ("admin", "upload"):
@@ -99,8 +100,8 @@ async def create_api_key(
 
 @router.get("/api/v1/api-keys")
 async def list_api_keys(
-    session: AsyncSession = Depends(get_session),
-    admin: str = Depends(require_admin),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[str, Depends(require_admin)],
 ) -> dict[str, object]:
     """List all API keys (without raw key values)."""
     result = await session.execute(select(APIKey).order_by(APIKey.name))
@@ -124,8 +125,8 @@ async def list_api_keys(
 @router.delete("/api/v1/api-keys/{key_id}")
 async def revoke_api_key(
     key_id: str,
-    session: AsyncSession = Depends(get_session),
-    admin: str = Depends(require_admin),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[str, Depends(require_admin)],
 ) -> dict[str, object]:
     """Revoke an API key."""
     from uuid import UUID
@@ -136,7 +137,7 @@ async def revoke_api_key(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid key ID",
-        )
+        ) from None
 
     result = await session.execute(select(APIKey).where(APIKey.id == key_uuid))
     api_key = result.scalar_one_or_none()
@@ -145,7 +146,7 @@ async def revoke_api_key(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="API key not found",
-        )
+        ) from None
 
     api_key.active = False
     await session.commit()
