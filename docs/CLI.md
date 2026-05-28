@@ -79,6 +79,7 @@ For CI/CD integration:
 ai-debt gate          # Quality gate (exit 0/1)
 ai-debt diff          # Compare two runs
 ai-debt trend         # Temporal trend analysis
+ai-debt upload        # Upload artifacts to hosted platform
 ```
 
 ## Related Documentation

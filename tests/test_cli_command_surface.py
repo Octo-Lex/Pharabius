@@ -31,6 +31,7 @@ EXPECTED_COMMANDS = [
     "gate",
     "diff",
     "trend",
+    "upload",
 ]
 
 
@@ -98,4 +99,4 @@ class TestVersionFlag:
     def test_version_flag_works(self) -> None:
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
-        assert "2.1.0" in result.output
+        assert "2.2.0" in result.output

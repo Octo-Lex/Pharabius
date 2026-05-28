@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from pharabius.core.v1_readiness import V1ReadinessCheck
 from typing import Annotated, Any
 
+import httpx
 import typer
 from rich.console import Console
 
@@ -1750,6 +1751,71 @@ def _render_trend_md(summary: object) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+@app.command(name="upload")
+def upload_cmd(
+    url: Annotated[
+        str,
+        typer.Option("--url", help="Platform URL (e.g., https://platform.example.com)"),
+    ],
+    token: Annotated[
+        str,
+        typer.Option("--token", help="Upload API token."),
+    ],
+    repository_root: Annotated[
+        Path | None,
+        typer.Option("-r", "--repository-root", help="Repository root."),
+    ] = None,
+) -> None:
+    """Upload .ai-debt artifacts to a Pharabius platform instance.
+
+    Creates a tarball of the .ai-debt directory and uploads it
+    to the specified platform instance. Requires a valid upload
+    token obtained from the platform admin.
+
+    WARNING: .ai-debt artifacts may contain source-derived evidence
+    snippets, file paths, hashes, and analysis metadata.
+    """
+    from pharabius.core.uploader import upload_bundle
+
+    resolved = (repository_root or Path.cwd()).resolve()
+    ai_debt = resolved / ".ai-debt"
+
+    if not ai_debt.is_dir():
+        console.print(f"[red]No .ai-debt directory found at {resolved}[/red]")
+        console.print("Run `ai-debt run` first to generate artifacts.")
+        raise typer.Exit(code=1)
+
+    console.print(f"Bundling .ai-debt from {resolved}...")
+
+    try:
+        result: dict[str, Any] = upload_bundle(url, token, ai_debt)
+    except httpx.HTTPStatusError as e:
+        console.print(f"[red]Upload failed: {e.response.status_code}[/red]")
+        console.print(e.response.text)
+        raise typer.Exit(code=1) from None
+    except httpx.ConnectError:
+        console.print(f"[red]Cannot connect to {url}[/red]")
+        raise typer.Exit(code=1) from None
+
+    bundle_id = result.get("bundle_id", "unknown")
+    is_valid = result.get("is_valid", False)
+    content_hash = result.get("content_hash", "")
+
+    status_color = "green" if is_valid else "yellow"
+    console.print(f"[{status_color}]Bundle uploaded: {bundle_id}[/{status_color}]")
+    console.print(f"  Content hash: {content_hash}")
+    console.print(f"  Valid: {is_valid}")
+
+    if result.get("parse_errors"):
+        for err in result["parse_errors"]:
+            console.print(f"  [yellow]Parse warning: {err}[/yellow]")
+
+    if not is_valid:
+        missing = result.get("validation", {}).get("missing_required", [])
+        if missing:
+            console.print(f"  [yellow]Missing: {', '.join(missing)}[/yellow]")
 
 
 if __name__ == "__main__":
