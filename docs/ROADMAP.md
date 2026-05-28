@@ -1,13 +1,22 @@
 # Pharabius Roadmap
 
-## v2.1 Planning
+## v2.2 Planning
 
 - Policy engine foundation (architecture-policy.yaml enforcement)
 - IDE feedback prototype
 - Dashboard prototype
-- Temporal trend charts
 
-## v2.0.1 — CI Gate Adoption & SARIF Polish (current)
+## v2.1 — Temporal Trends (current)
+
+- `ai-debt trend` command with trajectory classification
+- Run history collection from `.ai-debt/runs/`
+- Severity delta computation and heuristic trajectory
+- Markdown and JSON trend reports
+- Honest handling of missing category/readiness/claims data
+- ~53 new tests (1,823 total)
+- All 7 release gates pass
+
+## v2.0.1 — CI Gate Adoption & SARIF Polish
 
 - CI example docs (GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, portable shell)
 - GitHub Action polish (mode, generate-sarif, output-dir inputs)
