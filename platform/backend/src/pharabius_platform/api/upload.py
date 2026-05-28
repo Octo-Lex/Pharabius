@@ -227,7 +227,7 @@ async def upload_bundle(
         "is_valid": validation.is_valid,
         "validation": validation.to_dict(),
         "parse_errors": parse_errors,
-        "parser_version": "2.2.1",
+        "parser_version": "2.2.2",
         "findings_count": run_record.total_findings if run_record else 0,
     }
 

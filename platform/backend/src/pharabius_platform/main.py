@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import typing
 import uuid
 
@@ -16,7 +17,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="Pharabius Platform",
-        version="2.2.0",
+        version="2.2.2",
         description="Hosted Pharabius artifact visibility and CI ingestion.",
     )
 
@@ -45,6 +46,15 @@ def create_app() -> FastAPI:
     # Routers
     for router in all_routers:
         app.include_router(router)
+
+    # Startup: initialize database
+    @app.on_event("startup")
+    async def startup() -> None:
+        from pharabius_platform.db import init_db
+
+        database_url = os.environ.get("DATABASE_URL", "")
+        if database_url:
+            init_db(database_url)
 
     return app
 
