@@ -1,130 +1,133 @@
-# v2.2.1 — Hosted Platform Hardening & UX Polish
+# v2.3.0 — Human Validation Workflow
 
-Goal: Harden the hosted platform after the v2.2.0 category shift by improving upload diagnostics, platform health checks, API error consistency, frontend empty/error states, Docker/deployment documentation, and storage safety.
+Goal: Turn findings, claims, gaps, readiness, and work packages into a hosted human-review workflow with review states, comments, audit history, and sign-off, without external writes or remediation.
 
-Release posture: patch release, not feature release.
+Release posture: major hosted-platform workflow release. This release adds human review state and auditability inside the Pharabius platform, but must not create external issues, post PR comments, modify repositories, or perform remediation.
 
-Core boundary:
-- No new product capability beyond hosted-platform hardening
-- No GitHub OAuth
-- No RBAC/user-account expansion
+Core boundaries:
+- No OAuth / RBAC
 - No policy engine
 - No tracker writes
 - No PR comments
-- No issue creation
-- No SARIF upload
-- No repository cloning
-- No remediation
+- No GitHub Checks API
+- No external integrations
+- No autonomous remediation
 - No source-code modification
+- No approval automation
+- No replacement for Product Engineering Team responsibility
 
 
 # S06 — Docs, Tests, Changelog, Release
 
 Risk: Low  
-Slice type: Release finalization  
-Artifact impact: version, changelog, docs, roadmap
+Slice type: release finalization  
+Artifact impact: docs, changelog, roadmap, version
 
 ## Scope
 
-Finalize the v2.2.1 patch release with accurate documentation, tests, changelog, roadmap updates, and release notes.
+Finalize v2.3.0 documentation, tests, limitations, changelog, roadmap, and release notes.
 
-No new runtime behavior should be added in this slice beyond final wiring or documentation corrections required by earlier slices.
+This slice should clearly explain that review decisions are hosted human workflow state, not canonical analyzer truth.
 
 ## Goals
 
-- Bump version to `2.2.1`.
-- Update `CHANGELOG.md`.
-- Update `ROADMAP.md` or `docs/ROADMAP.md` as appropriate.
-- Update hosted platform docs index.
-- Confirm platform docs link coherently.
-- Confirm CLI docs mention `ai-debt upload` accurately.
-- Confirm all CLI tests still pass.
-- Confirm all platform backend tests pass.
-- Confirm frontend build passes.
-- Confirm Docker Compose config validates.
-- Prepare GitHub Release notes.
+- Bump version to `2.3.0`.
+- Update changelog.
+- Update roadmap.
+- Add human validation workflow documentation.
+- Update platform docs/navigation.
+- Update known limitations.
+- Document review statuses and state transitions.
+- Document audit history behavior.
+- Document no-external-write boundary.
+- Verify all backend/frontend/CLI gates pass.
 
 ## Patch Set
 
 Expected files:
 
 ```text
-pyproject.toml
-platform/backend/pyproject.toml
-platform/frontend/package.json                 # only if version tracked here
 CHANGELOG.md
 docs/ROADMAP.md
+KNOWN_LIMITATIONS.md
+platform/docs/human-validation.md
+platform/docs/review-state-machine.md
+platform/docs/audit-history.md
 platform/docs/README.md
-platform/docs/deployment.md
-platform/docs/backup-restore.md
-platform/docs/security-checklist.md
+platform/frontend/README.md
+```
+
+Required documentation statements:
+
+```text
+Review decisions do not mutate uploaded .ai-debt artifacts.
+Review decisions do not change canonical findings, risk scores, evidence, or operational claims.
+Review decisions are hosted platform workflow state.
+The platform does not create external issues, PR comments, tracker items, or remediation patches.
 ```
 
 Recommended changelog entry:
 
 ```markdown
-## v2.2.1
+## v2.3.0
 
-### Improved
-- Upload diagnostics and validation report readability.
-- Platform health/readiness and storage checks.
-- API error envelope consistency and request ID propagation.
-- Frontend empty/loading/error states.
-- Docker Compose, deployment, storage, and backup documentation.
+### Added
+- Hosted human validation workflow for findings, claims, gaps, readiness, and work packages where available.
+- Review status model with accepted, rejected, needs_clarification, blocked, and validated states.
+- Review comments and audit history.
+- Review summary APIs and UI.
 
 ### Safety
-- No GitHub OAuth, tracker writes, PR comments, repository cloning, policy engine, or remediation added.
-- Uploaded `.ai-debt` bundles remain treated as potentially sensitive source-derived artifacts.
+- Review decisions are hosted platform workflow state and do not mutate uploaded Pharabius artifacts.
+- No tracker writes, PR comments, policy engine, OAuth/RBAC, or remediation were added.
 ```
 
 ## Tests
 
-Run all tests and platform checks.
-
-Recommended final verification:
+Final verification:
 
 ```bash
 pytest
-cd platform/backend && pytest
-cd ../frontend && npm run build
-cd .. && docker compose config
+pytest platform/backend/tests
+npm --prefix platform/frontend run build
 python -m build
 python scripts/validate_repo.py .
 ```
 
-## Expected Behavior
+Optional runtime validation:
 
-v2.2.1 is ready for PR, CI, merge, tag, and GitHub Release as a hosted-platform hardening patch.
+```bash
+platform/scripts/smoke_docker_compose.sh
+```
 
 ## Acceptance Criteria
 
-- Version is `2.2.1`.
-- Changelog and roadmap are updated.
-- Hosted platform docs are coherent.
-- All platform and CLI tests pass.
+- Version is `2.3.0`.
+- Docs explain review workflow and boundaries.
+- Backend review tests pass.
 - Frontend build passes.
-- Docker Compose config validates.
-- No new product capability beyond hardening/polish.
-- All gates pass.
+- CLI tests continue passing.
+- Release notes do not overclaim governance automation.
+- No external writes or remediation exist.
+
 
 ## Guardrails
 
-- Preserve v2.2.0 architecture and product boundaries.
-- Do not add external writes.
-- Do not add repository cloning.
-- Do not add OAuth or full user management.
-- Do not add policy engine behavior.
-- Do not add tracker integrations.
-- Do not add background workers unless explicitly required for reliability; default is synchronous parsing.
-- Do not mutate uploaded bundles after storage.
-- Do not store raw API keys.
-- Treat uploaded `.ai-debt` bundles as potentially sensitive source-derived artifacts.
-- Keep all changes focused on diagnostics, safety, deployment readiness, and UX polish.
+- Review state is hosted platform state, not canonical analyzer truth.
+- Do not mutate uploaded `.ai-debt` bundles.
+- Do not mutate local Pharabius artifacts.
+- Do not change scoring semantics.
+- Do not let review decisions change canonical finding severity, risk score, evidence, or claim content.
+- Do not create tickets, issues, PR comments, or tracker items.
+- Do not add OAuth/RBAC in this release.
+- Use admin token / existing platform auth model only.
+- Preserve audit history for review changes.
+- Keep all sign-off language human-owned, not automated approval.
 
 
 ## Verification Commands
 
-Run the full local gate suite for the CLI and platform:
+Run the standard gates plus platform/frontend checks:
 
 ```bash
 ruff format --check .
@@ -132,19 +135,14 @@ ruff check .
 mypy src
 lint-imports
 pytest
+pytest platform/backend/tests
+npm --prefix platform/frontend run build
 python -m build
 python scripts/validate_repo.py .
 ```
 
-Platform-specific verification should also run where available:
+Optional runtime validation:
 
 ```bash
-cd platform
-# backend tests
-cd backend && pytest
-# frontend checks
-cd ../frontend && npm test -- --run || true
-cd ../frontend && npm run build
-# docker smoke
-cd .. && docker compose config
+platform/scripts/smoke_docker_compose.sh
 ```
