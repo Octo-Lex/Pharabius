@@ -17,13 +17,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from typing import Literal, cast
+
 from pharabius.schemas.run_metadata import RunMetadata
 from pharabius.schemas.trend import TrendPoint
 
 
 def _approximate_gate_result(
     critical: int, high: int, total: int
-) -> tuple[str, bool]:
+) -> tuple[Literal["pass", "fail", "unknown"], bool]:
     """Approximate gate result from severity counts using default thresholds.
 
     Returns (result, approximated=True).
@@ -38,9 +40,7 @@ def _approximate_gate_result(
     return "pass", True
 
 
-def collect_run_points(
-    runs_dir: Path, warnings: list[str] | None = None
-) -> list[TrendPoint]:
+def collect_run_points(runs_dir: Path, warnings: list[str] | None = None) -> list[TrendPoint]:
     """Collect TrendPoint data from run metadata files.
 
     Args:
@@ -86,6 +86,8 @@ def collect_run_points(
             summary.critical_findings, summary.high_findings, total
         )
 
+        gate_literal: Literal["pass", "fail", "unknown"] = gate_result
+
         points.append(
             TrendPoint(
                 run_id=metadata.run_id,
@@ -97,7 +99,7 @@ def collect_run_points(
                 high=summary.high_findings,
                 medium=summary.medium_findings,
                 low=summary.low_findings,
-                gate_result=gate_result,
+                gate_result=gate_literal,
                 gate_approximated=gate_approximated,
                 readiness_status="unknown",
                 category_counts={},
