@@ -2,6 +2,40 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.2.1] - Unreleased
+
+### Added
+
+- Upload endpoint persists to database: Organization, Repository, ArtifactBundle,
+  Run, Finding, Claim, Gap records created on each upload.
+- Duplicate bundle detection: same content hash returns 409 Conflict.
+- API key authentication for upload: `phar_*` tokens validated against database.
+  Admin token and API keys both accepted.
+- Revoked API key rejection: inactive keys return 401.
+- Expired API key rejection: past `expires_at` returns 401.
+- `last_used_at` tracking on API key usage.
+- Alembic initial migration (`001_initial`): creates all 11 tables.
+- `scripts/init_dev_db.py`: dev database setup without Alembic.
+- 68 platform tests (up from 58): ORM model verification, auth logic,
+  endpoint integration, error handling.
+
+### Changed
+
+- `require_token` middleware now accepts both admin tokens and database-backed
+  API keys (previously admin-only).
+- Upload response includes `repository_id` and `findings_count` fields.
+- Platform docs rewritten with honest data flow description and known limitations.
+
+### Known Limitations
+
+- Platform tests remain mock-based — no real PostgreSQL integration tests.
+- Frontend is scaffold only (no implemented views).
+- No Docker Compose smoke test (never run in CI).
+- No pagination on list endpoints.
+- No rate limiting.
+- No TLS (requires reverse proxy).
+- Single-user posture (no multi-tenancy).
+
 ## [2.2.0] - Unreleased
 
 ### Added
