@@ -2,6 +2,36 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.3.1] - Unreleased
+
+### Fixed
+
+- **Review workflow runtime-validated against Docker/PostgreSQL**: All 8 review
+  endpoints verified against real PostgreSQL (create, update, soft-delete,
+  audit log, bulk, summary).
+
+### Changed
+
+- **Token UX improved**: Review token input now shows a save button,
+  privacy notice ("stored locally in your browser"), and a change button
+  after saving. Previously the token was saved on every keystroke.
+- Frontend version bumped to 2.3.1.
+- Backend version bumped to 2.3.1.
+
+### Added
+
+- `platform/scripts/runtime_smoke_reviews.py` — Automated review workflow
+  validation against running Docker backend.
+- Browser verification: findings table with review badges, review summary
+  route with 3-tab layout (summary/decisions/audit log) all render correctly.
+
+### Known Limitations
+
+- Review modal not browser-tested end-to-end (token input interaction
+  limited in automated browser tooling).
+- No evidence linking yet (planned for v2.4.0).
+- Reviewer is free-text advisory — not verified identity.
+
 ## [2.3.0] - Unreleased
 
 ### Added
