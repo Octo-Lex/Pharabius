@@ -2,6 +2,62 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.2.2] - Unreleased
+
+### Added
+
+- **Runtime validation**: Full Docker Compose build + PostgreSQL + backend smoke test.
+  - Backend image builds successfully from monorepo context.
+  - PostgreSQL 16 container starts and passes health check.
+  - Backend connects to PostgreSQL and initializes schema (10 tables).
+  - Upload endpoint accepts `.ai-debt` bundle and persists to database.
+  - Repository, portfolio, findings, trends, gate history, claims, gaps,
+    and readiness endpoints return persisted data after upload.
+  - Cleanup removes all containers and volumes.
+- `platform/scripts/runtime_smoke_test.py`: Automated end-to-end runtime
+  validation script (S01–S06 steps).
+- Backend startup event initializes database connection via `DATABASE_URL`.
+- Backend Dockerfile: builds from repo root, installs pharabius CLI first,
+  then platform package.
+- Docker Compose: backend context set to repo root for monorepo access.
+- PostgreSQL mapped to port 5433 (avoids conflict with local PostgreSQL).
+- 23 platform tests for Dockerfile, compose config, runtime script, startup.
+
+### Changed
+
+- Backend Dockerfile rewritten: repo-root context, two-stage install.
+- Docker Compose `docker-compose.yml`: backend build context changed to `..`
+  (repo root) with `platform/backend/Dockerfile`.
+- `main.py` version updated to 2.2.2.
+- Upload `parser_version` updated to 2.2.2.
+
+### Runtime validation results
+
+All 14 acceptance criteria verified:
+
+1. ✅ Docker availability check (daemon + compose)
+2. ✅ Disk-space preflight (78 GB available)
+3. ✅ `docker compose config` passes
+4. ✅ Backend image builds
+5. ✅ PostgreSQL container starts (healthy)
+6. ✅ Backend connects to PostgreSQL
+7. ✅ `GET /api/v1/health` returns `{status: ok}`
+8. ✅ Database schema initializes (10 tables)
+9. ✅ Upload accepts sample `.ai-debt` bundle
+10. ✅ Repository API returns persisted data (1 repo, 2 findings)
+11. ✅ Portfolio API returns aggregated data (total_repositories=1)
+12. ✅ Risk rollup returns severity counts (high=1, medium=1)
+13. ✅ Cleanup removes containers and volumes
+14. ✅ Docs state what was runtime-verified
+
+### Known Limitations
+
+- Frontend remains scaffold only (no implemented views).
+- Claims and gaps endpoints return empty data (test bundle has no claims/gaps files).
+- Repository slug defaults to content hash prefix when `repository_name`
+  form field is not received.
+- No Docker Compose smoke test in CI (requires Docker runtime).
+
 ## [2.2.1] - Unreleased
 
 ### Added
