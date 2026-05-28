@@ -49,6 +49,9 @@ class TestFrontendViews:
     def test_upload_page_exists(self) -> None:
         assert (FRONTEND_DIR / "src" / "views" / "UploadPage.tsx").exists()
 
+    def test_review_summary_exists(self) -> None:
+        assert (FRONTEND_DIR / "src" / "views" / "ReviewSummary.tsx").exists()
+
 
 class TestFrontendComponents:
     """Verify shared components exist."""
@@ -71,6 +74,7 @@ class TestFrontendRoutes:
         assert 'path="/"' in content
         assert 'path="/repositories/:repoId"' in content
         assert 'path="/repositories/:repoId/findings"' in content
+        assert 'path="/repositories/:repoId/reviews"' in content
         assert 'path="/portfolio"' in content
         assert 'path="/upload"' in content
 
