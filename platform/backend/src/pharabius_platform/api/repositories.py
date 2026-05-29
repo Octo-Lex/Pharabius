@@ -1,4 +1,4 @@
-_timestamp": run.run_timestamp.isoformat() if run.run_timestamp else None,
+"_timestamp": run.run_timestamp.isoformat() if run.run_timestamp else None,
         "total_findings": run.total_findings,
         "critical": run.critical,
         "high": run.high,
