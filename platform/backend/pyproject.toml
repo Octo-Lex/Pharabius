@@ -1,6 +1,6 @@
 [project]
 name = "pharabius-platform"
-version = "2.8.0"
+version = "2.9.0"
 description = "Pharabius hosted platform — artifact visibility and CI ingestion"
 requires-python = ">=3.11"
 dependencies = [

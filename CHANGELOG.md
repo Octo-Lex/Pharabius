@@ -2,6 +2,29 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.9.0] - Unreleased
+
+### Added
+- Frontend test harness using Vitest, React Testing Library, and jsdom.
+- Frontend regression tests for selected-run navigation (6 tests).
+- Frontend regression tests for Work Packages view states (7 tests).
+- Frontend tests for EvidenceChip component covering all degraded states (6 tests).
+- Frontend test fixture factories (`api-mocks.ts`) for DTO construction.
+- Shared `EvidenceChip` component in `components/`.
+- Frontend validation documentation (`platform/frontend/README.md`).
+
+### Changed
+- Findings and Work Packages views now import shared EvidenceChip from components.
+- Removed duplicated evidence chip logic from FindingsTable and WorkPackages.
+
+### Fixed
+- Cleaned pre-existing ruff lint issues in backend test files (import style, line length).
+
+### Tests
+- Frontend: 20 tests (new).
+- Backend: 264 platform, 1,823 CLI (unchanged).
+- Ruff: clean on all backend code.
+
 ## [2.8.0] - Unreleased
 
 ### Added

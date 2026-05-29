@@ -11,7 +11,7 @@ import io
 import json
 import os
 import tarfile
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -317,7 +317,11 @@ class TestRunDetailAPI:
         assert resp.status_code == 404
 
     async def test_cross_repo_isolation(self, client: AsyncClient, seeded_single) -> None:
-        other = await _upload(client, _full_bundle(findings=FINDINGS_JSON_V2, run_metadata=None), name="Other Repo")
+        other = await _upload(
+            client,
+            _full_bundle(findings=FINDINGS_JSON_V2, run_metadata=None),
+            name="Other Repo",
+        )
         run_id = seeded_single["run_id"]
         resp = await client.get(f"/api/v1/repositories/{other['repository_id']}/runs/{run_id}")
         assert resp.status_code == 404

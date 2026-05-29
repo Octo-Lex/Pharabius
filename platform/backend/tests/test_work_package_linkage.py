@@ -11,7 +11,7 @@ import io
 import json
 import os
 import tarfile
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
