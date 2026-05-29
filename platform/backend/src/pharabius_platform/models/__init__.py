@@ -258,3 +258,39 @@ class ReviewDecision(Base):
     delete_reason: Mapped[str] = mapped_column(Text, default="")
 
     repository = relationship("Repository")
+
+
+class EvidenceRecord(Base):
+    """Normalized evidence record from .ai-debt/evidence.json.
+
+    Evidence IDs are run-scoped, not globally unique.
+    UNIQUE(repository_id, run_id, evidence_id).
+    """
+
+    __tablename__ = "evidence_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    repository_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("repositories.id"), nullable=False, index=True
+    )
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("runs.id"), nullable=False, index=True
+    )
+    evidence_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    source: Mapped[str] = mapped_column(String(100), default="unknown")
+    type: Mapped[str] = mapped_column(String(100), default="unknown")
+    category: Mapped[str] = mapped_column(String(100), default="unknown")
+    file_path: Mapped[str] = mapped_column(String(500), default="")
+    line_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    line_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    subject: Mapped[str] = mapped_column(Text, default="")
+    object: Mapped[str] = mapped_column(Text, default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    raw_observation: Mapped[str] = mapped_column(Text, default="")
+    confidence: Mapped[str] = mapped_column(String(20), default="Medium")
+    collected_at: Mapped[str] = mapped_column(String(100), default="")
+    evidence_metadata: Mapped[dict[str, object] | None] = mapped_column(JSON, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    repository = relationship("Repository")
+    run = relationship("Run")
