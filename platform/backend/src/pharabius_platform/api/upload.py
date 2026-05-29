@@ -184,9 +184,14 @@ async def upload_bundle(
 
         # Create Finding records
         for f in findings_list:
+            description_raw = getattr(f, "description", None)
             locations_raw = getattr(f, "locations", None)
             evidence_ids_raw = getattr(f, "evidence_ids", None)
-            description_raw = getattr(f, "description", "") or ""
+
+            # Normalize enriched fields at upload boundary
+            description = _normalize_description(description_raw)
+            locations = _normalize_string_list(locations_raw)
+            evidence_ids = _normalize_string_list(evidence_ids_raw)
 
             finding_record = Finding(
                 run_id=run_record.id,
@@ -194,13 +199,13 @@ async def upload_bundle(
                 category=f.category,
                 issue_type=getattr(f, "issue_type", "technical_debt"),
                 title=f.title,
-                description=description_raw,
+                description=description,
                 severity=f.severity,
                 confidence=getattr(f, "confidence", "Medium"),
                 risk_score=getattr(f, "risk_score", 0),
                 priority=getattr(f, "priority", "Medium"),
-                locations=[str(loc) for loc in locations_raw] if locations_raw else None,
-                evidence_ids=[str(eid) for eid in evidence_ids_raw] if evidence_ids_raw else None,
+                locations=locations,
+                evidence_ids=evidence_ids,
             )
             session.add(finding_record)
 
@@ -283,6 +288,41 @@ def _find_ai_debt_dir(root: Path) -> Path | None:
             return child / ".ai-debt"
     if (root / "evidence.json").exists() and (root / "debt-register.json").exists():
         return root
+    return None
+
+
+def _normalize_description(value: object) -> str:
+    """Normalize description at upload boundary.
+
+    Rules: missing/None -> "", str -> str, anything else -> str().
+    """
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
+def _normalize_string_list(value: object) -> list[str] | None:
+    """Normalize locations/evidence_ids at upload boundary.
+
+    Rules:
+        missing/None -> None (legacy, unknown)
+        list[str] -> list[str]
+        list with non-string items -> each item str()'d
+        scalar string -> wrap in [str]
+        anything else -> None (drop silently)
+
+    Preserves distinction: None = not provided, [] = explicitly empty.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        # Scalar string — wrap as single-element list
+        return [value] if value else None
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    # Object or other unexpected type — drop
     return None
 
 
