@@ -432,7 +432,10 @@ async def _resolve_evidence(
                 {
                     "evidence_id": eid,
                     "status": "missing",
-                    "reason": "Evidence ID referenced by finding but not found in this upload's evidence store.",
+                    "reason": (
+                    "Evidence ID referenced by finding"
+                    " but not found in this upload's evidence store."
+                ),
                 }
             )
         else:
