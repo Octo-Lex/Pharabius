@@ -2,6 +2,38 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.4.1] - Unreleased
+
+### Fixed
+
+- **Upload-boundary normalization**: `description`, `locations`, and
+  `evidence_ids` are now normalized at the upload boundary with explicit
+  rules (None → empty string for description; None → None, list → list,
+  scalar → wrapped list for locations/evidence_ids).
+- **Single-finding endpoint HTTP status codes**: Returns proper 400 for
+  invalid repo IDs, 404 for missing findings (previously returned 200
+  with error body).
+- **API preserves null vs [] distinction**: `locations` and `evidence_ids`
+  return `null` when not provided and `[]` when explicitly empty.
+
+### Improved
+
+- **Review modal readability**: Description uses multi-line block with
+  `whitespace-pre-wrap`. Locations shown as vertical monospace list.
+  Evidence IDs render as individual chips with flex-wrap. Empty states
+  use precise language ("No description provided.", "No locations
+  provided.", "No evidence references provided.").
+- **Legacy bundle compatibility**: Older bundles without enriched fields
+  upload and render safely without errors.
+- **Artifact sensitivity docs**: Finding details may include repository
+  paths, architectural references, and evidence IDs. Treat uploaded
+  bundles as internal engineering materials.
+
+### Tests
+
+- 28 new tests covering normalization, HTTP status codes, legacy bundles,
+  and backward compatibility.
+
 ## [2.4.0] - Unreleased
 
 ### Added

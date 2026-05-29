@@ -116,33 +116,57 @@ function ReviewModal({ finding, existing, repoId, token, onClose, onSaved }: Rev
               Finding Detail
             </button>
             {showContext && (
-              <div className="mt-2 space-y-2 text-sm">
+              <div className="mt-2 space-y-3 text-sm">
                 {hasDescription && (
                   <div>
-                    <span className="font-medium text-gray-600">Description:</span>{" "}
-                    <span className="text-gray-800">{finding.description}</span>
+                    <span className="font-medium text-gray-600">Description</span>
+                    <p className="mt-1 text-gray-800 whitespace-pre-wrap break-words">
+                      {finding.description}
+                    </p>
                   </div>
+                )}
+                {!hasDescription && (
+                  <p className="text-gray-400 italic">No description provided.</p>
                 )}
                 {hasLocations && (
                   <div>
-                    <span className="font-medium text-gray-600">Locations:</span>
-                    <ul className="ml-4 mt-1 list-disc text-muted">
+                    <span className="font-medium text-gray-600">Locations</span>
+                    <ul className="mt-1 ml-1 space-y-0.5">
                       {finding.locations.map((loc, i) => (
-                        <li key={i} className="font-mono text-xs">{loc}</li>
+                        <li
+                          key={i}
+                          className="font-mono text-xs text-muted break-all"
+                          title={loc}
+                        >
+                          {loc}
+                        </li>
                       ))}
                     </ul>
                   </div>
                 )}
+                {!hasLocations && (
+                  <p className="text-gray-400 italic">No locations provided.</p>
+                )}
                 {hasEvidence && (
                   <div>
-                    <span className="font-medium text-gray-600">Evidence IDs:</span>{" "}
-                    <span className="font-mono text-xs text-muted">
-                      {finding.evidence_ids.join(", ")}
-                    </span>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <span className="font-medium text-gray-600">Evidence References</span>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {finding.evidence_ids.map((eid, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-gray-100 text-gray-700"
+                        >
+                          {eid}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
                       Evidence IDs are references to uploaded artifact evidence, not full evidence content.
                     </p>
                   </div>
+                )}
+                {!hasEvidence && (
+                  <p className="text-gray-400 italic">No evidence references provided.</p>
                 )}
               </div>
             )}
