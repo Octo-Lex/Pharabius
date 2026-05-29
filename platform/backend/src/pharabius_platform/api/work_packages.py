@@ -187,7 +187,7 @@ async def _resolve_run_id(
     stmt = (
         select(Run.id)
         .where(Run.repository_id == repo_uuid)
-        .order_by(Run.run_timestamp.desc())
+        .order_by(Run.run_timestamp.desc(), Run.id.desc())
         .limit(1)
     )
     result = await session.execute(stmt)

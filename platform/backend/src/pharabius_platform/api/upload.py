@@ -166,14 +166,26 @@ async def upload_bundle(
         medium = sum(1 for f in findings_list if f.severity == "Medium")
         low = sum(1 for f in findings_list if f.severity == "Low")
 
-        run_id_str = f"RUN-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+        # Extract run metadata from parsed bundle if available
+        run_meta = parsed.runs[0] if parsed.runs else None
+        run_id_str = (
+            run_meta.run_id
+            if run_meta
+            else f"RUN-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+        )
+        tool_version = (
+            run_meta.tool_version
+            if run_meta and run_meta.tool_version
+            else parsed.debt_register.schema_version
+            if hasattr(parsed.debt_register, "schema_version")
+            else "unknown"
+        )
+
         run_record = Run(
             bundle_id=bundle.id,
             repository_id=repo.id,
             run_id=run_id_str,
-            pharabius_version=parsed.debt_register.schema_version
-            if hasattr(parsed.debt_register, "schema_version")
-            else "2.2.1",
+            pharabius_version=tool_version,
             total_findings=total,
             critical=critical,
             high=high,
@@ -181,6 +193,9 @@ async def upload_bundle(
             low=low,
             readiness_status="unknown",
             gate_result="unknown",
+            commit_sha=run_meta.commit if run_meta else "",
+            branch_name=run_meta.branch if run_meta else "",
+            analysis_mode=run_meta.analysis_mode if run_meta else "baseline",
         )
         session.add(run_record)
         await session.flush()
@@ -333,10 +348,25 @@ async def upload_bundle(
 
     await session.commit()
 
+    # Compute is_latest deterministically
+    is_latest = False
+    if run_record is not None:
+        latest_stmt = (
+            select(Run.id)
+            .where(Run.repository_id == repo.id)
+            .order_by(Run.run_timestamp.desc(), Run.id.desc())
+            .limit(1)
+        )
+        latest_result = await session.execute(latest_stmt)
+        latest_id = latest_result.scalar_one_or_none()
+        is_latest = latest_id == run_record.id
+
     return {
         "bundle_id": str(bundle.id),
         "repository_id": str(repo.id),
         "run_id": str(run_record.id) if run_record else None,
+        "created_at": run_record.run_timestamp.isoformat() if run_record else None,
+        "is_latest": is_latest,
         "content_hash": sha256,
         "storage_path": storage_path,
         "file_size_bytes": len(data),
@@ -345,10 +375,13 @@ async def upload_bundle(
         "parse_errors": parse_errors,
         "evidence_warnings": parsed.evidence_warnings if parsed else [],
         "evidence_count": len(parsed.evidence_items) if parsed else 0,
-        "parser_version": "2.6.0",
+        "parser_version": "2.7.0",
         "findings_count": run_record.total_findings if run_record else 0,
         "work_package_count": len(parsed.work_packages) if parsed else 0,
         "work_package_warnings": parsed.work_package_warnings if parsed else [],
+        "warnings": parse_errors
+        + [w.get("message", "") for w in (parsed.evidence_warnings if parsed else [])]
+        + [w.get("message", "") for w in (parsed.work_package_warnings if parsed else [])],
     }
 
 

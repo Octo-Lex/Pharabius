@@ -46,7 +46,7 @@ async def get_portfolio(
         run_result = await session.execute(
             select(Run)
             .where(Run.repository_id == repo.id)
-            .order_by(Run.run_timestamp.desc())
+            .order_by(Run.run_timestamp.desc(), Run.id.desc())
             .limit(1)
         )
         latest_run = run_result.scalar_one_or_none()
@@ -154,7 +154,9 @@ async def get_gate_history(
         return {"error": {"code": "invalid_id", "message": "Invalid repository ID"}}
 
     result = await session.execute(
-        select(Run).where(Run.repository_id == repo_uuid).order_by(Run.run_timestamp.desc())
+        select(Run)
+        .where(Run.repository_id == repo_uuid)
+        .order_by(Run.run_timestamp.desc(), Run.id.desc())
     )
     runs = result.scalars().all()
 
@@ -238,7 +240,7 @@ async def list_readiness(
         run_result = await session.execute(
             select(Run)
             .where(Run.repository_id == repo.id)
-            .order_by(Run.run_timestamp.desc())
+            .order_by(Run.run_timestamp.desc(), Run.id.desc())
             .limit(1)
         )
         latest_run = run_result.scalar_one_or_none()

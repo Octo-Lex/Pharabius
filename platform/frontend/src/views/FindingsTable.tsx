@@ -323,6 +323,7 @@ export default function FindingsTable() {
 
   const severity = searchParams.get("severity") || "";
   const category = searchParams.get("category") || "";
+  const runId = searchParams.get("run_id") || undefined;
 
   const loadReviews = useCallback(async () => {
     if (!repoId) return;
@@ -345,6 +346,7 @@ export default function FindingsTable() {
     listFindings(repoId, {
       severity: severity || undefined,
       category: category || undefined,
+      runId,
     })
       .then((data) => {
         setFindings(data.findings);
@@ -352,7 +354,7 @@ export default function FindingsTable() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [repoId, severity, category]);
+  }, [repoId, severity, category, runId]);
 
   useEffect(() => {
     loadReviews();

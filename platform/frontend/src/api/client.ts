@@ -27,6 +27,9 @@ export interface RunSummary {
   run_id: string;
   pharabius_version: string;
   run_timestamp: string;
+  commit_sha: string;
+  branch_name: string;
+  analysis_mode: string;
   total_findings: number;
   critical: number;
   high: number;
@@ -34,6 +37,12 @@ export interface RunSummary {
   low: number;
   readiness_status: string;
   gate_result: string;
+  evidence_count: number;
+  work_package_count: number;
+  has_evidence_store: boolean;
+  has_work_packages: boolean;
+  warning_count: number;
+  is_latest: boolean;
 }
 
 export interface EvidenceReference {
@@ -108,6 +117,9 @@ export interface RiskRollup {
 export interface UploadResult {
   bundle_id: string;
   repository_id: string;
+  run_id: string | null;
+  created_at: string | null;
+  is_latest: boolean;
   content_hash: string;
   file_size_bytes: number;
   is_valid: boolean;
@@ -121,6 +133,11 @@ export interface UploadResult {
   parse_errors: string[];
   parser_version: string;
   findings_count: number;
+  evidence_count: number;
+  work_package_count: number;
+  evidence_warnings: Array<{ code: string; message: string }>;
+  work_package_warnings: Array<{ code: string; message: string }>;
+  warnings: string[];
 }
 
 // --- Review types ---
@@ -192,12 +209,13 @@ export function getRepository(repoId: string): Promise<Repository> {
 
 export function listFindings(
   repoId: string,
-  params?: { severity?: string; category?: string; page?: number },
+  params?: { severity?: string; category?: string; page?: number; runId?: string },
 ): Promise<FindingsResponse> {
   const sp = new URLSearchParams();
   if (params?.severity) sp.set("severity", params.severity);
   if (params?.category) sp.set("category", params.category);
   if (params?.page) sp.set("page", String(params.page));
+  if (params?.runId) sp.set("run_id", params.runId);
   const qs = sp.toString();
   return fetchJSON(`${BASE}/repositories/${repoId}/findings${qs ? `?${qs}` : ""}`);
 }
@@ -205,8 +223,13 @@ export function listFindings(
 export function getFinding(
   repoId: string,
   findingId: string,
+  params?: { runId?: string; includeEvidence?: boolean },
 ): Promise<Finding> {
-  return fetchJSON(`${BASE}/repositories/${repoId}/findings/${findingId}`);
+  const sp = new URLSearchParams();
+  if (params?.runId) sp.set("run_id", params.runId);
+  if (params?.includeEvidence) sp.set("include_evidence", "true");
+  const qs = sp.toString();
+  return fetchJSON(`${BASE}/repositories/${repoId}/findings/${findingId}${qs ? `?${qs}` : ""}`);
 }
 
 export function getPortfolio(): Promise<PortfolioData> {
@@ -301,4 +324,18 @@ export function getAuditLog(
   limit = 50,
 ): Promise<{ entries: AuditLogEntry[]; total: number }> {
   return fetchJSON(`${BASE}/repositories/${repoId}/reviews/audit-log?limit=${limit}`);
+}
+
+// --- Run API ---
+
+export function listRuns(repoId: string): Promise<{ runs: RunSummary[]; total: number }> {
+  return fetchJSON(`${BASE}/repositories/${repoId}/runs`);
+}
+
+export function getRunDetail(repoId: string, runId: string): Promise<Record<string, unknown>> {
+  return fetchJSON(`${BASE}/repositories/${repoId}/runs/${runId}`);
+}
+
+export function getLatestRun(repoId: string): Promise<{ run: RunSummary | null }> {
+  return fetchJSON(`${BASE}/repositories/${repoId}/latest-run`);
 }

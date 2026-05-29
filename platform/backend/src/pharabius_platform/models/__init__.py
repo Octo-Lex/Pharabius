@@ -17,7 +17,7 @@ class Base(DeclarativeBase):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(microsecond=0)
+    return datetime.now(UTC)
 
 
 def _uuid() -> uuid.UUID:
@@ -96,6 +96,9 @@ class Run(Base):
     low: Mapped[int] = mapped_column(Integer, default=0)
     readiness_status: Mapped[str] = mapped_column(String(50), default="unknown")
     gate_result: Mapped[str] = mapped_column(String(20), default="unknown")
+    commit_sha: Mapped[str] = mapped_column(String(40), default="")
+    branch_name: Mapped[str] = mapped_column(String(255), default="")
+    analysis_mode: Mapped[str] = mapped_column(String(50), default="baseline")
 
     bundle: Mapped[ArtifactBundle] = relationship(back_populates="runs")
     repository: Mapped[Repository] = relationship(back_populates="runs")

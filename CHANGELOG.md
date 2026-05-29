@@ -2,6 +2,35 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.7.0] - Unreleased
+
+### Added
+- Run detail API with artifact counts and capability flags (`GET /repositories/{id}/runs/{run_id}`).
+- Run list enriched with evidence/work-package counts, `is_latest`, `commit_sha`,
+  `branch_name`, `analysis_mode`.
+- Batched aggregate enrichment for run list (no N+1 queries).
+- Selected-run scoping for findings list and detail (`?run_id=` parameter).
+- Evidence lookup and work package endpoints already supported `?run_id=`.
+- Upload parses and stores run metadata from `.ai-debt/runs/RUN-*.json`.
+- Upload response includes `created_at`, `is_latest` (computed), `warnings`.
+- Repository dashboard run selector with URL-driven state (`?run_id=`).
+- FindingsTable passes selected `run_id` to API calls.
+- Frontend API client updated with run types and functions.
+- Migration 006: `commit_sha`, `branch_name`, `analysis_mode` columns on runs.
+- 24 new run-history navigation tests.
+
+### Fixed
+- Latest-run selection deterministic (microsecond-precision timestamps + `Run.id` tie-breaker).
+- All run-ordering queries use deterministic secondary sort.
+- Findings list and detail accept optional `run_id` parameter.
+- Upload uses `tool_version` from run metadata instead of `debt_register.schema_version`.
+
+### Changed
+- `_utcnow()` now preserves microseconds.
+- `_resolve_run` helper centralizes run-scoping logic.
+- `warning_count` on runs reflects persisted traceability degradation
+  (unresolved work-package links), not transient upload warnings.
+
 ## [2.6.0] - Unreleased
 
 ### Added
