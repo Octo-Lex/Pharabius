@@ -36,6 +36,29 @@ export interface RunSummary {
   gate_result: string;
 }
 
+export interface EvidenceReference {
+  evidence_id: string;
+  status: "resolved" | "missing" | "legacy_no_evidence_store" | "stale" | "malformed_reference" | "unavailable";
+  reason?: string;
+  evidence?: EvidenceRecord;
+}
+
+export interface EvidenceRecord {
+  evidence_id: string;
+  source: string;
+  type: string;
+  category: string;
+  summary: string;
+  file_path: string | null;
+  line_start: number | null;
+  line_end: number | null;
+  subject: string;
+  object: string;
+  confidence: string;
+  collected_at: string | null;
+  metadata: Record<string, unknown>;
+}
+
 export interface Finding {
   id: string;
   finding_id: string;
@@ -47,8 +70,9 @@ export interface Finding {
   confidence: string;
   risk_score: number;
   priority: string;
-  locations: string[];
-  evidence_ids: string[];
+  locations: string[] | null;
+  evidence_ids: string[] | null;
+  evidence_references: EvidenceReference[];
 }
 
 export interface FindingsResponse {

@@ -23,6 +23,7 @@ from pharabius_platform.middleware.auth import require_token
 from pharabius_platform.models import (
     ArtifactBundle,
     Claim,
+    EvidenceRecord,
     Finding,
     Gap,
     Organization,
@@ -233,6 +234,28 @@ async def upload_bundle(
             )
             session.add(gap_record)
 
+        # Create Evidence records
+        for ev in parsed.evidence_items:
+            evidence_record = EvidenceRecord(
+                repository_id=repo.id,
+                run_id=run_record.id,
+                evidence_id=str(ev.get("evidence_id", "")),
+                source=str(ev.get("source", "unknown")),
+                type=str(ev.get("type", "unknown")),
+                category=str(ev.get("category", "unknown")),
+                file_path=str(ev.get("file_path", "")),
+                line_start=ev.get("line_start"),
+                line_end=ev.get("line_end"),
+                subject=str(ev.get("subject", "")),
+                object=str(ev.get("object", "")),
+                summary=str(ev.get("summary", "")),
+                raw_observation=str(ev.get("raw_observation", "")),
+                confidence=str(ev.get("confidence", "Medium")),
+                collected_at=str(ev.get("collected_at", "")),
+                evidence_metadata=ev.get("metadata"),
+            )
+            session.add(evidence_record)
+
         await session.flush()
 
     await session.commit()
@@ -246,7 +269,9 @@ async def upload_bundle(
         "is_valid": validation.is_valid,
         "validation": validation.to_dict(),
         "parse_errors": parse_errors,
-        "parser_version": "2.2.2",
+        "evidence_warnings": parsed.evidence_warnings if parsed else [],
+        "evidence_count": len(parsed.evidence_items) if parsed else 0,
+        "parser_version": "2.5.0",
         "findings_count": run_record.total_findings if run_record else 0,
     }
 
