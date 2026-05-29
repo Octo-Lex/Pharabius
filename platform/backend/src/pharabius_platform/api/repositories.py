@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -150,8 +150,8 @@ async def list_findings(
             "confidence": f.confidence,
             "risk_score": f.risk_score,
             "priority": f.priority,
-            "locations": f.locations or [],
-            "evidence_ids": f.evidence_ids or [],
+            "locations": f.locations,
+            "evidence_ids": f.evidence_ids,
         }
         for f in findings
     ]
@@ -241,7 +241,10 @@ async def get_finding(
     try:
         repo_uuid = UUID(repo_id)
     except ValueError:
-        return {"error": {"code": "invalid_id", "message": "Invalid repository ID"}}
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "invalid_id", "message": "Invalid repository ID"},
+        )
 
     # Get latest run for this repo
     run_result = await session.execute(
@@ -252,7 +255,10 @@ async def get_finding(
     )
     latest_run = run_result.scalar_one_or_none()
     if latest_run is None:
-        return {"error": {"code": "not_found", "message": "No runs found for repository"}}
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "No runs found for repository"},
+        )
 
     # Find by finding_id (not UUID)
     result = await session.execute(
@@ -263,7 +269,14 @@ async def get_finding(
     )
     finding = result.scalar_one_or_none()
     if finding is None:
-        return {"error": {"code": "not_found", "message": f"Finding {finding_id} not found"}}
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "finding_not_found",
+                "message": f"Finding {finding_id} not found.",
+                "finding_id": finding_id,
+            },
+        )
 
     return {
         "id": str(finding.id),
@@ -276,6 +289,6 @@ async def get_finding(
         "confidence": finding.confidence,
         "risk_score": finding.risk_score,
         "priority": finding.priority,
-        "locations": finding.locations or [],
-        "evidence_ids": finding.evidence_ids or [],
+        "locations": finding.locations,
+        "evidence_ids": finding.evidence_ids,
     }
