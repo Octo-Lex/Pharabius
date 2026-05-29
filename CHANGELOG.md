@@ -2,6 +2,35 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.6.0] - Unreleased
+
+### Added
+
+- **Work package persistence**: `.ai-debt/work-packages/WP-*.md` files from
+  uploaded bundles are parsed and stored as `work_packages` + `work_package_findings`
+  in the database. Malformed packages are skipped with warnings.
+- **Work package finding linkage**: Each work package's `Linked Debt Items` are
+  resolved against uploaded findings with 3-way status: `resolved`, `missing`,
+  `malformed_reference`. Missing/malformed links are preserved as first-class rows.
+- **Work package list API**: `GET /repositories/{id}/work-packages` returns
+  summary list with finding link counts and resolution stats.
+- **Work package detail API**: `GET /repositories/{id}/work-packages/{package_id}`
+  with optional `?include_findings=true` and `?include_evidence=true` expansion.
+- **Evidence-backed resolution**: `include_evidence=true` traces from work package
+  → linked finding → evidence records, with per-reference resolution status.
+- **Upload response enrichment**: Upload now returns `run_id`, `work_package_count`,
+  and `work_package_warnings`.
+- **Alembic migration 005**: Creates `work_packages` and `work_package_findings`
+  tables with composite unique indexes.
+- **22 work package tests**: Upload parsing, API list/detail, cross-run isolation,
+  degraded states, malformed references, evidence resolution.
+
+### Changed
+
+- Upload response now includes `run_id` for precise run identification.
+- Parser version bumped from `2.5.0` to `2.6.0`.
+- Alembic table count updated from 12 to 14.
+
 ## [2.5.0] - Unreleased
 
 ### Added

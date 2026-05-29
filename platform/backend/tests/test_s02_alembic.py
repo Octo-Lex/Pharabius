@@ -42,4 +42,4 @@ class TestAlembicBootstrap:
     def test_model_table_count_matches_migration(self) -> None:
         from pharabius_platform.models import Base
 
-        assert len(Base.metadata.tables) == 12
+        assert len(Base.metadata.tables) == 14
