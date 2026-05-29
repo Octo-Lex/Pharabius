@@ -2,6 +2,43 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.5.0] - Unreleased
+
+### Added
+
+- **Evidence record persistence**: `evidence.json` from uploaded bundles is
+  parsed and stored as `evidence_records` in the database. Malformed records
+  are skipped with warnings (not fatal).
+- **Evidence lookup API**: `GET /repositories/{id}/evidence/{evidence_id}`
+  returns canonical evidence record. Optional `?run_id=` for specific runs.
+- **Finding detail evidence resolution**: `GET /findings/{id}` now includes
+  `evidence_references` with resolution status per evidence ID.
+- **Evidence expansion**: `GET /findings/{id}?include_evidence=true` adds
+  full evidence record for resolved references.
+- **Review modal evidence drawer**: Expandable evidence chips showing
+  summary, location, source, type, category, and confidence.
+- **Resolution states**: `resolved`, `missing`, `legacy_no_evidence_store`,
+  `stale`, `malformed_reference`, `unavailable`.
+- **Alembic migration 004**: Creates `evidence_records` table with
+  `UNIQUE(repository_id, run_id, evidence_id)` constraint.
+
+### Changed
+
+- Upload parser now extracts evidence records from `evidence.json`.
+- Upload response includes `evidence_warnings` and `evidence_count`.
+- Evidence records scoped to `(repository_id, run_id, evidence_id)`,
+  not globally unique.
+- Finding detail evidence resolution uses finding's own `run_id`,
+  not the repository's latest run.
+- `raw_observation` excluded from default API responses.
+
+### Known Limitations
+
+- Evidence IDs are run-scoped; `EVD-000001` may appear in different runs
+  with different content.
+- `raw_observation` is persisted but not exposed in v2.5.0 UI.
+- `collected_at` stored as string; no date-based query logic yet.
+
 ## [2.4.1] - Unreleased
 
 ### Fixed

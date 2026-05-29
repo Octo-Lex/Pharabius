@@ -22,7 +22,9 @@ class ParsedBundle:
         self.quality_gates: list[QualityGateResult] = []
         self.claims: list[OperationalClaim] = []
         self.gaps: list[dict[str, object]] = []
+        self.evidence_items: list[dict[str, object]] = []
         self.parse_errors: list[str] = []
+        self.evidence_warnings: list[dict[str, object]] = []
 
 
 def parse_bundle(ai_debt_dir: Path) -> ParsedBundle:
@@ -71,6 +73,11 @@ def parse_bundle(ai_debt_dir: Path) -> ParsedBundle:
     if gaps_path.exists():
         result.gaps = _parse_gaps_md(gaps_path)
 
+    # Evidence store
+    evidence_path = ai_debt_dir / "evidence.json"
+    if evidence_path.exists():
+        _parse_evidence(evidence_path, result)
+
     return result
 
 
@@ -118,3 +125,69 @@ def _parse_gaps_md(path: Path) -> list[dict[str, object]]:
         gaps.append(current_gap)
 
     return gaps
+
+
+def _parse_evidence(path: Path, result: ParsedBundle) -> None:
+    """Parse evidence.json into structured evidence items.
+
+    Malformed records are skipped with a warning, not fatal.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        result.parse_errors.append(f"evidence.json: {e}")
+        return
+
+    evidence_list = data.get("evidence", [])
+    if not isinstance(evidence_list, list):
+        result.parse_errors.append("evidence.json: 'evidence' is not a list")
+        return
+
+    for idx, item in enumerate(evidence_list):
+        if not isinstance(item, dict):
+            result.evidence_warnings.append(
+                {
+                    "code": "malformed_evidence_record_skipped",
+                    "message": "Skipped non-object evidence record.",
+                    "path": "evidence.json",
+                    "index": idx,
+                }
+            )
+            continue
+
+        evidence_id = item.get("evidence_id") or item.get("id") or ""
+        if not evidence_id or not isinstance(evidence_id, str):
+            result.evidence_warnings.append(
+                {
+                    "code": "malformed_evidence_record_skipped",
+                    "message": "Skipped evidence record with missing/invalid ID.",
+                    "path": "evidence.json",
+                    "index": idx,
+                }
+            )
+            continue
+
+        location = item.get("location") or {}
+        if not isinstance(location, dict):
+            location = {}
+
+        result.evidence_items.append(
+            {
+                "evidence_id": evidence_id,
+                "source": str(item.get("source", "unknown")),
+                "type": str(item.get("type", "unknown")),
+                "category": str(item.get("category", "unknown")),
+                "file_path": str(location.get("file", "")),
+                "line_start": location.get("line_start") or location.get("line"),
+                "line_end": location.get("line_end"),
+                "subject": str(item.get("subject", "")),
+                "object": str(item.get("object", "")),
+                "summary": str(item.get("summary", "")),
+                "raw_observation": str(item.get("raw_observation", "")),
+                "confidence": str(item.get("confidence", "Medium")),
+                "collected_at": str(item.get("collected_at", "")),
+                "metadata": item.get("metadata")
+                if isinstance(item.get("metadata"), dict)
+                else None,
+            }
+        )
