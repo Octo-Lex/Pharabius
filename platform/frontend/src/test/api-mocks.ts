@@ -185,3 +185,94 @@ export function mockUploadResult(
     ...overrides,
   };
 }
+
+// --- Run Comparison factories ---
+
+export function mockFindingDelta(
+  overrides: Partial<FindingDelta> = {},
+): FindingDelta {
+  return {
+    finding_id: "TD-ARCH-001",
+    status: "changed",
+    baseline: { title: "Old", severity: "Medium" },
+    comparison: { title: "New", severity: "High" },
+    changed_fields: ["title", "severity"],
+    traceability_change: {
+      baseline_evidence_ids: 2,
+      comparison_evidence_ids: 3,
+      status: "improved",
+    },
+    ...overrides,
+  };
+}
+
+export function mockWorkPackageDelta(
+  overrides: Partial<WorkPackageDelta> = {},
+): WorkPackageDelta {
+  return {
+    package_id: "WP-001",
+    status: "changed",
+    baseline: { title: "Old WP" },
+    comparison: { title: "New WP" },
+    changed_fields: ["title"],
+    traceability_change: {
+      baseline_resolved_links: 1,
+      comparison_resolved_links: 2,
+      baseline_missing_links: 1,
+      comparison_missing_links: 0,
+      status: "improved",
+    },
+    ...overrides,
+  };
+}
+
+export function mockTraceabilityDelta(
+  overrides: Partial<TraceabilityDelta> = {},
+): TraceabilityDelta {
+  return {
+    evidence: {
+      status: "improved",
+      baseline_unique_total: 3,
+      baseline_unique_resolved: 1,
+      baseline_unique_unresolved: 2,
+      comparison_unique_total: 3,
+      comparison_unique_resolved: 3,
+      comparison_unique_unresolved: 0,
+    },
+    work_package_links: {
+      status: "improved",
+      baseline_total: 3,
+      baseline_resolved: 1,
+      baseline_missing: 2,
+      comparison_total: 3,
+      comparison_resolved: 3,
+      comparison_missing: 0,
+    },
+    ...overrides,
+  };
+}
+
+export function mockRunComparisonResponse(
+  overrides: Partial<RunComparisonResponse> = {},
+): RunComparisonResponse {
+  return {
+    baseline_run: {
+      id: "run-a",
+      run_id: "RUN-001",
+      timestamp: "2026-05-28T10:00:00Z",
+    },
+    comparison_run: {
+      id: "run-b",
+      run_id: "RUN-002",
+      timestamp: "2026-05-29T10:00:00Z",
+    },
+    summary: {
+      findings: { added: 1, removed: 0, changed: 1, unchanged: 0 },
+      work_packages: { added: 0, removed: 0, changed: 1, unchanged: 0 },
+    },
+    findings_delta: [mockFindingDelta()],
+    work_packages_delta: [mockWorkPackageDelta()],
+    traceability_delta: mockTraceabilityDelta(),
+    ...overrides,
+  };
+}

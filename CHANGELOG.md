@@ -2,6 +2,27 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.0.0] - Unreleased
+
+### Added
+- Run Comparison & Traceability Delta API endpoint (`GET /api/v1/repositories/{repo_id}/runs/compare`).
+- Finding delta engine: detects added, removed, changed, and unchanged findings between two runs with field-level change tracking.
+- Work-package delta engine: detects added, removed, changed, and unchanged work packages with linked-finding and evidence delta.
+- Traceability delta engine: computes evidence coverage and work-package link resolution deltas between runs.
+- Same-run comparison returns all-unchanged (not rejected).
+- Order-insensitive comparison for `evidence_ids`, `locations`, and `declared_evidence_ids` arrays.
+- `RunComparison.tsx` frontend view with run selectors, summary cards, findings delta table, work-packages delta table, and traceability status.
+- `FIELD_LABELS` mapping for human-readable delta field names in the comparison view.
+- "Compare Runs" action link in Repository Dashboard.
+- `compareRuns()` API client function with full TypeScript types.
+- 12 backend tests for comparison validation, finding delta, work-package delta, traceability delta, same-run comparison, route ordering, and cross-repository protection.
+- 8 frontend tests for RunComparison view states and API integration.
+- Mock factories for `FindingDelta`, `WorkPackageDelta`, `TraceabilityDelta`, and `RunComparisonResponse` in test fixtures.
+
+### Changed
+- `run_comparison` router registered before `repositories_router` to prevent `/runs/compare` route conflicts with `/runs/{run_id}`.
+- Traceability counts use `unique_*` prefix for clarity (`unique_total`, `unique_resolved`, `unique_unresolved`).
+
 ## [2.9.0] - Unreleased
 
 ### Added

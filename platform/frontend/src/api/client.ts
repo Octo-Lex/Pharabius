@@ -408,3 +408,82 @@ export function getRunDetail(repoId: string, runId: string): Promise<Record<stri
 export function getLatestRun(repoId: string): Promise<{ run: RunSummary | null }> {
   return fetchJSON(`${BASE}/repositories/${repoId}/latest-run`);
 }
+
+// --- Run Comparison ---
+
+export interface FindingDelta {
+  finding_id: string;
+  status: "added" | "removed" | "changed" | "unchanged";
+  baseline: Record<string, unknown> | null;
+  comparison: Record<string, unknown> | null;
+  changed_fields: string[];
+  traceability_change: {
+    baseline_evidence_ids: number;
+    comparison_evidence_ids: number;
+    status: "improved" | "regressed" | "unchanged";
+  } | null;
+}
+
+export interface WorkPackageDelta {
+  package_id: string;
+  status: "added" | "removed" | "changed" | "unchanged";
+  baseline: Record<string, unknown> | null;
+  comparison: Record<string, unknown> | null;
+  changed_fields: string[];
+  traceability_change: {
+    baseline_resolved_links: number;
+    comparison_resolved_links: number;
+    baseline_missing_links: number;
+    comparison_missing_links: number;
+    status: "improved" | "regressed" | "unchanged";
+  } | null;
+}
+
+export interface TraceabilityDelta {
+  evidence: {
+    status: "improved" | "regressed" | "unchanged" | "unavailable";
+    baseline_unique_total: number;
+    baseline_unique_resolved: number;
+    baseline_unique_unresolved: number;
+    comparison_unique_total: number;
+    comparison_unique_resolved: number;
+    comparison_unique_unresolved: number;
+  };
+  work_package_links: {
+    status: "improved" | "regressed" | "unchanged" | "unavailable";
+    baseline_total: number;
+    baseline_resolved: number;
+    baseline_missing: number;
+    comparison_total: number;
+    comparison_resolved: number;
+    comparison_missing: number;
+  };
+}
+
+export interface ComparisonSummary {
+  findings: { added: number; removed: number; changed: number; unchanged: number };
+  work_packages: { added: number; removed: number; changed: number; unchanged: number };
+}
+
+export interface RunComparisonResponse {
+  baseline_run: { id: string; run_id: string; timestamp: string };
+  comparison_run: { id: string; run_id: string; timestamp: string };
+  summary: ComparisonSummary;
+  findings_delta: FindingDelta[];
+  work_packages_delta: WorkPackageDelta[];
+  traceability_delta: TraceabilityDelta;
+}
+
+export function compareRuns(
+  repoId: string,
+  baselineRunId: string,
+  comparisonRunId: string,
+): Promise<RunComparisonResponse> {
+  const params = new URLSearchParams({
+    baseline_run_id: baselineRunId,
+    comparison_run_id: comparisonRunId,
+  });
+  return fetchJSON(
+    `${BASE}/repositories/${repoId}/runs/compare?${params}`,
+  );
+}
