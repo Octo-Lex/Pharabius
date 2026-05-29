@@ -60,6 +60,7 @@ async def list_work_packages(
         resolved_count = sum(1 for lk in links if lk.resolution_status == "resolved")
         missing_count = sum(1 for lk in links if lk.resolution_status == "missing")
 
+        declared_ids = wp.declared_evidence_ids or []
         summaries.append(
             {
                 "package_id": wp.package_id,
@@ -69,6 +70,7 @@ async def list_work_packages(
                 "linked_finding_count": len(links),
                 "resolved_finding_count": resolved_count,
                 "missing_finding_count": missing_count,
+                "declared_evidence_count": len(declared_ids),
             }
         )
 
@@ -163,6 +165,7 @@ async def get_work_package(
         "suggested_owner_area": wp.suggested_owner_area or "",
         "status": wp.status or "",
         "declared_evidence_ids": wp.declared_evidence_ids or [],
+        "declared_evidence_count": len(wp.declared_evidence_ids or []),
         "linked_finding_count": len(links),
         "resolved_finding_count": resolved_count,
         "missing_finding_count": missing_count,

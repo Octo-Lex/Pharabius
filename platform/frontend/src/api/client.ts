@@ -140,6 +140,50 @@ export interface UploadResult {
   warnings: string[];
 }
 
+// --- Work Package types ---
+
+export interface WorkPackageSummary {
+  package_id: string;
+  title: string;
+  status: string;
+  estimated_effort: string;
+  linked_finding_count: number;
+  resolved_finding_count: number;
+  missing_finding_count: number;
+  declared_evidence_count: number;
+}
+
+export interface CompactFinding {
+  finding_id: string;
+  title: string;
+  severity: string;
+  confidence: string;
+  category: string;
+}
+
+export interface LinkedFinding {
+  debt_item_id: string;
+  status: "resolved" | "missing" | "malformed_reference" | "unavailable";
+  reason?: string;
+  finding: CompactFinding | null;
+  evidence_references: EvidenceReference[];
+}
+
+export interface WorkPackageDetail extends WorkPackageSummary {
+  objective: string;
+  current_risk: string;
+  recommended_engineering_approach: string[];
+  expected_affected_areas: string[];
+  preconditions: string[];
+  verification_recommendations: string[];
+  risks_and_cautions: string[];
+  definition_of_done: string[];
+  expected_risk_reduction: string;
+  suggested_owner_area: string;
+  declared_evidence_ids: string[];
+  linked_findings: LinkedFinding[];
+}
+
 // --- Review types ---
 
 export type DecisionStatus =
@@ -324,6 +368,31 @@ export function getAuditLog(
   limit = 50,
 ): Promise<{ entries: AuditLogEntry[]; total: number }> {
   return fetchJSON(`${BASE}/repositories/${repoId}/reviews/audit-log?limit=${limit}`);
+}
+
+// --- Work Package API ---
+
+export function listWorkPackages(
+  repoId: string,
+  runId?: string,
+): Promise<{ work_packages: WorkPackageSummary[]; total: number }> {
+  const sp = new URLSearchParams();
+  if (runId) sp.set("run_id", runId);
+  const qs = sp.toString();
+  return fetchJSON(`${BASE}/repositories/${repoId}/work-packages${qs ? `?${qs}` : ""}`);
+}
+
+export function getWorkPackageDetail(
+  repoId: string,
+  packageId: string,
+  options?: { runId?: string; includeFindings?: boolean; includeEvidence?: boolean },
+): Promise<WorkPackageDetail> {
+  const sp = new URLSearchParams();
+  if (options?.runId) sp.set("run_id", options.runId);
+  if (options?.includeFindings) sp.set("include_findings", "true");
+  if (options?.includeEvidence) sp.set("include_evidence", "true");
+  const qs = sp.toString();
+  return fetchJSON(`${BASE}/repositories/${repoId}/work-packages/${packageId}${qs ? `?${qs}` : ""}`);
 }
 
 // --- Run API ---

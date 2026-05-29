@@ -375,7 +375,7 @@ async def upload_bundle(
         "parse_errors": parse_errors,
         "evidence_warnings": parsed.evidence_warnings if parsed else [],
         "evidence_count": len(parsed.evidence_items) if parsed else 0,
-        "parser_version": "2.7.0",
+        "parser_version": "2.8.0",
         "findings_count": run_record.total_findings if run_record else 0,
         "work_package_count": len(parsed.work_packages) if parsed else 0,
         "work_package_warnings": parsed.work_package_warnings if parsed else [],

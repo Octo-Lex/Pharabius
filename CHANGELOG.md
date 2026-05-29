@@ -2,6 +2,26 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [2.8.0] - Unreleased
+
+### Added
+- Work Packages frontend view scoped to the selected audit run.
+- Expandable work-package detail panels with full remediation content.
+- Linked finding cards with resolved/missing/malformed states.
+- Evidence reference chips inside work-package review.
+- Dashboard navigation to work packages preserving selected run.
+- Upload success now includes "View uploaded run" link using database run UUID.
+- `declared_evidence_count` added to work-package list and detail responses.
+
+### Changed
+- Work-package list endpoint returns `declared_evidence_count` (collapsed card data).
+- Upload success shows "View uploaded run" link instead of only "View repositories".
+
+### Tests
+- Existing backend work-package tests remain green (264 platform, 1,823 CLI).
+- Frontend validation: TypeScript build + Vite build.
+- Frontend test harness deferred to a future infrastructure wave.
+
 ## [2.7.0] - Unreleased
 
 ### Added

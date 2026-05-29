@@ -10,6 +10,7 @@ import FindingsTable from "./views/FindingsTable";
 import PortfolioSummary from "./views/PortfolioSummary";
 import UploadPage from "./views/UploadPage";
 import ReviewSummary from "./views/ReviewSummary";
+import WorkPackages from "./views/WorkPackages";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/repositories/:repoId" element={<RepositoryDashboard />} />
           <Route path="/repositories/:repoId/findings" element={<FindingsTable />} />
           <Route path="/repositories/:repoId/reviews" element={<ReviewSummary />} />
+          <Route path="/repositories/:repoId/work-packages" element={<WorkPackages />} />
           <Route path="/portfolio" element={<PortfolioSummary />} />
           <Route path="/upload" element={<UploadPage />} />
         </Route>
