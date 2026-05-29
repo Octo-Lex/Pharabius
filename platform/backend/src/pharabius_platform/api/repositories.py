@@ -244,7 +244,7 @@ async def get_finding(
         raise HTTPException(
             status_code=400,
             detail={"code": "invalid_id", "message": "Invalid repository ID"},
-        )
+        ) from None
 
     # Get latest run for this repo
     run_result = await session.execute(
