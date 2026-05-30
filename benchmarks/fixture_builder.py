@@ -103,6 +103,51 @@ class BenchmarkFixture:
         lines = [f"# TODO: fix issue {i} before release" for i in range(count)]
         return self.add_python_file("src/debts.py", "\n".join(lines) + "\n")
 
+    # ── v3.8.0 runtime fixture helpers ──────────────────────────────
+
+    def add_tool_versions(self, entries: dict[str, str]) -> BenchmarkFixture:
+        lines = [f"{tool} {ver}" for tool, ver in entries.items()]
+        return self.add_file(".tool-versions", "\n".join(lines) + "\n")
+
+    def add_ruby_version(self, version: str) -> BenchmarkFixture:
+        return self.add_file(".ruby-version", version + "\n")
+
+    def add_gemfile(self, ruby_version: str | None = None) -> BenchmarkFixture:
+        lines = ['source "https://rubygems.org"']
+        if ruby_version:
+            lines.append(f'ruby "{ruby_version}"')
+        return self.add_file("Gemfile", "\n".join(lines) + "\n")
+
+    def add_java_version(self, version: str) -> BenchmarkFixture:
+        return self.add_file(".java-version", version + "\n")
+
+    def add_pom_xml(self, java_version: int | None = None) -> BenchmarkFixture:
+        lines = ['<project>']
+        if java_version:
+            lines.append(f'<properties><maven.compiler.release>{java_version}</maven.compiler.release></properties>')
+        lines.append('</project>')
+        return self.add_file("pom.xml", "\n".join(lines))
+
+    def add_gradle_build(self, java_version: int | None = None) -> BenchmarkFixture:
+        if java_version:
+            return self.add_file("build.gradle", f"sourceCompatibility = JavaVersion.VERSION_{java_version}\n")
+        return self.add_file("build.gradle", "plugins { id 'java' }\n")
+
+    def add_dockerfile(self, base_image: str) -> BenchmarkFixture:
+        return self.add_file("Dockerfile", f"FROM {base_image}\n")
+
+    def add_github_workflow(self, name: str, content: str) -> BenchmarkFixture:
+        return self.add_file(f".github/workflows/{name}", content)
+
+    def add_runtime_txt(self, version: str) -> BenchmarkFixture:
+        return self.add_file("runtime.txt", f"python-{version}\n")
+
+    def add_pyproject_toml(self, requires_python: str | None = None) -> BenchmarkFixture:
+        lines = ['[project]', 'name = "example"', 'version = "1.0.0"']
+        if requires_python:
+            lines.append(f'requires-python = "{requires_python}"')
+        return self.add_file("pyproject.toml", "\n".join(lines) + "\n")
+
     def build(self) -> Path:
         self.root.mkdir(parents=True, exist_ok=True)
         for op, kwargs in self._ops:

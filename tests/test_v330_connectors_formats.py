@@ -463,11 +463,12 @@ class TestS06RuntimePinning:
         assert "Python" in runtimes
         assert "Node.js" in runtimes
 
-    def test_tool_versions_ignores_ruby_java_for_v330(
+    def test_tool_versions_detects_ruby_java_v380(
         self, tmp_path: Path
     ) -> None:
+        """v3.8.0: .tool-versions now detects Ruby and Java runtime entries."""
         (tmp_path / ".tool-versions").write_text(
-            "ruby 3.2.2\njava 17.0.8\n"
+            "ruby 3.2.2\njava temurin-17.0.8\n"
         )
         store = scan_repository(tmp_path)
         pinned = [
@@ -477,8 +478,8 @@ class TestS06RuntimePinning:
             and e.metadata.get("signal") == "runtime_version_pinned"
         ]
         runtimes = {s.metadata["runtime"] for s in pinned}
-        assert "Ruby" not in runtimes
-        assert "Java" not in runtimes
+        assert "Ruby" in runtimes
+        assert "Java" in runtimes
 
 
 # ---------------------------------------------------------------------------

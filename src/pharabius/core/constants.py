@@ -21,6 +21,15 @@ EVIDENCE_BROAD_EXCEPTION = "broad_exception_detected"
 EVIDENCE_DEPENDENCY_SIGNAL = "dependency_health_signal"
 EVIDENCE_RUNTIME_VERSION_SIGNAL = "runtime_version_signal"
 
+# ── Runtime signal metadata values (v3.8.0) ────────────────────────────
+
+RUNTIME_SIGNAL_PINNED = "runtime_version_pinned"
+RUNTIME_SIGNAL_MISSING = "runtime_version_missing"
+RUNTIME_SIGNAL_CONFLICT = "runtime_version_conflict"
+RUNTIME_SIGNAL_FROM_CONTAINER = "runtime_version_from_container"
+RUNTIME_SIGNAL_FROM_CI = "runtime_version_from_ci"
+RUNTIME_SIGNAL_PARTIAL = "runtime_version_partial"
+
 # ── Coverage patterns (single authoritative map) ──────────────────────
 
 COVERAGE_PATTERNS: dict[str, str] = {

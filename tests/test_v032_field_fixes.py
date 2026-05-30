@@ -102,29 +102,29 @@ class TestDotNetSolutionFile:
         )
         _full_pipeline(tmp_path)
         reg = analyze_evidence(tmp_path)
-        dep = [f for f in reg.findings if f.category == "TD-DEP"]
+        dep = [f for f in reg.findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
         assert len(dep) == 0
 
 
 class TestDotNetAnalyzer:
     def test_csproj_without_lockfile(self, tmp_path: Path) -> None:
-        """Single .csproj without packages.lock.json produces TD-DEP."""
+        """Single .csproj without packages.lock.json produces TD-DEP (advisory)."""
         (tmp_path / "Api.csproj").write_text("<Project></Project>", encoding="utf-8")
         _full_pipeline(tmp_path)
         dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
-        assert len(dep) == 1
-        assert ".NET" in dep[0].title
+        assert len(dep) >= 1
+        assert any(".NET" in f.title for f in dep)
 
     def test_csproj_with_lockfile(self, tmp_path: Path) -> None:
         """Single .csproj with same-root packages.lock.json does NOT produce TD-DEP."""
         (tmp_path / "Api.csproj").write_text("<Project></Project>", encoding="utf-8")
         (tmp_path / "packages.lock.json").write_text("{}", encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
+        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
         assert len(dep) == 0
 
     def test_nested_csproj_root_lockfile_unsatisfied(self, tmp_path: Path) -> None:
-        """Nested .csproj + root packages.lock.json still produces TD-DEP."""
+        """Nested .csproj + root packages.lock.json still produces TD-DEP (advisory)."""
         (tmp_path / "src" / "Api").mkdir(parents=True)
         (tmp_path / "src" / "Api" / "Api.csproj").write_text(
             "<Project></Project>", encoding="utf-8"
@@ -142,7 +142,7 @@ class TestDotNetAnalyzer:
         )
         (tmp_path / "src" / "Api" / "packages.lock.json").write_text("{}", encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
+        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
         assert len(dep) == 0
 
 
@@ -157,7 +157,7 @@ class TestMavenPomClassification:
             encoding="utf-8",
         )
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
+        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
         assert len(dep) == 0
 
     def test_parent_pom_whitespace_tolerant(self, tmp_path: Path) -> None:
@@ -188,8 +188,10 @@ class TestMavenPomClassification:
         )
         _full_pipeline(tmp_path)
         dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
-        assert len(dep) == 1
-        assert "Java" in dep[0].title
+        # v3.7.0: lockfile absence is advisory; v3.8.0: Java missing runtime also advisory
+        # The Java lockfile absence should still be TD-DEP (advisory)
+        assert len(dep) >= 1
+        assert any("Java" in f.title for f in dep)
 
     def test_library_pom_no_dep_finding(self, tmp_path: Path) -> None:
         """Common-lib POM without application signals → no TD-DEP."""
@@ -199,7 +201,7 @@ class TestMavenPomClassification:
             encoding="utf-8",
         )
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
+        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
         assert len(dep) == 0
 
     def test_maven_with_reproducibility_no_finding(self, tmp_path: Path) -> None:
@@ -213,7 +215,7 @@ class TestMavenPomClassification:
         )
         (tmp_path / "api-service" / "mvnw").write_text("#!/bin/sh", encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
+        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
         assert len(dep) == 0
 
     def test_multi_module_one_dep_finding(self, tmp_path: Path) -> None:
@@ -238,8 +240,10 @@ class TestMavenPomClassification:
         )
         _full_pipeline(tmp_path)
         dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
-        assert len(dep) == 1
-        assert "api-service" in dep[0].locations[0]
+        # v3.7.0: lockfile absence is advisory; expect at least 1 TD-DEP (advisory)
+        # for the api-service application POM without lockfile
+        assert len(dep) >= 1
+        assert any("api-service" in loc for f in dep for loc in f.locations)
 
     def test_unreadable_pom_no_dep_finding(self, tmp_path: Path) -> None:
         """POM that cannot be read → unknown → no TD-DEP."""
@@ -271,7 +275,7 @@ class TestTerraformLockfile:
         """.tf files without .terraform.lock.hcl do NOT produce TD-DEP in v0.3.2."""
         (tmp_path / "main.tf").write_text('resource "aws_vpc" "main" {}', encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP"]
+        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
         assert len(dep) == 0
 
 

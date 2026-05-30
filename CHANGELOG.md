@@ -2,6 +2,31 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.8.0] - Unreleased
+
+### Added
+- **Runtime conflict detection** for Python and Node.js: flags when multiple runtime declarations disagree (`.python-version` vs `.tool-versions`, `.nvmrc` vs `.node-version`, etc.).
+- **Constraint kind model**: sources classified as `exact`, `range`, `partial`, or `unknown`. Only `exact vs exact` or `range excludes exact` produce conflicts.
+- **Python source expansion**: `runtime.txt` (Heroku) and `pyproject.toml` `requires-python` now detected as runtime sources.
+- **Ruby runtime pin evidence**: `.ruby-version`, `.tool-versions` ruby, and `Gemfile` ruby declarations.
+- **Java runtime pin evidence**: `.java-version`, `.tool-versions` java, `pom.xml` maven.compiler.release/source, `build.gradle` sourceCompatibility/toolchain.
+- **Dockerfile runtime evidence**: FROM line extraction for Python, Node, Ruby, Java base images. ARG-driven images produce partial evidence. Multi-stage Dockerfiles handled correctly.
+- **GitHub Actions runtime evidence**: `setup-python`, `setup-node`, `setup-ruby`, `setup-java` action detection with version extraction. Matrix/env expressions produce partial evidence.
+- **Missing runtime pin reclassified as advisory** (`issue_type="advisory"`): does not generate work packages or claims.
+- **Runtime conflict finding**: `issue_type="technical_debt"`, generates work packages and claims.
+- **Per-ecosystem version normalization**: Python/Ruby by major.minor, Node/Java by major.
+- **6 runtime signal constants** in `constants.py`: `RUNTIME_SIGNAL_PINNED`, `RUNTIME_SIGNAL_MISSING`, `RUNTIME_SIGNAL_CONFLICT`, `RUNTIME_SIGNAL_FROM_CONTAINER`, `RUNTIME_SIGNAL_FROM_CI`, `RUNTIME_SIGNAL_PARTIAL`.
+- **Standardized runtime evidence metadata**: `constraint_kind`, `source_kind`, `normalized`, `sources[]` for conflicts.
+- **New benchmark fixture methods**: `add_tool_versions`, `add_ruby_version`, `add_gemfile`, `add_java_version`, `add_pom_xml`, `add_gradle_build`, `add_dockerfile`, `add_github_workflow`, `add_runtime_txt`, `add_pyproject_toml`.
+- **docs/RUNTIME_REPRODUCIBILITY.md**: full documentation of supported sources, conflict policy, and limitations.
+- **25 new tests** in `test_v380_runtime_reproducibility.py`.
+
+### Changed
+- **runtime_parsers.py** expanded from 156 → ~630 lines: Ruby, Java, Dockerfile, CI, conflict detection, constraint model.
+- **Missing runtime pin** now classified as advisory (was technical_debt finding).
+- **v3.3.0 test**: `.tool-versions` Ruby/Java now detected (was deferred in v3.3.0).
+- **v3.2.0 tests**: Maven/CSProj lockfile tests updated to account for advisory classification.
+
 ## [3.7.0] - Unreleased
 
 ### Added

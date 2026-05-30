@@ -335,7 +335,7 @@ scanner.py
 
 ---
 
-## Implementation Status (v3.7.0)
+## Implementation Status (v3.8.0)
 
 | Capability | Status |
 |---|---|
@@ -386,6 +386,13 @@ scanner.py
 | Run history advisory tracking | ✅ Implemented (v3.7.0) |
 | Classification-boundary warning | ✅ Implemented (v3.7.0) |
 | Performance smoke test (1000-file repo) | ✅ Implemented (v3.7.0) |
+| Runtime conflict detection (Python/Node) | ✅ Implemented (v3.8.0) |
+| Ruby runtime pin evidence | ✅ Implemented (v3.8.0) |
+| Java runtime pin evidence | ✅ Implemented (v3.8.0) |
+| Dockerfile runtime evidence | ✅ Implemented (v3.8.0) |
+| GitHub Actions runtime evidence | ✅ Implemented (v3.8.0) |
+| Constraint kind model (exact/range/partial) | ✅ Implemented (v3.8.0) |
+| Runtime reproducibility documentation | ✅ Implemented (v3.8.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |

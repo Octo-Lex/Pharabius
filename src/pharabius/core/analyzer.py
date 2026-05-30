@@ -1177,51 +1177,112 @@ def _analyze_coverage_gaps(store: EvidenceStore, builder: FindingBuilder) -> Non
 
 
 def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
-    """TD-DEP: Generate findings from runtime version pinning signals."""
-    from pharabius.core.constants import EVIDENCE_RUNTIME_VERSION_SIGNAL
+    """TD-DEP: Generate findings/advisories from runtime version signals.
+
+    v3.8.0: Missing pins → advisory. Conflicts → technical_debt finding.
+    """
+    from pharabius.core.constants import (
+        EVIDENCE_RUNTIME_VERSION_SIGNAL,
+        RUNTIME_SIGNAL_CONFLICT,
+        RUNTIME_SIGNAL_MISSING,
+    )
 
     runtime_signals = [e for e in store.evidence if e.type == EVIDENCE_RUNTIME_VERSION_SIGNAL]
     if not runtime_signals:
         return
 
-    missing = [e for e in runtime_signals if e.metadata.get("signal") == "runtime_version_missing"]
-    if not missing:
-        return
+    # ── Missing runtime pins → advisory ─────────────────────────────
+    missing = [e for e in runtime_signals if e.metadata.get("signal") == RUNTIME_SIGNAL_MISSING]
+    if missing:
+        runtimes = [e.metadata.get("runtime", "unknown") for e in missing]
+        breakdown = {**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2}
+        builder.add(
+            category="TD-DEP",
+            title=f"Missing runtime version pins for: {', '.join(runtimes)}",
+            description=(
+                f"Dependency manifests exist for {', '.join(runtimes)} but no runtime "
+                "version pinning file detected. Runtime drift affects reproducibility."
+            ),
+            evidence_ids=_evidence_ids(missing),
+            locations=_locations(missing),
+            technical_impact=(
+                "Without runtime version pins, different environments may use "
+                "different runtime versions, causing subtle compatibility issues."
+            ),
+            business_impact=(
+                "Reproducibility risk is inferred from repository evidence. "
+                "Validate with the Product Engineering Team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                "Add a runtime version file (.python-version, .nvmrc, .ruby-version, "
+                ".java-version, or .tool-versions) or specify in manifest."
+            ),
+            verification_recommendations=["Verify CI uses the pinned runtime version."],
+            risks_and_cautions=[
+                "Some projects intentionally use latest runtime versions.",
+                "Docker images may already pin runtime versions.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering",
+            issue_type="advisory",
+        )
 
-    runtimes = [e.metadata.get("runtime", "unknown") for e in missing]
-    breakdown = {**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2}
-    builder.add(
-        category="TD-DEP",
-        title=f"Missing runtime version pins for: {', '.join(runtimes)}",
-        description=(
-            f"Dependency manifests exist for {', '.join(runtimes)} but no runtime "
-            "version pinning file detected (.python-version, .nvmrc, .tool-versions, "
-            "or package.json engines). Runtime drift affects reproducibility."
-        ),
-        evidence_ids=_evidence_ids(missing),
-        locations=_locations(missing),
-        technical_impact=(
-            "Without runtime version pins, different environments may use "
-            "different runtime versions, causing subtle compatibility issues."
-        ),
-        business_impact=(
-            "Reproducibility risk is inferred from repository evidence. "
-            "Validate with the Product Engineering Team."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Small",
-        recommended_action=(
-            "Add a runtime version file (.python-version, .nvmrc, or "
-            ".tool-versions) or specify engines in package.json."
-        ),
-        verification_recommendations=["Verify CI uses the pinned runtime version."],
-        risks_and_cautions=[
-            "Some projects intentionally use latest runtime versions.",
-            "Docker images may already pin runtime versions.",
-        ],
-        confidence="Low",
-        suggested_owner_area="Product Engineering",
-    )
+    # ── Runtime conflicts → technical_debt finding ───────────────────
+    conflicts = [e for e in runtime_signals if e.metadata.get("signal") == RUNTIME_SIGNAL_CONFLICT]
+    for conflict in conflicts:
+        runtime = conflict.metadata.get("runtime", "unknown")
+        sources = conflict.metadata.get("sources", [])
+        source_desc = ", ".join(
+            f"{s.get('source_file', '?')}={s.get('version', '?')}"
+            for s in sources
+        )
+        reason = conflict.metadata.get("conflict_reason", "unknown")
+
+        breakdown = {
+            **RISK_SCORE_TEMPLATE,
+            "technical_severity": 4,
+            "blast_radius": 3,
+            "dependency_risk": 5,
+            "remediation_simplicity": -2,
+        }
+
+        builder.add(
+            category="TD-DEP",
+            title=f"{runtime} runtime version declarations conflict",
+            description=(
+                f"Multiple {runtime} runtime version declarations disagree: "
+                f"{source_desc}. This creates direct reproducibility risk "
+                f"({reason})."
+            ),
+            evidence_ids=[conflict.evidence_id],
+            locations=["."],
+            technical_impact=(
+                "Conflicting runtime declarations mean different tools may "
+                "select different runtime versions, causing inconsistent builds "
+                "and test failures."
+            ),
+            business_impact=(
+                "Reproducibility risk from conflicting runtime declarations. "
+                "Validate with the Product Engineering Team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                f"Align all {runtime} runtime declarations to a single version "
+                "or ensure range constraints are compatible."
+            ),
+            verification_recommendations=[
+                "Run the build in a clean environment.",
+                "Verify all runtime sources select the same version.",
+            ],
+            risks_and_cautions=[
+                "Some conflicts may be intentional (e.g., development vs production).",
+            ],
+            confidence="High",
+            suggested_owner_area="Product Engineering / Platform",
+        )
 
 
 def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
