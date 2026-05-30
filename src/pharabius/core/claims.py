@@ -161,8 +161,12 @@ def build_claims_register(
     finding_to_wp_map: dict[str, list[str]] | None = None,
 ) -> OperationalClaimsRegister:
     """Build a complete claims register from findings."""
+    # Exclude advisories from claims by default (v3.7.0)
+    debt_findings = [
+        f for f in findings if f.get("issue_type", "technical_debt") != "advisory"
+    ]
     claims = generate_claims_from_findings(
-        findings, warnings, finding_to_wp_map=finding_to_wp_map,
+        debt_findings, warnings, finding_to_wp_map=finding_to_wp_map,
     )
 
     summary = OperationalClaimsRegisterSummary(

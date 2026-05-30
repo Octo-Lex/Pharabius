@@ -304,7 +304,8 @@ def test_rust_cargo_no_lock_cautious(tmp_path: Path) -> None:
     dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep_findings) == 1
     f = dep_findings[0]
-    assert f.severity == "Medium"
+    assert f.severity == "Low"  # Advisory: capped at Low (v3.7.0)
+    assert f.issue_type == "advisory"
     assert f.confidence == "Medium"
     assert "Rust" in f.title
     # Rust caution in description, risks_and_cautions, and verification

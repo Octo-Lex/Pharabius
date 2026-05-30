@@ -58,6 +58,9 @@ indent-style = "space"
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
+markers = [
+  "slow: marks tests as slow",
+]
 addopts = [
   "-ra",
   "--strict-markers",

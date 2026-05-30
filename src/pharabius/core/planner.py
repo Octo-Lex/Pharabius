@@ -319,7 +319,9 @@ def _generate_work_packages(
     findings: list[DebtFinding],
     max_work_packages: int,
 ) -> list[WorkPackage]:
-    groups = _group_findings(findings)
+    # Exclude advisories from work packages by default (v3.7.0)
+    debt_findings = [f for f in findings if f.issue_type != "advisory"]
+    groups = _group_findings(debt_findings)
     packages: list[WorkPackage] = []
 
     for index, group in enumerate(groups[:max_work_packages], start=1):

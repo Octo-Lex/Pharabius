@@ -700,11 +700,38 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
             f"| Medium | {ctx.debt_register.summary.medium} |",
             f"| Low | {ctx.debt_register.summary.low} |",
             "",
-            f"Total findings: **{ctx.debt_register.summary.total_findings}**",
+            f"Total findings: **{ctx.debt_register.summary.total_findings}** "
+            f"(technical debt: {ctx.debt_register.summary.technical_debt_count}, "
+            f"advisories: {ctx.debt_register.summary.advisory_count})",
             "",
             "## 6. Top Findings",
             "",
             *_finding_table(findings[:10]),
+        ]
+    )
+
+    # Advisory section (v3.7.0)
+    advisories = [f for f in findings if f.issue_type == "advisory"]
+    if advisories:
+        lines.extend(
+            [
+                "",
+                "## 6b. Advisory Signals",
+                "",
+                "> These are hygiene observations, not actionable debt.",
+                "> They do not generate work packages or operational claims by default.",
+                "",
+                "| Category | Title | Severity | Risk Score |",
+                "|---|---|---|---:|",
+            ]
+        )
+        for a in advisories:
+            lines.append(
+                f"| {a.category} | {a.title[:80]} | {a.severity} | {a.risk_score} |"
+            )
+
+    lines.extend(
+        [
             "",
             "## 7. Architecture Summary",
             "",

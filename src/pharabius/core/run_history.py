@@ -227,6 +227,18 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
         "grouping_ratio": grouping_ratio,
         "traceability_grade": trace_grade,
         "owner_areas": owner_areas,
+        # Advisory classification (v3.7.0)
+        "technical_debt_count": sum(1 for f in findings if f.get("issue_type", "technical_debt") != "advisory"),
+        "advisory_count": sum(1 for f in findings if f.get("issue_type") == "advisory"),
+        "advisories_by_category": {
+            cat: cnt
+            for cat, cnt in findings_by_category.items()
+            if cat in {"TD-BUILD", "TD-DOC", "TD-PROCESS"}
+            or (cat == "TD-DEP" and any(
+                f.get("category") == "TD-DEP" and f.get("issue_type") == "advisory"
+                for f in findings
+            ))
+        },
     }
 
 
@@ -304,6 +316,10 @@ def build_run_history_index(workspace: Path) -> dict[str, Any]:
             entry["traceability_grade"] = snapshot.get("traceability_grade", "")
             entry["claim_count"] = snapshot.get("claim_count", 0)
             entry["limitation_evidence_count"] = snapshot.get("limitation_evidence_count", 0)
+            # Advisory classification (v3.7.0)
+            entry["technical_debt_count"] = snapshot.get("technical_debt_count", entry["finding_count"])
+            entry["advisory_count"] = snapshot.get("advisory_count", 0)
+            entry["advisories_by_category"] = snapshot.get("advisories_by_category", {})
 
         runs.append(entry)
 
@@ -354,8 +370,9 @@ def compute_finding_trend(index: dict[str, Any]) -> dict[str, Any]:
 
     latest = runs[-1]
     previous = runs[-2]
-    latest_count = int(latest.get("finding_count", 0))
-    previous_count = int(previous.get("finding_count", 0))
+    # Use technical_debt_count when available (v3.7.0 classification boundary)
+    latest_count = int(latest.get("technical_debt_count") or latest.get("finding_count", 0))
+    previous_count = int(previous.get("technical_debt_count") or previous.get("finding_count", 0))
     total_delta = latest_count - previous_count
 
     both_enriched = bool(latest.get("enriched")) and bool(previous.get("enriched"))
@@ -410,6 +427,18 @@ def compute_finding_trend(index: dict[str, Any]) -> dict[str, Any]:
         trajectory = "worsening"
     else:
         trajectory = "stable"
+
+    # Classification boundary warning (v3.7.0)
+    if "technical_debt_count" not in previous and "technical_debt_count" in latest:
+        warnings.append({
+            "code": "classification_boundary",
+            "path": "",
+            "message": (
+                "v3.7.0 reclassified selected structural hygiene signals as advisories. "
+                "Apparent finding-count improvement may reflect classification changes, "
+                "not repository remediation."
+            ),
+        })
 
     return {
         "status": "complete",

@@ -335,7 +335,7 @@ scanner.py
 
 ---
 
-## Implementation Status (v3.6.0)
+## Implementation Status (v3.7.0)
 
 | Capability | Status |
 |---|---|
@@ -379,6 +379,13 @@ scanner.py
 | Executable finding-quality rubric | ✅ Implemented (v3.6.0) |
 | Threshold calibration (all kept) | ✅ Implemented (v3.6.0) |
 | Validation documentation | ✅ Implemented (v3.6.0) |
+| Advisory classification for structural signals | ✅ Implemented (v3.7.0) |
+| OSS benchmark lane (3 pinned repos) | ✅ Implemented (v3.7.0) |
+| Advisory severity cap (Low, risk ≤ 10) | ✅ Implemented (v3.7.0) |
+| Planner/claims advisory exclusion | ✅ Implemented (v3.7.0) |
+| Run history advisory tracking | ✅ Implemented (v3.7.0) |
+| Classification-boundary warning | ✅ Implemented (v3.7.0) |
+| Performance smoke test (1000-file repo) | ✅ Implemented (v3.7.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |

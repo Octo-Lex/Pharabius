@@ -2,6 +2,30 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.7.0] - Unreleased
+
+### Added
+- **Advisory classification** for structural hygiene signals: TD-BUILD, TD-DOC, TD-PROCESS, and missing-lockfile (TD-DEP) are now `issue_type="advisory"` instead of `technical_debt`.
+- **Severity cap for advisories**: All advisories are capped at severity "Low" with risk_score ≤ 10.
+- **`technical_debt_count` and `advisory_count`** in `DebtRegisterSummary` for clean count separation.
+- **Advisory Signals section** in the foundation audit report.
+- **OSS benchmark lane**: 3 pinned public repositories (pallets/click, uuidjs/uuid, YousefED/typescript-json-schema) with SHA-256 verified snapshots.
+- **OSS validation harness** (`benchmarks/oss_validation.py`) with safe tar extraction.
+- **Run history advisory tracking**: enriched snapshots include `advisory_count`, `advisories_by_category`.
+- **Finding trend uses `technical_debt_count`**: trend excludes advisories to prevent classification-boundary distortion.
+- **Classification-boundary warning**: emitted when comparing pre-v3.7.0 vs v3.7.0+ runs.
+- **Performance smoke test**: 1000-file synthetic repo completes in <10s.
+
+### Changed
+- **Planner**: excludes advisories from work package generation by default.
+- **Claims**: excludes advisories from operational claims by default.
+- **Reporter**: summary shows "(technical debt: N, advisories: M)".
+- **FindingBuilder.add()**: accepts `issue_type` parameter (default `"technical_debt"`).
+- **v3.6.0 severity calibration test**: updated to exclude advisories from distribution check.
+
+### Removed
+- No features removed. Advisory classification is additive.
+
 ## [3.6.0] - Unreleased
 
 ### Added

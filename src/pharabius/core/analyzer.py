@@ -321,6 +321,7 @@ class FindingBuilder:
         risks_and_cautions: list[str],
         confidence: str = "Medium",
         suggested_owner_area: str = "",
+        issue_type: str = "technical_debt",
     ) -> None:
         if not evidence_ids:
             return
@@ -328,13 +329,21 @@ class FindingBuilder:
         self._counters[category] += 1
         raw_score, priority = _score(risk_breakdown)
 
+        # Advisory severity cap: Low severity, risk_score <= 10
+        if issue_type == "advisory":
+            severity = "Low"
+            raw_score = min(raw_score, 10)
+        else:
+            severity = _severity_for_priority(priority)
+
         self.findings.append(
             DebtFinding(
                 id=f"{category}-{self._counters[category]:03d}",
                 category=category,
+                issue_type=issue_type,
                 title=title,
                 description=description,
-                severity=_severity_for_priority(priority),
+                severity=severity,
                 confidence=confidence,
                 locations=locations,
                 evidence_ids=evidence_ids,
@@ -516,6 +525,7 @@ def _analyze_missing_ci(store: EvidenceStore, builder: FindingBuilder) -> None:
             "Do not add slow or flaky checks directly to the required path without stabilization.",
         ],
         suggested_owner_area="Platform / DevOps",
+        issue_type="advisory",
     )
 
 
@@ -563,6 +573,7 @@ def _analyze_missing_docs(store: EvidenceStore, builder: FindingBuilder) -> None
             "Avoid writing aspirational documentation that does not match the repository behavior.",
         ],
         suggested_owner_area="Product Engineering",
+        issue_type="advisory",
     )
 
 
@@ -775,6 +786,7 @@ def _emit_lockfile_finding(
         risks_and_cautions=risks_and_cautions,
         confidence=confidence,
         suggested_owner_area="Product Engineering / Platform",
+        issue_type="advisory",
     )
 
 
@@ -1884,15 +1896,20 @@ def _analyze_missing_process_artifacts(store: EvidenceStore, builder: FindingBui
         ],
         confidence="Low",
         suggested_owner_area="Product Engineering",
+        issue_type="advisory",
     )
 
 
 def _summarize(findings: list[DebtFinding]) -> DebtRegisterSummary:
     severity_counts = Counter(finding.severity.lower() for finding in findings)
     category_counts = Counter(finding.category for finding in findings)
+    tech_debt = sum(1 for f in findings if f.issue_type != "advisory")
+    advisory = sum(1 for f in findings if f.issue_type == "advisory")
 
     return DebtRegisterSummary(
         total_findings=len(findings),
+        technical_debt_count=tech_debt,
+        advisory_count=advisory,
         critical=severity_counts["critical"],
         high=severity_counts["high"],
         medium=severity_counts["medium"],

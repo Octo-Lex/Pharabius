@@ -1,0 +1,33 @@
+repos:
+  - name: python-click
+    upstream: pallets/click
+    upstream_url: https://github.com/pallets/click
+    commit: c48021040a50c659b74e24ac2b11c9c9c6620a21
+    snapshot: snapshots/python-click-c4802104.tar.gz
+    snapshot_sha256: c7d37774cde62bbda72dcd6c99085b494239bc8550856e38bbd7882925f76483
+    snapshot_size_bytes: 466791
+    languages: [python]
+    license: BSD-3-Clause
+    expected_findings_max: 20
+
+  - name: node-uuid
+    upstream: uuidjs/uuid
+    upstream_url: https://github.com/uuidjs/uuid
+    commit: 664cb3163531f49d3a5125f732d38724621bfcaa
+    snapshot: snapshots/node-uuid-664cb316.tar.gz
+    snapshot_sha256: 664743247d9e39b87cdfb22dd515cae4e784b42e20cf234e003bc802ba3a78c8
+    snapshot_size_bytes: 155219
+    languages: [javascript]
+    license: MIT
+    expected_findings_max: 15
+
+  - name: typescript-json-schema
+    upstream: YousefED/typescript-json-schema
+    upstream_url: https://github.com/YousefED/typescript-json-schema
+    commit: e9246330bd0508323d6fecfbf5db729ac754aa48
+    snapshot: snapshots/typescript-json-schema-e9246330.tar.gz
+    snapshot_sha256: 1d23806c6ccabb98d4069eff0da34e2685f9c5e10fe161ff5561768bed5a269b
+    snapshot_size_bytes: 85168
+    languages: [typescript]
+    license: BSD-3-Clause
+    expected_findings_max: 20
