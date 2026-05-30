@@ -1,0 +1,56 @@
+# Human judgment audit trail.
+#
+# Each entry records whether a finding type is expected to be useful
+# in a given fixture, and why. This makes the subjective assessment
+# auditable and reproducible.
+#
+# Generated as part of v3.6.0 Benchmark Validation & Calibration.
+
+fixtures:
+  medium-python-service:
+    findings:
+      - title_pattern: "Long function"
+        expected_useful: true
+        reason: "Function is intentionally 100 lines and mixes responsibilities."
+      - title_pattern: "Unpinned"
+        expected_useful: true
+        reason: "requirements.txt uses broad specifiers (flask>=2.0, requests unpinned)."
+      - title_pattern: "Broad exception"
+        expected_useful: true
+        reason: "Bare except: blocks are present in source code."
+      - title_pattern: "debt marker"
+        expected_useful: true
+        reason: "8 TODO markers intentionally placed."
+      - title_pattern: "coverage"
+        expected_useful: true
+        reason: "Coverage at 45% is below 60% threshold."
+
+  medium-node-app:
+    findings:
+      - title_pattern: "Unpinned"
+        expected_useful: true
+        reason: "express: * is intentionally unpinned."
+      - title_pattern: "coverage"
+        expected_useful: true
+        reason: "Istanbul coverage at 55% lines is below threshold."
+
+  poor-hygiene:
+    findings:
+      - title_pattern: "Unpinned"
+        expected_useful: true
+        reason: "All Python and Node dependencies intentionally unpinned."
+      - title_pattern: "runtime"
+        expected_useful: true
+        reason: "No runtime pin files exist in this fixture."
+
+  coverage-heavy:
+    findings:
+      - title_pattern: "coverage"
+        expected_useful: true
+        reason: "Multiple coverage formats present, all below threshold."
+
+  clean-baseline:
+    findings:
+      - title_pattern: "*"
+        expected_useful: false
+        reason: "Clean baseline should produce minimal findings. All deps pinned, runtime pinned, coverage at 92%."

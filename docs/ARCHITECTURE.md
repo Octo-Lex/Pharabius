@@ -335,7 +335,7 @@ scanner.py
 
 ---
 
-## Implementation Status (v3.5.0)
+## Implementation Status (v3.6.0)
 
 | Capability | Status |
 |---|---|
@@ -375,6 +375,10 @@ scanner.py
 | Evidence coverage trend | ✅ Implemented (v3.5.0) |
 | Work-package readiness trend | ✅ Implemented (v3.5.0) |
 | Run history documentation | ✅ Implemented (v3.5.0) |
+| Benchmark validation & calibration | ✅ Implemented (v3.6.0) |
+| Executable finding-quality rubric | ✅ Implemented (v3.6.0) |
+| Threshold calibration (all kept) | ✅ Implemented (v3.6.0) |
+| Validation documentation | ✅ Implemented (v3.6.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |

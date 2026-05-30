@@ -2,6 +2,24 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.6.0] - Unreleased
+
+### Added
+- **S01 — Benchmark fixture builder** (`benchmarks/fixture_builder.py`): 8 synthetic fixtures covering Python, Node, mixed, coverage-heavy, poor-hygiene, and clean-baseline scenarios.
+- **S02 — Golden snapshot generator** (`benchmarks/generate_golden.py`): Captures expected output bounds for each fixture with volatile field normalization.
+- **S03 — Executable finding-quality rubric** (`benchmarks/rubric.py`): 5 weighted criteria with callable evaluators. Quality score 0–1.0 per finding, noise rate < 25% target.
+- **S04 — Threshold calibration**: All 6 thresholds tested against all fixtures. Default policy: observe/document/keep. No changes needed.
+- **S05 — Severity/confidence calibration**: Severity distribution and confidence honesty validated across all fixtures.
+- **S06 — Report readability calibration**: Section presence, heuristic disclaimers, and JSON-blob checks validated.
+- **S07 — Manual assessment artifact** (`benchmarks/manual_assessment.yaml`): Auditable human judgment per fixture/finding pattern.
+- **S08 — Calibration results schema** (`benchmarks/calibration-results.schema.json`): JSON schema validation for calibration output.
+- **S09 — 27 benchmark regression tests** in `test_v360_benchmark_regression.py`.
+- **S10 — `docs/VALIDATION.md`**: Full methodology, results, and recommendations.
+- `benchmarks/generate_calibration.py` for generating calibration-results.json.
+
+### Changed
+- No source code changes — all thresholds held after calibration.
+
 ## [3.5.0] - Unreleased
 
 ### Added

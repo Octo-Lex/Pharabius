@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-05-30T21:17:24+00:00",
+  "fixtures_tested": 8,
+  "thresholds": [
+    {
+      "name": "LARGE_FILE_LINE_THRESHOLD",
+      "original": 1000,
+      "calibrated": 1000,
+      "decision": "keep",
+      "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures."
+    },
+    {
+      "name": "LONG_FUNCTION_LINE_THRESHOLD",
+      "original": 80,
+      "calibrated": 80,
+      "decision": "keep",
+      "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures."
+    },
+    {
+      "name": "BROAD_EXCEPTION_PER_FILE_THRESHOLD",
+      "original": 3,
+      "calibrated": 3,
+      "decision": "keep",
+      "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures."
+    },
+    {
+      "name": "MIN_DEBT_MARKER_OCCURRENCES",
+      "original": 5,
+      "calibrated": 5,
+      "decision": "keep",
+      "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures."
+    },
+    {
+      "name": "COVERAGE_LOW_THRESHOLD_PCT",
+      "original": 60.0,
+      "calibrated": 60.0,
+      "decision": "keep",
+      "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures."
+    },
+    {
+      "name": "DEFAULT_MAX_FILE_SIZE_KB",
+      "original": 500,
+      "calibrated": 500,
+      "decision": "keep",
+      "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures."
+    }
+  ],
+  "severity_distribution": {
+    "clean-baseline": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3,
+      "low": 2
+    },
+    "coverage-heavy": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3,
+      "low": 2
+    },
+    "medium-node-app": {
+      "critical": 0,
+      "high": 0,
+      "medium": 4,
+      "low": 4
+    },
+    "medium-python-service": {
+      "critical": 0,
+      "high": 2,
+      "medium": 3,
+      "low": 7
+    },
+    "mixed-python-node": {
+      "critical": 0,
+      "high": 0,
+      "medium": 4,
+      "low": 5
+    },
+    "poor-hygiene": {
+      "critical": 0,
+      "high": 0,
+      "medium": 4,
+      "low": 5
+    },
+    "small-node-package": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3,
+      "low": 4
+    },
+    "small-python-package": {
+      "critical": 0,
+      "high": 0,
+      "medium": 3,
+      "low": 4
+    }
+  },
+  "finding_quality_scores": {
+    "clean-baseline": {
+      "average": 0.911,
+      "noise_rate": 0.0
+    },
+    "coverage-heavy": {
+      "average": 0.889,
+      "noise_rate": 0.0
+    },
+    "medium-node-app": {
+      "average": 0.944,
+      "noise_rate": 0.0
+    },
+    "medium-python-service": {
+      "average": 0.963,
+      "noise_rate": 0.0
+    },
+    "mixed-python-node": {
+      "average": 0.951,
+      "noise_rate": 0.0
+    },
+    "poor-hygiene": {
+      "average": 0.951,
+      "noise_rate": 0.0
+    },
+    "small-node-package": {
+      "average": 0.937,
+      "noise_rate": 0.0
+    },
+    "small-python-package": {
+      "average": 0.937,
+      "noise_rate": 0.0
+    }
+  },
+  "warnings": []
+}
