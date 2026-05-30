@@ -839,11 +839,11 @@ def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
     Reads ``large_file_detected`` evidence items produced by the scanner.
     Threshold is shared via ``scanner.LARGE_FILE_LINE_THRESHOLD``.
     """
-    from pharabius.core.scanner import LARGE_FILE_LINE_THRESHOLD
+    from pharabius.core.constants import LARGE_FILE_LINE_THRESHOLD, EVIDENCE_LARGE_FILE
 
     large_items: list[EvidenceItem] = []
     for item in store.evidence:
-        if item.type != "large_file_detected":
+        if item.type != EVIDENCE_LARGE_FILE:
             continue
         # Read line count from metadata (canonical source)
         if item.metadata and "line_count" in item.metadata:
@@ -909,12 +909,12 @@ def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None
     Reads ``debt_marker_detected`` evidence items produced by the scanner.
     Counts total occurrences (not unique marker names) across files.
     """
-    MIN_TOTAL_MARKERS = 5
+    from pharabius.core.constants import EVIDENCE_DEBT_MARKER, MIN_DEBT_MARKER_OCCURRENCES
 
     marker_items: list[EvidenceItem] = []
     total_marker_count = 0
     for item in store.evidence:
-        if item.type != "debt_marker_detected":
+        if item.type != EVIDENCE_DEBT_MARKER:
             continue
         marker_items.append(item)
         # Read occurrence count from metadata
@@ -923,7 +923,7 @@ def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None
         else:
             total_marker_count += 1  # fallback
 
-    if total_marker_count < MIN_TOTAL_MARKERS:
+    if total_marker_count < MIN_DEBT_MARKER_OCCURRENCES:
         return
 
     breakdown = {
@@ -970,6 +970,309 @@ def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None
 
 
 # ── TD-COMP: Compliance debt ────────────────────────────────────────────────
+
+
+def _analyze_long_functions(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-CODE: Flag functions exceeding line threshold."""
+    from pharabius.core.constants import EVIDENCE_LONG_FUNCTION, LONG_FUNCTION_LINE_THRESHOLD
+
+    long_items = [e for e in store.evidence if e.type == EVIDENCE_LONG_FUNCTION]
+    if not long_items:
+        return
+
+    by_file: dict[str, list[EvidenceItem]] = {}
+    for item in long_items:
+        by_file.setdefault(item.location.file, []).append(item)
+
+    for file_path, items in by_file.items():
+        total_lines = sum(
+            item.metadata.get("line_count", 0) for item in items
+        )
+        breakdown = {
+            **RISK_SCORE_TEMPLATE,
+            "technical_severity": 4,
+            "blast_radius": 2,
+            "remediation_simplicity": -1,
+        }
+        builder.add(
+            category="TD-CODE",
+            title=(
+                f"Long functions detected in {file_path} "
+                f"({len(items)} function(s), {total_lines} total lines)"
+            ),
+            description=(
+                f"{len(items)} Python function(s) exceed "
+                f"{LONG_FUNCTION_LINE_THRESHOLD} lines. "
+                "Long functions increase cognitive load, testing difficulty, "
+                "and defect density. Detection is heuristic (indentation-based), "
+                "not AST-grade certainty."
+            ),
+            evidence_ids=_evidence_ids(items),
+            locations=_locations(items),
+            technical_impact=(
+                "Functions exceeding 80 lines are harder to understand, test, "
+                "and refactor. They often indicate mixed responsibilities."
+            ),
+            business_impact=(
+                "Maintenance cost is inferred from function length evidence. "
+                "Validate impact with the Product Engineering Team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Consider decomposing long functions into focused, testable units. "
+                "Prioritize functions with the most change activity."
+            ),
+            verification_recommendations=[
+                "Verify decomposition does not change public API behavior.",
+                "Run existing tests after refactoring.",
+            ],
+            risks_and_cautions=[
+                "Some long functions are legitimate (parsers, data transformations).",
+                "Detection is indentation-based, not AST-precise.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering",
+        )
+
+
+def _analyze_broad_exceptions(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-CODE: Flag files with excessive broad exception handlers."""
+    from pharabius.core.constants import (
+        BROAD_EXCEPTION_PER_FILE_THRESHOLD,
+        EVIDENCE_BROAD_EXCEPTION,
+    )
+
+    broad_items = [e for e in store.evidence if e.type == EVIDENCE_BROAD_EXCEPTION]
+    if not broad_items:
+        return
+
+    by_file: dict[str, list[EvidenceItem]] = {}
+    for item in broad_items:
+        by_file.setdefault(item.location.file, []).append(item)
+
+    for file_path, items in by_file.items():
+        if len(items) < BROAD_EXCEPTION_PER_FILE_THRESHOLD:
+            continue
+
+        breakdown = {
+            **RISK_SCORE_TEMPLATE,
+            "technical_severity": 4,
+            "blast_radius": 3,
+            "remediation_simplicity": -2,
+        }
+        builder.add(
+            category="TD-CODE",
+            title=(
+                f"Broad exception handlers in {file_path} "
+                f"({len(items)} catch-all patterns)"
+            ),
+            description=(
+                f"{len(items)} broad exception handler(s) detected in {file_path}. "
+                "Broad catch-all patterns swallow errors, hide bugs, and make "
+                "debugging harder. Detection is regex-based, not AST-precise."
+            ),
+            evidence_ids=_evidence_ids(items),
+            locations=_locations(items),
+            technical_impact=(
+                "Broad exception handlers can mask real errors, making bugs "
+                "harder to diagnose and fix."
+            ),
+            business_impact=(
+                "Error-handling quality is inferred from pattern evidence. "
+                "Validate with the Product Engineering Team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                "Replace broad exception handlers with specific exception types. "
+                "Log or re-raise unexpected errors."
+            ),
+            verification_recommendations=[
+                "Verify error handling changes do not suppress legitimate errors.",
+                "Add tests for specific error paths.",
+            ],
+            risks_and_cautions=[
+                "Some broad handlers are intentional (top-level error boundaries).",
+                "Detection is regex-based, not AST-precise.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering",
+        )
+
+
+def _analyze_coverage_gaps(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-TEST: Generate findings from low coverage when reports exist."""
+    from pharabius.core.constants import (
+        COVERAGE_LOW_THRESHOLD_PCT,
+        EVIDENCE_COVERAGE_METRIC,
+    )
+
+    metrics = [e for e in store.evidence if e.type == EVIDENCE_COVERAGE_METRIC]
+    if not metrics:
+        return  # No coverage report → no finding
+
+    low_metrics = [
+        m for m in metrics
+        if m.metadata.get("percent", 100) < COVERAGE_LOW_THRESHOLD_PCT
+    ]
+    if not low_metrics:
+        return
+
+    breakdown = {
+        **RISK_SCORE_TEMPLATE,
+        "technical_severity": 5,
+        "blast_radius": 4,
+        "test_gap": 3,
+    }
+    builder.add(
+        category="TD-TEST",
+        title=(
+            f"Low test coverage detected "
+            f"({len(low_metrics)} metric(s) below {COVERAGE_LOW_THRESHOLD_PCT:.0f}%)"
+        ),
+        description=(
+            f"Coverage report shows {len(low_metrics)} metric(s) below "
+            f"{COVERAGE_LOW_THRESHOLD_PCT:.0f}%. "
+            "Low coverage increases regression risk."
+        ),
+        evidence_ids=_evidence_ids(low_metrics),
+        locations=_locations(low_metrics),
+        technical_impact=(
+            "Low test coverage means changes are more likely to "
+            "introduce undetected regressions."
+        ),
+        business_impact=(
+            "Regression risk is inferred from coverage metrics. "
+            "Validate with the Product Engineering Team."
+        ),
+        risk_breakdown=breakdown,
+        remediation_effort="Large",
+        recommended_action=(
+            "Prioritize adding tests for high-risk and high-change-frequency areas."
+        ),
+        verification_recommendations=[
+            "Run coverage analysis after adding tests.",
+            "Ensure CI fails on coverage regression.",
+        ],
+        risks_and_cautions=[
+            "Coverage percentage alone does not guarantee test quality.",
+            "Some low-coverage areas may not need tests (e.g., generated code).",
+        ],
+        confidence="Medium",
+        suggested_owner_area="Quality Engineering",
+    )
+
+
+def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-DEP: Generate findings from dependency health signals."""
+    from pharabius.core.constants import EVIDENCE_DEPENDENCY_SIGNAL
+
+    dep_signals = [e for e in store.evidence if e.type == EVIDENCE_DEPENDENCY_SIGNAL]
+    if not dep_signals:
+        return
+
+    # Group by signal type
+    by_signal: dict[str, list[EvidenceItem]] = {}
+    for item in dep_signals:
+        signal = item.metadata.get("signal", "unknown") if item.metadata else "unknown"
+        by_signal.setdefault(signal, []).append(item)
+
+    for signal_type, items in by_signal.items():
+        if signal_type == "unpinned_dependency":
+            # Group by ecosystem
+            by_eco: dict[str, list[EvidenceItem]] = {}
+            for item in items:
+                eco = item.metadata.get("ecosystem", "unknown") if item.metadata else "unknown"
+                by_eco.setdefault(eco, []).append(item)
+            for eco, eco_items in by_eco.items():
+                total_count = sum(
+                    item.metadata.get("count", 0) for item in eco_items
+                )
+                breakdown = {
+                    **RISK_SCORE_TEMPLATE,
+                    "technical_severity": 3,
+                    "blast_radius": 3,
+                    "remediation_simplicity": -1,
+                }
+                builder.add(
+                    category="TD-DEP",
+                    title=(
+                        f"Unpinned {eco} dependencies detected "
+                        f"({total_count} unpinned)"
+                    ),
+                    description=(
+                        f"{total_count} {eco} dependencies use unpinned or broad "
+                        "version ranges. This reduces build reproducibility "
+                        "and makes dependency audits harder."
+                    ),
+                    evidence_ids=_evidence_ids(eco_items),
+                    locations=_locations(eco_items),
+                    technical_impact=(
+                        "Unpinned dependencies can change without warning, "
+                        "breaking builds or introducing vulnerabilities."
+                    ),
+                    business_impact=(
+                        "Reproducibility risk is inferred from manifest evidence. "
+                        "Validate with the Product Engineering Team."
+                    ),
+                    risk_breakdown=breakdown,
+                    remediation_effort="Small",
+                    recommended_action=(
+                        "Pin dependency versions using lockfiles or exact version specifiers."
+                    ),
+                    verification_recommendations=[
+                        "Verify pinned dependencies install correctly in CI.",
+                        "Run full test suite after dependency pinning.",
+                    ],
+                    risks_and_cautions=[
+                        "Some broad ranges are intentional (monorepo shared deps).",
+                    ],
+                    confidence="Medium",
+                    suggested_owner_area="Product Engineering",
+                )
+        elif signal_type == "lockfile_conflict":
+            for item in items:
+                lockfiles = item.metadata.get("lockfiles", []) if item.metadata else []
+                breakdown = {
+                    **RISK_SCORE_TEMPLATE,
+                    "technical_severity": 2,
+                    "blast_radius": 2,
+                }
+                builder.add(
+                    category="TD-DEP",
+                    title=(
+                        f"Multiple Node.js lockfiles detected: {', '.join(lockfiles)}"
+                    ),
+                    description=(
+                        "Multiple lockfiles for the same ecosystem can cause "
+                        "inconsistent dependency resolution across environments."
+                    ),
+                    evidence_ids=_evidence_ids(items),
+                    locations=_locations(items),
+                    technical_impact=(
+                        "Different developers may get different dependency trees "
+                        "depending on which package manager they use."
+                    ),
+                    business_impact=(
+                        "Build consistency risk. "
+                        "Validate with the Product Engineering Team."
+                    ),
+                    risk_breakdown=breakdown,
+                    remediation_effort="Small",
+                    recommended_action=(
+                        "Standardize on one package manager and remove other lockfiles. "
+                        "Add the unused lockfile to .gitignore."
+                    ),
+                    verification_recommendations=[
+                        "Verify CI uses the chosen package manager exclusively.",
+                    ],
+                    risks_and_cautions=[
+                        "Some monorepos intentionally use multiple package managers.",
+                    ],
+                    confidence="Medium",
+                    suggested_owner_area="Product Engineering",
+                )
 
 
 def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) -> None:
@@ -1719,6 +2022,10 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
     # Taxonomy closure (v0.10.0)
     _analyze_large_files(store, builder)
     _analyze_debt_markers(store, builder)
+    _analyze_long_functions(store, builder)
+    _analyze_broad_exceptions(store, builder)
+    _analyze_coverage_gaps(store, builder)
+    _analyze_dependency_signals(store, builder)
     _analyze_compliance_keywords(store, builder)
     _analyze_deployment_without_healthchecks(store, builder)
     _analyze_data_migration_risk(store, builder)

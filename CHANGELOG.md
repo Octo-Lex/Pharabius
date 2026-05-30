@@ -2,6 +2,20 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.2.0] - Unreleased
+
+### Added
+- **S01 — Shared Constants Module** (`src/pharabius/core/constants.py`): Centralizes evidence type names, thresholds, and quality metadata values. Eliminates hardcoded strings across scanner and analyzer.
+- **S02 — max_file_size_kb enforcement**: Scanner skips source files exceeding `max_file_size_kb` with `source_file_skipped` evidence containing limitation metadata. `None` means no limit.
+- **S04 — Deeper TD-CODE Analyzers**: Long Python function detection (indentation-based, threshold configurable) and broad exception handler detection (Python/JS/Java patterns). Both produce `TD-CODE` findings with honest confidence levels.
+- **S05 — Dependency Health Signals**: Unpinned dependency detection for Node.js `package.json` and Python `requirements.txt`. Multiple Node.js lockfile conflict detection at repository level.
+- **S06 — Coverage-Report Ingestion**: Parses Istanbul JSON, Python coverage.json, and LCOV reports. Emits `coverage_metric` evidence. Low coverage (< 70%) generates `TD-TEST` findings. Malformed reports emit limitation evidence, never crash.
+- **S07 — Traceability Quality**: `compute_traceability_quality()` generates orphan/broken-reference metrics with grade (complete/usable/partial/weak). Writes `traceability-quality.json` and `.md` to traceability directory.
+- 22 new regression tests in `test_v320_evidence_quality.py`.
+
+### Changed
+- Updated `test_analyzer.py::test_python_dual_manifests_grouped_as_one_dep` to expect 2 TD-DEP findings (no-lockfile + unpinned).
+
 ## [3.1.0] - Unreleased
 
 ### Fixed

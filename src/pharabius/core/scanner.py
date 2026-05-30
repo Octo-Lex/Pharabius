@@ -6,12 +6,37 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from pharabius.core.constants import (
+    BROAD_EXCEPTION_PER_FILE_THRESHOLD,
+    COMPLETENESS_COMPLETE,
+    COMPLETENESS_PARTIAL,
+    COMPLETENESS_SKIPPED,
+    COVERAGE_LOW_THRESHOLD_PCT,
+    DEFAULT_MAX_FILE_SIZE_KB,
+    EVIDENCE_BROAD_EXCEPTION,
+    EVIDENCE_COVERAGE_GAP,
+    EVIDENCE_COVERAGE_METRIC,
+    EVIDENCE_COVERAGE_REPORT,
+    EVIDENCE_DEBT_MARKER,
+    EVIDENCE_DEPENDENCY_SIGNAL,
+    EVIDENCE_LARGE_FILE,
+    EVIDENCE_LONG_FUNCTION,
+    EVIDENCE_SOURCE_FILE_SKIPPED,
+    LARGE_FILE_LINE_THRESHOLD,
+    LONG_FUNCTION_LINE_THRESHOLD,
+    OBSERVATION_STRENGTH_DIRECT,
+    OBSERVATION_STRENGTH_HEURISTIC,
+    OBSERVATION_STRENGTH_LIMITATION,
+    PARSER_BUILTIN_REGEX,
+    PARSER_COVERAGE,
+    PARSER_FILESYSTEM,
+    PARSER_MANIFEST,
+    READ_MODE_JSON,
+    READ_MODE_SKIPPED,
+    READ_MODE_TEXT,
+)
 from pharabius.core.exclusions import EXCLUDED_DIR_NAMES, is_excluded_path
 from pharabius.schemas.evidence import EvidenceItem, EvidenceLocation, EvidenceStore
-
-# Shared threshold for large-file detection (scanner and analyzer both use this).
-# Defined here so the analyzer can import it without coupling to scanner internals.
-LARGE_FILE_LINE_THRESHOLD = 1000
 
 _DEBT_MARKER_RE = re.compile(r"\b(todo|fixme|hack|xxx)\b", re.IGNORECASE)
 
@@ -564,6 +589,457 @@ def _debt_markers_in_text(text: str) -> dict[str, int]:
     return counts
 
 
+def _detect_long_python_functions(
+    text: str, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Detect Python functions exceeding LONG_FUNCTION_LINE_THRESHOLD.
+
+    Uses indentation-based span counting. Only applies to .py files.
+    Observation strength is heuristic — not AST-grade certainty.
+    End detection prefers next nonblank line at same or lesser indent
+    for better accuracy than simple next-function-start.
+    """
+    lines = text.split('\n')
+    func_starts: list[tuple[int, int, str]] = []  # (line_index, indent, name)
+
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith('#'):
+            continue
+        indent = len(line) - len(stripped)
+        if stripped.startswith(('def ', 'async def ')):
+            # Extract function name
+            def_line = stripped.split('(')[0]
+            name = def_line.replace('def ', '').replace('async ', '').strip()
+            func_starts.append((i, indent, name))
+
+    for start_idx, (start_line, base_indent, func_name) in enumerate(func_starts):
+        # Find end: next nonblank line at same or lesser indent, or next function start
+        end_line = len(lines) - 1
+        # First try: next nonblank line at <= base_indent
+        found_end = False
+        for j in range(start_line + 1, len(lines)):
+            stripped = lines[j].lstrip()
+            if not stripped or stripped.startswith('#'):
+                continue
+            current_indent = len(lines[j]) - len(stripped)
+            if current_indent <= base_indent:
+                end_line = j - 1
+                found_end = True
+                break
+        if not found_end:
+            end_line = len(lines) - 1
+
+        func_lines = end_line - start_line + 1
+        if func_lines >= LONG_FUNCTION_LINE_THRESHOLD:
+            builder.add(
+                type_=EVIDENCE_LONG_FUNCTION,
+                category="code_structure",
+                summary=(
+                    f"Long function {func_name} spans {func_lines} lines in {relative}"
+                ),
+                location_file=relative,
+                subject=func_name,
+                raw_observation=f"{func_name}:{func_lines}lines",
+                confidence="Medium",
+                metadata={
+                    "function_name": func_name,
+                    "line_start": start_line + 1,
+                    "line_end": end_line + 1,
+                    "line_count": func_lines,
+                    "threshold": LONG_FUNCTION_LINE_THRESHOLD,
+                    "language": "python",
+                    "observation_strength": OBSERVATION_STRENGTH_HEURISTIC,
+                    "completeness": COMPLETENESS_PARTIAL,
+                    "parser": PARSER_BUILTIN_REGEX,
+                    "read_mode": READ_MODE_TEXT,
+                },
+            )
+
+
+def _detect_broad_exceptions(
+    text: str, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Detect bare except / catch-all patterns in source code.
+
+    Supports Python, JavaScript/TypeScript, and Java patterns.
+    """
+    BROAD_PATTERNS: list[tuple[str, str]] = [
+        (r'^\s*except\s*:', 'python_bare_except'),
+        (r'^\s*except\s+Exception\s*[:\[]', 'python_exception_catch'),
+        (r'^\s*except\s+BaseException\s*:', 'python_base_exception'),
+        (r'catch\s*\(\s*\w*\s*\)\s*\{', 'js_catch_all'),
+        (r'catch\s*\(\s*Exception\s+\w+\s*\)', 'java_exception_catch'),
+        (r'catch\s*\(\s*Throwable\s+\w+\s*\)', 'java_throwable_catch'),
+    ]
+    lines = text.split('\n')
+    for i, line in enumerate(lines):
+        for pattern, label in BROAD_PATTERNS:
+            if re.search(pattern, line):
+                builder.add(
+                    type_=EVIDENCE_BROAD_EXCEPTION,
+                    category="code_structure",
+                    summary=(
+                        f"Broad exception handler ({label}) "
+                        f"in {relative} line {i + 1}"
+                    ),
+                    location_file=relative,
+                    subject=relative,
+                    raw_observation=f"{label}:line{i + 1}",
+                    confidence="Medium",
+                    metadata={
+                        "pattern": label,
+                        "line_number": i + 1,
+                        "observation_strength": OBSERVATION_STRENGTH_HEURISTIC,
+                        "completeness": COMPLETENESS_PARTIAL,
+                        "parser": PARSER_BUILTIN_REGEX,
+                        "read_mode": READ_MODE_TEXT,
+                    },
+                )
+                break  # one detection per line
+
+
+def _check_node_unpinned_deps(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Check package.json for unpinned or broad version ranges."""
+    data = _read_json(file_path)
+    deps = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+    unpinned: list[dict[str, str]] = []
+    for name, version in deps.items():
+        if not isinstance(version, str):
+            continue
+        if version in ("*", "latest", ""):
+            unpinned.append({"name": name, "specifier": version})
+        elif version.startswith(">") or version.startswith("<") or version.startswith("~"):
+            unpinned.append({"name": name, "specifier": version})
+    if unpinned:
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary=f"Unpinned Node.js dependencies in {relative}",
+            location_file=relative,
+            subject=relative,
+            raw_observation=f"unpinned:{len(unpinned)}",
+            confidence="High",
+            metadata={
+                "signal": "unpinned_dependency",
+                "ecosystem": "Node.js",
+                "count": len(unpinned),
+                "examples": unpinned[:10],
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_MANIFEST,
+                "read_mode": READ_MODE_JSON,
+            },
+        )
+
+
+def _check_python_unpinned_deps(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Check requirements.txt for unpinned version specifiers.
+
+    Pinned: package==1.2.3, package===1.2.3, package @ file://...
+    Unpinned/broad: package, package>=1.0, package~=1.2, package<3
+    """
+    text = _read_text(file_path)
+    if not text:
+        return
+    unpinned: list[dict[str, str]] = []
+    for line in text.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith('-'):
+            continue
+        # Remove environment markers
+        if ';' in line:
+            line = line.split(';')[0].strip()
+        # Remove extras
+        if '[' in line and ']' in line:
+            base = line.split('[')[0]
+            rest = line.split(']', 1)[1]
+            line = base + rest
+        # Check pinning
+        if '==' in line or '===' in line or ' @ ' in line:
+            continue  # Pinned
+        # Anything else with a name is unpinned
+        name = line
+        for ch in ('>', '<', '~', '=', '!', ' ', '\t'):
+            name = name.split(ch)[0]
+        name = name.strip()
+        if name:
+            unpinned.append({"name": name, "specifier": line})
+    if unpinned:
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary=f"Unpinned Python dependencies in {relative}",
+            location_file=relative,
+            subject=relative,
+            raw_observation=f"unpinned:{len(unpinned)}",
+            confidence="High",
+            metadata={
+                "signal": "unpinned_dependency",
+                "ecosystem": "Python",
+                "count": len(unpinned),
+                "examples": unpinned[:10],
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_MANIFEST,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+
+
+def _check_node_lockfile_conflicts(root: Path, builder: EvidenceBuilder) -> None:
+    """Detect when multiple Node.js lockfiles exist for the same ecosystem."""
+    NODE_LOCKFILES = [
+        "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lock", "bun.lockb",
+    ]
+    found = [lf for lf in NODE_LOCKFILES if (root / lf).exists()]
+    if len(found) > 1:
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary=f"Multiple Node.js lockfiles detected: {', '.join(found)}",
+            location_file=".",
+            subject="Node.js",
+            raw_observation=f"lockfile_conflict:{','.join(found)}",
+            confidence="High",
+            metadata={
+                "signal": "lockfile_conflict",
+                "ecosystem": "Node.js",
+                "lockfiles": found,
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_FILESYSTEM,
+                "read_mode": READ_MODE_SKIPPED,
+            },
+        )
+
+
+_COVERAGE_PATTERNS: dict[str, str] = {
+    "coverage/coverage-summary.json": "istanbul_json",
+    "coverage.json": "python_coverage_json",
+    "coverage/lcov.info": "lcov",
+    "lcov.info": "lcov",
+}
+
+
+def _parse_istanbul_coverage(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    data = _read_json(file_path)
+    total = data.get("total", {})
+    if not total:
+        return
+    for metric_name in ("lines", "statements", "functions", "branches"):
+        metric_data = total.get(metric_name, {})
+        pct = metric_data.get("pct", 0)
+        if isinstance(pct, (int, float)):
+            builder.add(
+                type_=EVIDENCE_COVERAGE_METRIC,
+                category="test_health",
+                summary=f"{metric_name} coverage: {pct}%",
+                location_file=relative,
+                subject=metric_name,
+                raw_observation=f"{metric_name}:{pct}%",
+                confidence="High",
+                metadata={
+                    "metric": metric_name,
+                    "percent": float(pct),
+                    "format": "istanbul_json",
+                    "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                    "completeness": COMPLETENESS_COMPLETE,
+                    "parser": PARSER_COVERAGE,
+                    "read_mode": READ_MODE_JSON,
+                },
+            )
+
+
+def _parse_python_coverage(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    data = _read_json(file_path)
+    totals = data.get("totals", {})
+    if not totals:
+        return
+    # coverage.py v5+ provides percent_covered directly
+    pct = totals.get("percent_covered")
+    if pct is not None:
+        builder.add(
+            type_=EVIDENCE_COVERAGE_METRIC,
+            category="test_health",
+            summary=f"line coverage: {float(pct):.1f}%",
+            location_file=relative,
+            subject="lines",
+            raw_observation=f"lines:{float(pct):.1f}%",
+            confidence="High",
+            metadata={
+                "metric": "lines",
+                "percent": float(pct),
+                "format": "python_coverage_json",
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_COVERAGE,
+                "read_mode": READ_MODE_JSON,
+            },
+        )
+    else:
+        # Fallback: compute from covered_lines / num_statements
+        covered = totals.get("covered_lines", 0)
+        total_statements = totals.get("num_statements", 0)
+        if total_statements > 0:
+            pct = round(covered / total_statements * 100, 1)
+            builder.add(
+                type_=EVIDENCE_COVERAGE_METRIC,
+                category="test_health",
+                summary=f"line coverage: {pct}% (derived)",
+                location_file=relative,
+                subject="lines",
+                raw_observation=f"lines:{pct}%",
+                confidence="High",
+                metadata={
+                    "metric": "lines",
+                    "percent": float(pct),
+                    "format": "python_coverage_json",
+                    "derived": True,
+                    "observation_strength": OBSERVATION_STRENGTH_DERIVED,
+                    "completeness": COMPLETENESS_COMPLETE,
+                    "parser": PARSER_COVERAGE,
+                    "read_mode": READ_MODE_JSON,
+                },
+            )
+
+
+def _parse_lcov_coverage(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    text = _read_text(file_path)
+    if not text:
+        return
+    lf = 0  # line count found
+    lh = 0  # line count hit
+    fnf = 0  # function count found
+    fnh = 0  # function count hit
+    for line in text.split('\n'):
+        line = line.strip()
+        if line.startswith('LF:'):
+            try:
+                lf += int(line[3:])
+            except ValueError:
+                pass
+        elif line.startswith('LH:'):
+            try:
+                lh += int(line[3:])
+            except ValueError:
+                pass
+        elif line.startswith('FNF:'):
+            try:
+                fnf += int(line[4:])
+            except ValueError:
+                pass
+        elif line.startswith('FNH:'):
+            try:
+                fnh += int(line[4:])
+            except ValueError:
+                pass
+    # Line coverage
+    if lf > 0:
+        line_pct = round(lh / lf * 100, 1)
+        builder.add(
+            type_=EVIDENCE_COVERAGE_METRIC,
+            category="test_health",
+            summary=f"line coverage: {line_pct}% (LCOV)",
+            location_file=relative,
+            subject="lines",
+            raw_observation=f"lines:{line_pct}%:LH={lh}/LF={lf}",
+            confidence="High",
+            metadata={
+                "metric": "lines",
+                "percent": float(line_pct),
+                "format": "lcov",
+                "lf": lf,
+                "lh": lh,
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_COVERAGE,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+    # Function coverage (when present)
+    if fnf > 0:
+        func_pct = round(fnh / fnf * 100, 1)
+        builder.add(
+            type_=EVIDENCE_COVERAGE_METRIC,
+            category="test_health",
+            summary=f"function coverage: {func_pct}% (LCOV)",
+            location_file=relative,
+            subject="functions",
+            raw_observation=f"functions:{func_pct}%:FNH={fnh}/FNF={fnf}",
+            confidence="High",
+            metadata={
+                "metric": "functions",
+                "percent": float(func_pct),
+                "format": "lcov",
+                "fnf": fnf,
+                "fnh": fnh,
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_COVERAGE,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+
+
+def _scan_coverage_artifact(
+    file_path: Path, relative: str, format_type: str, builder: EvidenceBuilder,
+) -> None:
+    """Scan a coverage report file."""
+    builder.add(
+        type_=EVIDENCE_COVERAGE_REPORT,
+        category="test_health",
+        summary=f"Coverage report detected: {relative}",
+        location_file=relative,
+        subject=relative,
+        raw_observation=format_type,
+        confidence="High",
+        metadata={
+            "format": format_type,
+            "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+            "completeness": COMPLETENESS_COMPLETE,
+            "parser": PARSER_COVERAGE,
+            "read_mode": READ_MODE_JSON if format_type != "lcov" else READ_MODE_TEXT,
+        },
+    )
+    try:
+        if format_type == "istanbul_json":
+            _parse_istanbul_coverage(file_path, relative, builder)
+        elif format_type == "python_coverage_json":
+            _parse_python_coverage(file_path, relative, builder)
+        elif format_type == "lcov":
+            _parse_lcov_coverage(file_path, relative, builder)
+    except Exception:
+        # Malformed report — emit limitation evidence
+        builder.add(
+            type_=EVIDENCE_COVERAGE_GAP,
+            category="test_health",
+            summary=f"Coverage report {relative} could not be fully parsed",
+            location_file=relative,
+            subject=relative,
+            raw_observation=f"parse_failure:{format_type}",
+            confidence="Medium",
+            metadata={
+                "format": format_type,
+                "reason": "malformed_report",
+                "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
+                "completeness": COMPLETENESS_PARTIAL,
+                "parser": PARSER_COVERAGE,
+                "read_mode": READ_MODE_JSON if format_type != "lcov" else READ_MODE_TEXT,
+            },
+        )
+
+
 def scan_repository(
     repository_root: Path,
     *,
@@ -613,6 +1089,21 @@ def scan_repository(
             confidence="High",
         )
 
+    # Repository-level dependency signals
+    _check_node_lockfile_conflicts(root, builder)
+
+    # Repository-level coverage artifact scanning (v3.2.0)
+    # Coverage dirs are normally excluded, so we scan them separately
+    for pattern, format_type in _COVERAGE_PATTERNS.items():
+        parts = pattern.split("/")
+        if len(parts) == 2:
+            candidate = root / parts[0] / parts[1]
+        else:
+            candidate = root / pattern
+        if candidate.exists() and candidate.is_file():
+            rel = _relative(candidate, root)
+            _scan_coverage_artifact(candidate, rel, format_type, builder)
+
     for file_path in files:
         relative = _relative(file_path, root)
 
@@ -630,6 +1121,36 @@ def scan_repository(
             },
         )
 
+        # Size-based skip for source files (v3.2.0)
+        if max_file_size_kb is not None and file_path.suffix in SOURCE_EXTENSIONS:
+            try:
+                size_kb = file_path.stat().st_size / 1024
+            except OSError:
+                size_kb = 0
+            if size_kb > max_file_size_kb:
+                builder.add(
+                    type_=EVIDENCE_SOURCE_FILE_SKIPPED,
+                    category="scanner_limit",
+                    summary=(
+                        f"Source file skipped: {relative} "
+                        f"({size_kb:.0f} KB exceeds {max_file_size_kb} KB limit)"
+                    ),
+                    location_file=relative,
+                    subject=relative,
+                    raw_observation=f"skipped:{size_kb:.0f}kb>max:{max_file_size_kb}kb",
+                    confidence="High",
+                    metadata={
+                        "size_kb": round(size_kb, 1),
+                        "max_file_size_kb": max_file_size_kb,
+                        "reason": "file_size_limit",
+                        "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
+                        "completeness": COMPLETENESS_SKIPPED,
+                        "parser": PARSER_FILESYSTEM,
+                        "read_mode": READ_MODE_SKIPPED,
+                    },
+                )
+                continue  # Skip all content scanning for this file
+
         if file_path.name in MANIFEST_FILES:
             builder.add(
                 type_="manifest_detected",
@@ -642,6 +1163,12 @@ def scan_repository(
                 confidence="High",
                 metadata={"manifest_type": MANIFEST_FILES[file_path.name]},
             )
+
+            # Dependency signal: unpinned deps
+            if file_path.name == "package.json":
+                _check_node_unpinned_deps(file_path, relative, builder)
+            if file_path.name == "requirements.txt":
+                _check_python_unpinned_deps(file_path, relative, builder)
 
         # Suffix-based manifest detection (.NET project files)
         if file_path.suffix in MANIFEST_SUFFIXES:
@@ -710,6 +1237,14 @@ def scan_repository(
                 raw_observation=relative,
                 confidence="High",
             )
+
+        # Coverage report detection (v3.2.0) — handles files NOT in excluded dirs
+        normalized_rel = relative.replace("\\", "/")
+        for pattern, format_type in _COVERAGE_PATTERNS.items():
+            if normalized_rel == pattern or normalized_rel.endswith("/" + pattern.split("/")[-1]):
+                _scan_coverage_artifact(file_path, relative, format_type, builder)
+                break
+                break
 
         if _is_test_path(file_path, root):
             builder.add(
@@ -794,7 +1329,7 @@ def scan_repository(
                 total_marker_count = sum(marker_counts.values())
                 if total_marker_count:
                     builder.add(
-                        type_="debt_marker_detected",
+                        type_=EVIDENCE_DEBT_MARKER,
                         category="code_quality",
                         summary=f"Debt markers detected in {relative}",
                         location_file=relative,
@@ -815,7 +1350,7 @@ def scan_repository(
                 line_count = text.count('\n') + 1
                 if line_count >= LARGE_FILE_LINE_THRESHOLD:
                     builder.add(
-                        type_="large_file_detected",
+                        type_=EVIDENCE_LARGE_FILE,
                         category="code_structure",
                         summary=f"Large source file: {relative} ({line_count} lines)",
                         location_file=relative,
@@ -824,6 +1359,13 @@ def scan_repository(
                         confidence="High",
                         metadata={"line_count": line_count},
                     )
+
+            # Long function detection (Python only for v3.2.0)
+            if file_path.suffix == ".py":
+                _detect_long_python_functions(text, relative, builder)
+
+            # Broad exception detection
+            _detect_broad_exceptions(text, relative, builder)
 
         imports = _extract_imports(file_path)
         if imports:

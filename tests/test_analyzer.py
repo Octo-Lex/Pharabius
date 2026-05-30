@@ -325,11 +325,11 @@ def test_python_dual_manifests_grouped_as_one_dep(tmp_path: Path) -> None:
     register = analyze_evidence(tmp_path)
 
     dep_findings = _td_dep_findings(register)
-    assert len(dep_findings) == 1
-    f = dep_findings[0]
-    assert "Python" in f.title
+    assert len(dep_findings) == 2  # v3.2.0: no-lockfile + unpinned deps
+    lockfile_f = next((f for f in dep_findings if "lockfile" in f.title.lower() or "lockfile" in f.description.lower()), dep_findings[0])
+    assert "Python" in lockfile_f.title
     # Both manifest evidence IDs included
-    assert len(f.evidence_ids) >= 2
+    assert len(lockfile_f.evidence_ids) >= 2
 
 
 def test_root_manifest_with_root_lock_no_dep(tmp_path: Path) -> None:

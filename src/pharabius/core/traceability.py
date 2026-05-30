@@ -1,7 +1,8 @@
-"""Traceability matrix generation and rendering.
+"""Traceability matrix generation, rendering, and quality assessment.
 
 Generates evidence→finding, finding→claim, and claim→work-package
-traceability matrices. All outputs are deterministic Markdown tables.
+traceability matrices plus a quality summary with orphan/broken detection.
+All outputs are deterministic Markdown or JSON.
 """
 
 from __future__ import annotations
@@ -151,5 +152,168 @@ def write_traceability_matrices(
     p3 = traceability_dir / "claim-workpackage-matrix.md"
     p3.write_text(render_claim_workpackage_matrix(claims), encoding="utf-8")
     paths.append(p3)
+
+    return paths
+
+
+def compute_traceability_quality(
+    evidence_ids: set[str],
+    findings: list[dict[str, object]],
+    claims: list[OperationalClaim],
+    work_packages: list[dict[str, object]],
+) -> dict[str, object]:
+    """Compute traceability quality metrics.
+
+    Args:
+        evidence_ids: Set of all evidence IDs from evidence.json.
+        findings: List of finding dicts from debt-register.json.
+        claims: List of OperationalClaim objects.
+        work_packages: List of work package dicts with package_id and linked_debt_items.
+    """
+    finding_ids = {str(f.get("id", "")) for f in findings}
+    wp_ids = {str(wp.get("package_id", "")) for wp in work_packages}
+
+    # Findings with at least one evidence ID
+    findings_with_evidence = sum(
+        1 for f in findings if f.get("evidence_ids") and len(f["evidence_ids"]) > 0
+    )
+    findings_with_evidence_pct = (
+        round(findings_with_evidence / len(findings) * 100, 1) if findings else 0.0
+    )
+
+    # Claims linked to at least one finding
+    claims_with_findings = sum(1 for c in claims if c.linked_findings)
+    claims_with_findings_pct = (
+        round(claims_with_findings / len(claims) * 100, 1) if claims else 0.0
+    )
+
+    # Claims linked to at least one work package
+    claims_with_wp = sum(1 for c in claims if c.linked_work_packages)
+    claims_with_wp_pct = (
+        round(claims_with_wp / len(claims) * 100, 1) if claims else 0.0
+    )
+
+    # Work packages linked to at least one finding
+    wp_with_findings = sum(
+        1 for wp in work_packages
+        if wp.get("linked_debt_items") and len(wp["linked_debt_items"]) > 0
+    )
+    wp_with_findings_pct = (
+        round(wp_with_findings / len(work_packages) * 100, 1) if work_packages else 0.0
+    )
+
+    # Orphan evidence: not referenced by any finding
+    referenced_evidence: set[str] = set()
+    for f in findings:
+        for eid in (f.get("evidence_ids") or []):
+            referenced_evidence.add(str(eid))
+    orphan_evidence_count = len(evidence_ids - referenced_evidence)
+
+    # Orphan findings: not linked to any claim
+    findings_in_claims: set[str] = set()
+    for c in claims:
+        for fid in c.linked_findings:
+            findings_in_claims.add(fid)
+    orphan_finding_count = len(finding_ids - findings_in_claims)
+
+    # Broken references: IDs referenced but not found
+    broken_count = 0
+    for c in claims:
+        for fid in c.linked_findings:
+            if fid not in finding_ids:
+                broken_count += 1
+        for wp_id in (c.linked_work_packages or []):
+            if wp_id not in wp_ids:
+                broken_count += 1
+    for wp in work_packages:
+        for debt_id in (wp.get("linked_debt_items") or []):
+            if str(debt_id) not in finding_ids:
+                broken_count += 1
+
+    # Grade
+    if (
+        findings_with_evidence_pct >= 95
+        and claims_with_wp_pct >= 80
+        and broken_count == 0
+    ):
+        grade = "complete"
+    elif (
+        findings_with_evidence_pct >= 80
+        and claims_with_findings_pct >= 70
+        and broken_count == 0
+    ):
+        grade = "usable"
+    elif findings_with_evidence_pct >= 50:
+        grade = "partial"
+    else:
+        grade = "weak"
+
+    return {
+        "total_findings": len(findings),
+        "total_claims": len(claims),
+        "total_work_packages": len(work_packages),
+        "total_evidence": len(evidence_ids),
+        "findings_with_evidence_pct": findings_with_evidence_pct,
+        "claims_with_findings_pct": claims_with_findings_pct,
+        "claims_with_work_packages_pct": claims_with_wp_pct,
+        "work_packages_with_findings_pct": wp_with_findings_pct,
+        "orphan_evidence_count": orphan_evidence_count,
+        "orphan_finding_count": orphan_finding_count,
+        "broken_reference_count": broken_count,
+        "traceability_grade": grade,
+    }
+
+
+def render_traceability_quality_markdown(quality: dict[str, object]) -> str:
+    """Render traceability quality as Markdown."""
+    lines: list[str] = []
+    lines.append("# Traceability Quality Summary")
+    lines.append("")
+
+    lines.append("## Grade")
+    lines.append("")
+    lines.append(f"**{quality['traceability_grade'].toString().upper() if hasattr(quality['traceability_grade'], 'toString') else str(quality['traceability_grade']).upper()}**")
+    lines.append("")
+
+    lines.append("## Metrics")
+    lines.append("")
+    lines.append("| Metric | Value |")
+    lines.append("|---|---:|")
+    for key in (
+        "total_findings",
+        "total_claims",
+        "total_work_packages",
+        "total_evidence",
+        "findings_with_evidence_pct",
+        "claims_with_findings_pct",
+        "claims_with_work_packages_pct",
+        "work_packages_with_findings_pct",
+        "orphan_evidence_count",
+        "orphan_finding_count",
+        "broken_reference_count",
+    ):
+        label = key.replace("_", " ").replace(" pct", " %").title()
+        lines.append(f"| {label} | {quality[key]} |")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def write_traceability_quality(
+    traceability_dir: Path, quality: dict[str, object]
+) -> list[Path]:
+    """Write traceability quality JSON and Markdown."""
+    import json
+
+    traceability_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+
+    json_path = traceability_dir / "traceability-quality.json"
+    json_path.write_text(json.dumps(quality, indent=2) + "\n", encoding="utf-8")
+    paths.append(json_path)
+
+    md_path = traceability_dir / "traceability-quality.md"
+    md_path.write_text(render_traceability_quality_markdown(quality), encoding="utf-8")
+    paths.append(md_path)
 
     return paths

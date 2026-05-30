@@ -304,24 +304,31 @@ evolve independently. Sidecar output is never read by canonical commands.
 **Derived/export schemas** (SARIF, CSV, JSONL) follow their respective external standards.
 SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding data.
 
-## Implementation Status (v3.1.0)
+## Implementation Status (v3.2.0)
 
 | Capability | Status |
 |---|---|
 | Evidence-backed debt register | ✅ Implemented |
 | TD-CODE detection (large files + debt markers) | ✅ Implemented (v3.1.0 repair) |
+| TD-CODE detection (long functions + broad exceptions) | ✅ Implemented (v3.2.0) |
 | Finding deduplication | ✅ Minimal deterministic (v3.1.0) |
 | Work-package grouping | ✅ Conservative grouping (v3.1.0) |
 | Operational claims with gap tracking | ✅ Implemented |
 | Claims pipeline wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
 | Traceability matrices wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
+| Traceability quality metrics + grading | ✅ Implemented (v3.2.0) |
 | Quality gate thresholds | ✅ Implemented |
 | Review decision sidecar | ✅ Implemented |
 | Trend trajectory analysis | ✅ Heuristic (not scientific) |
 | AI enrichment (optional) | ✅ OpenAI-compatible adapter |
 | Mock AI provider confidence fix | ✅ Fixed (v3.1.0) |
+| Shared constants module | ✅ Implemented (v3.2.0) |
+| `max_file_size_kb` enforcement | ✅ Implemented (v3.2.0) |
+| Dependency health signals (unpinned + lockfile conflict) | ✅ Partial (v3.2.0: Node + Python) |
+| Coverage-report ingestion (Istanbul/Python/LCOV) | ✅ Implemented (v3.2.0) |
+| TD-TEST low-coverage finding | ✅ Implemented (v3.2.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
-| Dependency freshness/vulnerability | 🔜 Deferred |
-| Test coverage measurement | 🔜 Deferred |
-| `max_file_size_kb` parameter | 🔜 Deferred (currently unused) |
+| Dependency vulnerability scanning | 🔜 Deferred |
+| Long-function detection for non-Python | 🔜 Deferred (JS/Go/Swift) |
+| Pipfile/pyproject.toml/Poetry dep parsing | 🔜 Deferred |

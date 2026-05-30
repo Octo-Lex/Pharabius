@@ -21,7 +21,11 @@ from pharabius.core.planner import write_plan
 from pharabius.core.profiler import write_repository_profile
 from pharabius.core.reporter import write_reports
 from pharabius.core.scanner import write_evidence_store
-from pharabius.core.traceability import write_traceability_matrices
+from pharabius.core.traceability import (
+    compute_traceability_quality,
+    write_traceability_matrices,
+    write_traceability_quality,
+)
 from pharabius.schemas.run_metadata import RunMetadata, RunSummary
 
 
@@ -188,6 +192,25 @@ def execute_run(repository_root: Path) -> RunMetadata:
     # Wire traceability matrix generation (v3.1.0)
     traceability_dir = workspace / "traceability"
     write_traceability_matrices(traceability_dir, findings_list, claims_register.claims)
+
+    # Compute and write traceability quality (v3.2.0)
+    evidence_data = _load_json(workspace / "evidence.json")
+    all_evidence_ids = {
+        str(e.get("evidence_id", ""))
+        for e in evidence_data.get("evidence", [])
+        if e.get("evidence_id")
+    }
+    wp_dicts = [
+        {"package_id": wp.id, "linked_debt_items": wp.linked_debt_items}
+        for wp in plan_result.work_packages
+    ]
+    quality = compute_traceability_quality(
+        evidence_ids=all_evidence_ids,
+        findings=findings_list,
+        claims=claims_register.claims,
+        work_packages=wp_dicts,
+    )
+    write_traceability_quality(traceability_dir, quality)
 
     files_written = _collect_files(workspace) if workspace.exists() else []
     limitations = _load_profile_limitations(root)
