@@ -2,6 +2,24 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.4.0] - Unreleased
+
+### Added
+- **S01 — Evidence documentation** (`docs/EVIDENCE.md`): Complete evidence type catalog with metadata field reference.
+- **S02 — Coverage ingestion documentation** (`docs/COVERAGE_INGESTION.md`): Coverage format matrix, parser behavior, and configuration guide.
+- **S03 — Dependency signals documentation** (`docs/DEPENDENCY_SIGNALS.md`): Signal taxonomy, ecosystem coverage, and manifest format reference.
+- **S04 — `io_helpers.py`**: Shared `read_text()` and `read_json()` with consistent error handling. Replaces duplicated I/O helpers across modules.
+- **S04 — `coverage_parsers.py`**: Extracted all 6 coverage format parsers from scanner.py. Public API: `scan_coverage_artifact()`.
+- **S05 — `dependency_parsers.py`**: Extracted all manifest parsers and lockfile consistency checks. Public APIs: `scan_dependency_manifest()`, `scan_repository_dependency_consistency()`.
+- **S06 — `runtime_parsers.py`**: Extracted runtime version pin detection. Public API: `detect_runtime_version_pins()`.
+- `EvidenceBuilder` moved from scanner.py to `schemas/evidence.py` alongside `EvidenceStore`, `EvidenceItem`, and `EvidenceLocation`.
+- 29 new regression tests in `test_v340_modularization.py`.
+
+### Changed
+- **scanner.py reduced from 2048 to 1045 lines** — parser logic extracted into focused modules.
+- scanner retains thin `_read_text`/`_read_json` wrappers that delegate to `io_helpers`.
+- All 1916 pre-existing tests continue to pass unchanged.
+
 ## [3.3.0] - Unreleased
 
 ### Added

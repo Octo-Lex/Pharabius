@@ -304,7 +304,37 @@ evolve independently. Sidecar output is never read by canonical commands.
 **Derived/export schemas** (SARIF, CSV, JSONL) follow their respective external standards.
 SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding data.
 
-## Implementation Status (v3.3.0)
+## Scanner Module Structure (v3.4.0)
+
+The scanner was refactored in v3.4.0 from a monolithic 2048-line file into focused modules:
+
+| Module | Responsibility | Public API |
+|---|---|---|
+| `core/scanner.py` | File iteration, evidence orchestration, file-level analysis | `scan_repository()`, `write_evidence_store()` |
+| `core/io_helpers.py` | Shared `read_text()` and `read_json()` with error handling | `read_text()`, `read_json()` |
+| `core/coverage_parsers.py` | Istanbul, Python coverage, LCOV, Cobertura, JaCoCo parsing | `scan_coverage_artifact()` |
+| `core/dependency_parsers.py` | Manifest parsing, unpinned deps, lockfile consistency | `scan_dependency_manifest()`, `scan_repository_dependency_consistency()` |
+| `core/runtime_parsers.py` | Runtime version pin detection (Python + Node.js) | `detect_runtime_version_pins()` |
+| `core/constants.py` | Evidence types, thresholds, quality metadata constants | Constants only |
+| `core/path_utils.py` | Path normalization and pattern matching utilities | `normalize_repo_path()`, `relative_repo_path()`, etc. |
+| `core/dependency_utils.py` | PEP 508 / Poetry / Pipfile specifier classification | `classify_python_specifier()` |
+| `schemas/evidence.py` | `EvidenceStore`, `EvidenceItem`, `EvidenceLocation`, `EvidenceBuilder` | Data models + builder |
+
+### Module dependency graph
+
+```text
+scanner.py
+  ├── io_helpers.py
+  ├── coverage_parsers.py ── io_helpers.py, schemas/evidence.py
+  ├── dependency_parsers.py ── io_helpers.py, dependency_utils.py, schemas/evidence.py
+  ├── runtime_parsers.py ── io_helpers.py, schemas/evidence.py
+  ├── constants.py
+  └── path_utils.py
+```
+
+---
+
+## Implementation Status (v3.4.0)
 
 | Capability | Status |
 |---|---|
@@ -325,13 +355,19 @@ SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding
 | Mock AI provider confidence fix | ✅ Fixed (v3.1.0) |
 | Shared constants module | ✅ Implemented (v3.2.0) |
 | Shared path normalization | ✅ Implemented (v3.3.0) |
+| Shared I/O helpers | ✅ Implemented (v3.4.0) |
 | `max_file_size_kb` enforcement | ✅ Implemented (v3.2.0) |
 | Coverage ingestion (Istanbul/Python/LCOV) | ✅ Implemented (v3.2.0) |
 | Coverage ingestion (Cobertura/JaCoCo) | ✅ Implemented (v3.3.0) |
+| Coverage parser module | ✅ Extracted (v3.4.0) |
 | Dependency health signals (unpinned + lockfile conflict) | ✅ Partial (v3.2.0: Node + Python req) |
 | Dependency health signals (pyproject/Poetry/Pipfile) | ✅ Implemented (v3.3.0) |
+| Dependency parser module | ✅ Extracted (v3.4.0) |
 | Runtime version pinning (Python + Node) | ✅ Implemented (v3.3.0) |
+| Runtime parser module | ✅ Extracted (v3.4.0) |
+| Evidence system documentation | ✅ Implemented (v3.4.0) |
 | TD-TEST low-coverage finding | ✅ Implemented (v3.2.0) |
+| Scanner modularization (2048→1045 lines) | ✅ Complete (v3.4.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |
