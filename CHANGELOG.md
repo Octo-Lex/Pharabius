@@ -2,6 +2,25 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.5.0] - Unreleased
+
+### Added
+- **S01 — Per-run enriched history snapshots** (`runs/RUN-*-history-snapshot.json`): Captures category counts, risk scores, evidence type counts, work-package readiness, and traceability grade at run time. Enables full historical trend comparison for future runs.
+- **S02 — Run history index** (`runs/run-history-index.json`): Queryable index of all runs with enriched data when available. Excludes itself and snapshot files from scanning.
+- **S03 — Finding trend by category**: Category-level finding count deltas with `complete`/`partial`/`insufficient_data` status.
+- **S04 — Risk trend by category**: Total, average, and max risk score deltas across runs.
+- **S05 — Evidence coverage trend**: Evidence type count deltas, limitation evidence tracking, orphan/broken-reference trends.
+- **S06 — Work-package readiness trend**: WP count, grouping ratio, linked-finding completeness deltas.
+- **S07 — Traceability trend surfacing**: Existing traceability quality trend included in run history summary.
+- **S08 — Run history summary artifacts** (`reports/run-history-summary.json` + `.md`): Reviewer-facing JSON and Markdown with overall trajectory, confidence level, and all trend sections.
+- **`docs/RUN_HISTORY.md`**: Documentation on trend interpretation, status levels, and known limitations.
+- Structured warning schema with 7 codes (`malformed_run_metadata`, `missing_enriched_snapshot`, etc.).
+- 36 new regression tests in `test_v350_run_history_intelligence.py`.
+
+### Changed
+- `execute_run()` now writes enriched snapshot, index, and summary at the end of each run.
+- `test_cli.py` updated to exclude history snapshot files from run metadata glob.
+
 ## [3.4.0] - Unreleased
 
 ### Added

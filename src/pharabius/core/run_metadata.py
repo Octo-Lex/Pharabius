@@ -246,4 +246,23 @@ def execute_run(repository_root: Path) -> RunMetadata:
         encoding="utf-8",
     )
 
+    # Run history intelligence (v3.5.0)
+    from pharabius.core.run_history import (
+        build_current_run_snapshot,
+        build_run_history_index,
+        build_run_history_summary,
+        write_run_history_index,
+        write_run_history_snapshot,
+        write_run_history_summary,
+    )
+
+    history_snapshot = build_current_run_snapshot(workspace, metadata.run_id)
+    write_run_history_snapshot(workspace, history_snapshot)
+
+    history_index = build_run_history_index(workspace)
+    write_run_history_index(workspace, history_index)
+
+    run_history_summary = build_run_history_summary(workspace)
+    write_run_history_summary(workspace, run_history_summary)
+
     return metadata

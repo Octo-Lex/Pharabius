@@ -318,6 +318,7 @@ The scanner was refactored in v3.4.0 from a monolithic 2048-line file into focus
 | `core/constants.py` | Evidence types, thresholds, quality metadata constants | Constants only |
 | `core/path_utils.py` | Path normalization and pattern matching utilities | `normalize_repo_path()`, `relative_repo_path()`, etc. |
 | `core/dependency_utils.py` | PEP 508 / Poetry / Pipfile specifier classification | `classify_python_specifier()` |
+| `core/run_history.py` | Run history snapshots, index, trend computation, rendering | `build_current_run_snapshot()`, `build_run_history_summary()` |
 | `schemas/evidence.py` | `EvidenceStore`, `EvidenceItem`, `EvidenceLocation`, `EvidenceBuilder` | Data models + builder |
 
 ### Module dependency graph
@@ -334,7 +335,7 @@ scanner.py
 
 ---
 
-## Implementation Status (v3.4.0)
+## Implementation Status (v3.5.0)
 
 | Capability | Status |
 |---|---|
@@ -368,6 +369,12 @@ scanner.py
 | Evidence system documentation | ✅ Implemented (v3.4.0) |
 | TD-TEST low-coverage finding | ✅ Implemented (v3.2.0) |
 | Scanner modularization (2048→1045 lines) | ✅ Complete (v3.4.0) |
+| Run history intelligence (snapshots + trends) | ✅ Implemented (v3.5.0) |
+| Finding trend by category | ✅ Implemented (v3.5.0) |
+| Risk trend by category | ✅ Implemented (v3.5.0) |
+| Evidence coverage trend | ✅ Implemented (v3.5.0) |
+| Work-package readiness trend | ✅ Implemented (v3.5.0) |
+| Run history documentation | ✅ Implemented (v3.5.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |

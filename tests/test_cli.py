@@ -180,7 +180,7 @@ def test_run_command_creates_run_metadata(tmp_path: Path) -> None:
     assert "Completed deterministic pipeline run" in run_result.output
 
     runs_dir = tmp_path / ".ai-debt" / "runs"
-    run_files = list(runs_dir.glob("RUN-*.json"))
+    run_files = [f for f in runs_dir.glob("RUN-*.json") if not f.name.endswith("-history-snapshot.json")]
     assert run_files
 
     metadata = json.loads(run_files[0].read_text(encoding="utf-8"))
