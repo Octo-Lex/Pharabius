@@ -2,6 +2,38 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.1.0] - Unreleased
+
+### Fixed
+- `ai-debt run` no longer overwrites customized `config.yaml` or `governance.yaml` (S01).
+- TD-CODE analyzer for large files now receives correct evidence from scanner (S02).
+- TD-CODE analyzer for debt markers (TODO/FIXME/HACK/XXX) now receives correct evidence from scanner (S02).
+- Debt markers are counted by occurrence (not unique names) in scanner metadata (S02).
+- Large-file detection uses a single shared threshold constant between scanner and analyzer (S02).
+- Finding deduplication prevents duplicate entries in debt register (S03).
+- Deduplicated findings preserve both highest severity and highest risk score even when they disagree (S03).
+- Work packages now group related findings instead of 1:1 mapping (S04).
+- Mock AI provider emits valid confidence values (High/Medium/Low) instead of copying severity (S05).
+- Claims now link to actual work package IDs instead of related finding IDs (S06).
+- Claims generation and traceability matrix generation are now wired into `execute_run` (S06).
+
+### Added
+- `debt_marker_detected` evidence type for TODO/FIXME/HACK/XXX detection with occurrence counting.
+- `large_file_detected` evidence type for source files exceeding 1000 lines.
+- `LARGE_FILE_LINE_THRESHOLD` shared constant in scanner (importable by analyzer).
+- `_debt_markers_in_text()` scanner helper returning occurrence-counted marker dictionary.
+- `_deduplicate_findings()` analyzer function with normalized dedupe key and severity guarantee.
+- `_group_findings()` and `_should_group()` planner functions for conservative work-package grouping.
+- `_make_grouped_work_package()` planner function for multi-finding work packages.
+- `finding_to_wp_map` keyword parameter in `generate_claims_from_findings()` and `build_claims_register()`.
+- Claims and traceability matrices are now generated during `ai-debt run`.
+- Self-audit regression tests (`tests/test_v310_self_audit.py`) — 21 tests.
+- Implementation status matrix in architecture docs.
+
+### Tests
+- Self-audit regression tests: 21 tests covering all 8 repair slices.
+- No `...` placeholders in any test.
+
 ## [3.0.0] - Unreleased
 
 ### Added

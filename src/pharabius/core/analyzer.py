@@ -836,43 +836,25 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
 def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
     """TD-CODE: Flag very large source files as code-level debt.
 
-    Conservative threshold: files > 1000 lines detected as evidence.
-    Only applies to source files (not generated, config, or lockfiles).
+    Reads ``large_file_detected`` evidence items produced by the scanner.
+    Threshold is shared via ``scanner.LARGE_FILE_LINE_THRESHOLD``.
     """
-    LARGE_FILE_THRESHOLD = 1000
-    source_extensions = {
-        ".py",
-        ".js",
-        ".ts",
-        ".jsx",
-        ".tsx",
-        ".java",
-        ".cs",
-        ".go",
-        ".rs",
-        ".rb",
-        ".php",
-        ".swift",
-        ".kt",
-        ".scala",
-    }
+    from pharabius.core.scanner import LARGE_FILE_LINE_THRESHOLD
 
     large_items: list[EvidenceItem] = []
     for item in store.evidence:
-        if item.type != "file_detected" or not item.location.file:
+        if item.type != "large_file_detected":
             continue
-        ext = Path(item.location.file).suffix.lower()
-        if ext not in source_extensions:
-            continue
-        # Check raw_observation for line count hint
-        obs = item.raw_observation.lower()
-        if "lines" not in obs:
-            continue
-        # Extract line count from observation if present
-        import re as _re
-
-        match = _re.search(r"(\d+)\s*lines?", obs)
-        if match and int(match.group(1)) > LARGE_FILE_THRESHOLD:
+        # Read line count from metadata (canonical source)
+        if item.metadata and "line_count" in item.metadata:
+            line_count = int(item.metadata["line_count"])
+        else:
+            # Fallback: parse raw_observation
+            match = _re.search(r"(\d+)\s*lines?", item.raw_observation)
+            if not match:
+                continue
+            line_count = int(match.group(1))
+        if line_count >= LARGE_FILE_LINE_THRESHOLD:
             large_items.append(item)
 
     if not large_items:
@@ -890,7 +872,7 @@ def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
         category="TD-CODE",
         title="Very large source files detected",
         description=(
-            f"{len(large_items)} source file(s) exceed {LARGE_FILE_THRESHOLD} lines. "
+            f"{len(large_items)} source file(s) exceed {LARGE_FILE_LINE_THRESHOLD} lines. "
             "Large files increase cognitive load, review difficulty, and merge conflict risk."
         ),
         evidence_ids=_evidence_ids(large_items),
@@ -922,23 +904,26 @@ def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
 
 
 def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None:
-    """TD-CODE: Flag TODO/FIXME/HACK debt markers in source evidence.
+    """TD-CODE: Flag TODO/FIXME/HACK/XXX debt markers in source evidence.
 
-    Only counts markers in source code evidence, not in config or CI files.
-    Requires multiple markers to avoid noise from single-line annotations.
+    Reads ``debt_marker_detected`` evidence items produced by the scanner.
+    Counts total occurrences (not unique marker names) across files.
     """
-    DEBT_MARKERS = {"todo", "fixme", "hack", "xxx"}
-    MIN_MARKERS = 5
+    MIN_TOTAL_MARKERS = 5
 
     marker_items: list[EvidenceItem] = []
+    total_marker_count = 0
     for item in store.evidence:
-        if item.type != "risk_sensitive_keyword_detected":
+        if item.type != "debt_marker_detected":
             continue
-        keyword = item.raw_observation.lower().strip()
-        if keyword in DEBT_MARKERS:
-            marker_items.append(item)
+        marker_items.append(item)
+        # Read occurrence count from metadata
+        if item.metadata and "total_count" in item.metadata:
+            total_marker_count += int(item.metadata["total_count"])
+        else:
+            total_marker_count += 1  # fallback
 
-    if len(marker_items) < MIN_MARKERS:
+    if total_marker_count < MIN_TOTAL_MARKERS:
         return
 
     breakdown = {
@@ -951,9 +936,10 @@ def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None
 
     builder.add(
         category="TD-CODE",
-        title=f"Accumulated debt markers ({len(marker_items)} TODO/FIXME/HACK)",
+        title=f"Accumulated debt markers ({total_marker_count} TODO/FIXME/HACK)",
         description=(
-            f"{len(marker_items)} debt marker(s) (TODO, FIXME, HACK, XXX) detected in source code. "
+            f"{total_marker_count} debt marker occurrence(s) across "
+            f"{len(marker_items)} file(s). "
             "Accumulated debt markers indicate deferred maintenance that may compound over time."
         ),
         evidence_ids=_evidence_ids(marker_items),
@@ -1642,6 +1628,81 @@ def _apply_enhanced_scoring(root: Path, findings: list[DebtFinding]) -> None:
         finding.priority = _score(breakdown)[1]
 
 
+_SEVERITY_RANK = {"Low": 1, "Medium": 2, "High": 3, "Critical": 4}
+
+
+def _dedupe_key(f: DebtFinding) -> tuple[str, str, tuple[str, ...]]:
+    """Deterministic deduplication key: category + normalized title + sorted locations."""
+    locations = tuple(sorted(set(f.locations or [])))
+    normalized_title = " ".join(f.title.lower().split())
+    return (f.category, normalized_title, locations)
+
+
+def _deduplicate_findings(findings: list[DebtFinding]) -> list[DebtFinding]:
+    """Deterministic deduplication by category + normalized title + sorted locations.
+
+    Merge rules:
+    - Keep all evidence_ids (union, order-preserving, deduplicated)
+    - Keep all locations (union, order-preserving, deduplicated)
+    - Choose base by highest risk_score (best explanatory detail)
+    - Explicitly preserve highest severity across ALL group members
+    - Explicitly preserve highest risk_score across ALL group members
+    - Store merged-away finding IDs in related_findings
+
+    This ensures a Critical-severity finding with risk_score=10 is never
+    downgraded when merged with a Medium-severity finding with risk_score=30.
+    """
+    groups: dict[tuple, list[DebtFinding]] = {}
+    group_order: list[tuple] = []
+
+    for f in findings:
+        key = _dedupe_key(f)
+        if key not in groups:
+            groups[key] = []
+            group_order.append(key)
+        groups[key].append(f)
+
+    merged: list[DebtFinding] = []
+    for key in group_order:
+        group = groups[key]
+        if len(group) == 1:
+            merged.append(group[0])
+            continue
+
+        # Base: highest risk_score (best explanatory detail for the finding body)
+        base = max(group, key=lambda f: int(f.risk_score or 0))
+
+        # Explicitly enforce: highest severity across ALL group members
+        highest_severity = max(
+            (f.severity for f in group),
+            key=lambda s: _SEVERITY_RANK.get(s, 0),
+        )
+        # Explicitly enforce: highest risk_score across ALL group members
+        highest_risk_score = max(int(f.risk_score or 0) for f in group)
+
+        all_evidence = list(dict.fromkeys(
+            eid for f in group for eid in f.evidence_ids
+        ))
+        all_locations = list(dict.fromkeys(
+            loc for f in group for loc in (f.locations or [])
+        ))
+        all_related = list(dict.fromkeys(
+            f.id for f in group if f.id != base.id
+        ))
+
+        merged.append(base.model_copy(update={
+            "severity": highest_severity,
+            "risk_score": highest_risk_score,
+            "evidence_ids": all_evidence,
+            "locations": all_locations or None,
+            "related_findings": list(dict.fromkeys(
+                (base.related_findings or []) + all_related
+            )),
+        }))
+
+    return merged
+
+
 def analyze_evidence(repository_root: Path) -> DebtRegister:
     root = repository_root.resolve()
     store = _load_evidence_store(root)
@@ -1673,6 +1734,9 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
         key=lambda finding: finding.risk_score,
         reverse=True,
     )
+
+    # Deterministic deduplication (v3.1.0)
+    findings = _deduplicate_findings(findings)
 
     # Enhanced risk scoring (v1.5) — opt-in only
     _apply_enhanced_scoring(root, findings)

@@ -73,12 +73,16 @@ def _determine_status(
 def generate_claims_from_findings(
     findings: list[dict[str, object]],
     warnings: list[str] | None = None,
+    *,
+    finding_to_wp_map: dict[str, list[str]] | None = None,
 ) -> list[OperationalClaim]:
     """Generate operational claims from debt-register findings.
 
     Args:
         findings: List of finding dicts from debt-register.json.
         warnings: Optional list to append warnings.
+        finding_to_wp_map: Mapping from finding ID to list of work package IDs.
+            If None, linked_work_packages will be empty.
 
     Returns:
         Sorted list of OperationalClaim.
@@ -98,9 +102,10 @@ def generate_claims_from_findings(
         ]
         bib_val: object = finding.get("business_impact_basis")
         bib = str(bib_val) if bib_val is not None else None
-        work_packages: list[str] = [
-            str(x) for x in cast("list[object]", finding.get("related_findings") or [])
-        ]
+
+        # v3.1.0: Read work packages from explicit mapping, not related_findings
+        wp_map = finding_to_wp_map or {}
+        work_packages: list[str] = wp_map.get(fid, [])
 
         claim_id = f"CLM-{idx:06d}"
 
@@ -152,9 +157,13 @@ def build_claims_register(
     commit: str | None = None,
     generated_at: str = "",
     warnings: list[str] | None = None,
+    *,
+    finding_to_wp_map: dict[str, list[str]] | None = None,
 ) -> OperationalClaimsRegister:
     """Build a complete claims register from findings."""
-    claims = generate_claims_from_findings(findings, warnings)
+    claims = generate_claims_from_findings(
+        findings, warnings, finding_to_wp_map=finding_to_wp_map,
+    )
 
     summary = OperationalClaimsRegisterSummary(
         total_claims=len(claims),

@@ -5,12 +5,23 @@ from pathlib import Path
 from typing import Any
 
 from pharabius.core.analyzer import write_debt_register
+from pharabius.core.claims import (
+    build_claims_register,
+    extract_gaps_from_claims,
+    extract_questions_from_claims,
+    write_claims_json,
+    write_claims_markdown,
+    write_confidence_report,
+    write_gaps_markdown,
+    write_questions_markdown,
+)
 from pharabius.core.init_workspace import initialize_workspace
 from pharabius.core.mapper import write_analysis_units
 from pharabius.core.planner import write_plan
 from pharabius.core.profiler import write_repository_profile
 from pharabius.core.reporter import write_reports
 from pharabius.core.scanner import write_evidence_store
+from pharabius.core.traceability import write_traceability_matrices
 from pharabius.schemas.run_metadata import RunMetadata, RunSummary
 
 
@@ -130,18 +141,53 @@ def execute_run(repository_root: Path) -> RunMetadata:
         "analyze --no-ai",
         "report",
         "plan",
+        "claims",
+        "traceability",
     ]
 
-    initialize_workspace(root, force=True)
+    initialize_workspace(root, force=False)
     write_repository_profile(root)
     write_evidence_store(root)
     write_analysis_units(root)
     write_debt_register(root)
     write_reports(root)
-    write_plan(root)
+    plan_result = write_plan(root)
+
+    # Build finding → WP mapping from plan result
+    finding_to_wp: dict[str, list[str]] = {}
+    for wp in plan_result.work_packages:
+        for debt_id in wp.linked_debt_items:
+            finding_to_wp.setdefault(debt_id, []).append(wp.id)
+
+    # Generate claims with correct WP mapping (v3.1.0)
+    register_data = _load_json(workspace / "debt-register.json")
+    findings_list = register_data.get("findings", [])
 
     branch = _git_value(root, ["rev-parse", "--abbrev-ref", "HEAD"])
     commit = _git_value(root, ["rev-parse", "HEAD"])
+
+    claims_register = build_claims_register(
+        findings_list,
+        project_name=register_data.get("project_name"),
+        repository=register_data.get("repository"),
+        branch=branch,
+        commit=commit,
+        generated_at="",
+        finding_to_wp_map=finding_to_wp,
+    )
+
+    claims_dir = workspace / "claims"
+    write_claims_json(claims_dir, claims_register)
+    write_claims_markdown(claims_dir, claims_register)
+    gaps = extract_gaps_from_claims(claims_register.claims, findings_list)
+    write_gaps_markdown(claims_dir, claims_register)
+    questions = extract_questions_from_claims(claims_register.claims)
+    write_questions_markdown(claims_dir, questions)
+    write_confidence_report(claims_dir, claims_register.claims, gaps)
+
+    # Wire traceability matrix generation (v3.1.0)
+    traceability_dir = workspace / "traceability"
+    write_traceability_matrices(traceability_dir, findings_list, claims_register.claims)
 
     files_written = _collect_files(workspace) if workspace.exists() else []
     limitations = _load_profile_limitations(root)

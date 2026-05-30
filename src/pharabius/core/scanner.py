@@ -9,6 +9,12 @@ from typing import Any
 from pharabius.core.exclusions import EXCLUDED_DIR_NAMES, is_excluded_path
 from pharabius.schemas.evidence import EvidenceItem, EvidenceLocation, EvidenceStore
 
+# Shared threshold for large-file detection (scanner and analyzer both use this).
+# Defined here so the analyzer can import it without coupling to scanner internals.
+LARGE_FILE_LINE_THRESHOLD = 1000
+
+_DEBT_MARKER_RE = re.compile(r"\b(todo|fixme|hack|xxx)\b", re.IGNORECASE)
+
 SOURCE_EXTENSIONS = {
     ".py",
     ".js",
@@ -546,6 +552,18 @@ class EvidenceBuilder:
         self.items.append(item)
 
 
+def _debt_markers_in_text(text: str) -> dict[str, int]:
+    """Count debt-marker occurrences (TODO/FIXME/HACK/XXX) in source text.
+
+    Returns {"todo": 5, "fixme": 3, ...} — occurrence counts, not just presence.
+    """
+    counts: dict[str, int] = {}
+    for match in _DEBT_MARKER_RE.finditer(text):
+        marker = match.group(1).lower()
+        counts[marker] = counts.get(marker, 0) + 1
+    return counts
+
+
 def scan_repository(
     repository_root: Path,
     *,
@@ -769,6 +787,43 @@ def scan_repository(
                     confidence="Medium",
                     metadata={"keywords": text_keywords[:50]},
                 )
+
+            # Debt marker detection (occurrence-counting, not just unique names)
+            if file_path.suffix in SOURCE_EXTENSIONS:
+                marker_counts = _debt_markers_in_text(text)
+                total_marker_count = sum(marker_counts.values())
+                if total_marker_count:
+                    builder.add(
+                        type_="debt_marker_detected",
+                        category="code_quality",
+                        summary=f"Debt markers detected in {relative}",
+                        location_file=relative,
+                        subject=relative,
+                        raw_observation=", ".join(
+                            f"{marker}:{count}"
+                            for marker, count in sorted(marker_counts.items())
+                        ),
+                        confidence="High",
+                        metadata={
+                            "marker_counts": marker_counts,
+                            "total_count": total_marker_count,
+                        },
+                    )
+
+            # Large file detection for source files
+            if file_path.suffix in SOURCE_EXTENSIONS:
+                line_count = text.count('\n') + 1
+                if line_count >= LARGE_FILE_LINE_THRESHOLD:
+                    builder.add(
+                        type_="large_file_detected",
+                        category="code_structure",
+                        summary=f"Large source file: {relative} ({line_count} lines)",
+                        location_file=relative,
+                        subject=relative,
+                        raw_observation=f"{line_count} lines",
+                        confidence="High",
+                        metadata={"line_count": line_count},
+                    )
 
         imports = _extract_imports(file_path)
         if imports:

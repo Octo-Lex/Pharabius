@@ -219,14 +219,114 @@ def _make_work_package(
     )
 
 
+def _should_group(a: DebtFinding, b: DebtFinding) -> bool:
+    """Conservative grouping policy for v3.1.0.
+
+    Groups when ALL of:
+    1. Same category
+    2. Same suggested_owner_area
+    3. Overlapping locations OR explicitly related via related_findings
+    """
+    if a.category != b.category:
+        return False
+    if (a.suggested_owner_area or "") != (b.suggested_owner_area or ""):
+        return False
+
+    # Location overlap
+    a_locs = set(a.locations or [])
+    b_locs = set(b.locations or [])
+    if a_locs and b_locs and a_locs & b_locs:
+        return True
+
+    # Explicit related-findings link
+    a_related = set(a.related_findings or [])
+    b_related = set(b.related_findings or [])
+    if b.id in a_related or a.id in b_related:
+        return True
+
+    return False
+
+
+def _group_findings(findings: list[DebtFinding]) -> list[list[DebtFinding]]:
+    """Group findings by conservative policy. Pre-sorted by risk_score descending."""
+    sorted_findings = sorted(findings, key=lambda f: f.risk_score or 0, reverse=True)
+
+    groups: list[list[DebtFinding]] = []
+    assigned: set[str] = set()
+
+    for finding in sorted_findings:
+        if finding.id in assigned:
+            continue
+        group = [finding]
+        assigned.add(finding.id)
+
+        for other in sorted_findings:
+            if other.id in assigned:
+                continue
+            if _should_group(finding, other):
+                group.append(other)
+                assigned.add(other.id)
+
+        groups.append(group)
+
+    return groups
+
+
+def _make_grouped_work_package(index: int, group: list[DebtFinding]) -> WorkPackage:
+    """Create a work package from grouped findings."""
+    primary = group[0]  # Pre-sorted: highest risk_score first
+    all_evidence = list(dict.fromkeys(
+        eid for f in group for eid in f.evidence_ids
+    ))
+    all_locations = list(dict.fromkeys(
+        loc for f in group for loc in (f.locations or [])
+    ))
+
+    return WorkPackage(
+        id=f"WP-{index:03d}",
+        title=(
+            f"Address {len(group)} {primary.category} findings "
+            f"in {primary.suggested_owner_area or 'affected areas'}"
+        ),
+        linked_debt_items=[f.id for f in group],
+        objective=(
+            f"Reduce risk from {len(group)} related {primary.category} findings "
+            "by addressing the supported technical debt without changing "
+            "production behavior beyond the approved remediation scope."
+        ),
+        current_risk=primary.technical_impact,
+        recommended_engineering_approach=_default_approach_for_category(primary),
+        expected_affected_areas=all_locations or ["Validate affected areas from linked evidence."],
+        preconditions=[
+            "Review all linked evidence IDs before implementation.",
+            "Confirm ownership and remediation scope with Product Engineering.",
+            "Avoid production behavior changes unless explicitly approved.",
+        ],
+        verification_recommendations=primary.verification_recommendations,
+        risks_and_cautions=primary.risks_and_cautions,
+        definition_of_done=[
+            f"All {len(group)} linked findings have been reviewed by the responsible owner.",
+            "Recommended verification commands pass locally and in CI.",
+            "Evidence and generated `.ai-debt/` artifacts are updated after remediation.",
+        ],
+        estimated_effort=primary.remediation_effort,
+        expected_risk_reduction=_expected_risk_reduction(primary),
+        suggested_owner_area=primary.suggested_owner_area or "Product Engineering",
+    )
+
+
 def _generate_work_packages(
     findings: list[DebtFinding],
     max_work_packages: int,
 ) -> list[WorkPackage]:
+    groups = _group_findings(findings)
     packages: list[WorkPackage] = []
 
-    for index, finding in enumerate(findings[:max_work_packages], start=1):
-        packages.append(_make_work_package(index, finding))
+    for index, group in enumerate(groups[:max_work_packages], start=1):
+        if len(group) == 1:
+            packages.append(_make_work_package(index, group[0]))
+        else:
+            packages.append(_make_grouped_work_package(index, group))
 
     return packages
 
@@ -887,14 +987,29 @@ def write_plan(
     findings_by_id = {finding.id: finding for finding in findings}
 
     for package in packages:
-        debt_id = package.linked_debt_items[0]
-        finding = findings_by_id[debt_id]
+        # Collect evidence IDs from ALL linked findings
+        all_wp_evidence: list[str] = []
+        primary_finding = None
+        for debt_id in package.linked_debt_items:
+            finding = findings_by_id.get(debt_id)
+            if finding is not None:
+                if primary_finding is None:
+                    primary_finding = finding
+                all_wp_evidence.extend(eid for eid in finding.evidence_ids if eid not in all_wp_evidence)
+
+        # Fall back to first linked finding if none found by ID
+        if primary_finding is None:
+            debt_id = package.linked_debt_items[0]
+            primary_finding = findings_by_id.get(debt_id)
+            if primary_finding is None:
+                continue
+
         slug = _slugify(package.title)
         path = work_packages_dir / f"{package.id}-{slug}.md"
         path.write_text(
             render_work_package_markdown(
                 package,
-                finding,
+                primary_finding,
                 repository_root=root,
                 governance=governance,
             ),

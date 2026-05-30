@@ -303,3 +303,25 @@ evolve independently. Sidecar output is never read by canonical commands.
 
 **Derived/export schemas** (SARIF, CSV, JSONL) follow their respective external standards.
 SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding data.
+
+## Implementation Status (v3.1.0)
+
+| Capability | Status |
+|---|---|
+| Evidence-backed debt register | ✅ Implemented |
+| TD-CODE detection (large files + debt markers) | ✅ Implemented (v3.1.0 repair) |
+| Finding deduplication | ✅ Minimal deterministic (v3.1.0) |
+| Work-package grouping | ✅ Conservative grouping (v3.1.0) |
+| Operational claims with gap tracking | ✅ Implemented |
+| Claims pipeline wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
+| Traceability matrices wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
+| Quality gate thresholds | ✅ Implemented |
+| Review decision sidecar | ✅ Implemented |
+| Trend trajectory analysis | ✅ Heuristic (not scientific) |
+| AI enrichment (optional) | ✅ OpenAI-compatible adapter |
+| Mock AI provider confidence fix | ✅ Fixed (v3.1.0) |
+| Schema-Budget Coupling | 📋 Design only |
+| AST-based analysis | 🔜 Deferred |
+| Dependency freshness/vulnerability | 🔜 Deferred |
+| Test coverage measurement | 🔜 Deferred |
+| `max_file_size_kb` parameter | 🔜 Deferred (currently unused) |
