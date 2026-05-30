@@ -2,6 +2,22 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.3.0] - Unreleased
+
+### Added
+- **S01 — Path normalization utility** (`core/path_utils.py`): `normalize_repo_path`, `relative_repo_path`, `path_matches_exact_or_suffix` (coverage artifacts), `path_matches_root_pattern` (manifests). Eliminates all ad-hoc `replace("\\", "/")` calls.
+- **S02 — Cobertura XML coverage ingestion**: Parses `line-rate` and `branch-rate` from Cobertura XML reports. Supports `coverage.xml`, `coverage/cobertura.xml`, `coverage/cobertura-coverage.xml`, `target/site/cobertura/coverage.xml`.
+- **S03 — JaCoCo XML coverage ingestion**: Parses LINE/BRANCH/METHOD counters from JaCoCo XML. Prefers report-level counters to avoid double-counting. Falls back to package-level when report-level absent.
+- **S04 — `pyproject.toml` dependency parsing** (`core/dependency_utils.py`): Centralized `classify_python_specifier()` handles full PEP 508 strings + Poetry/Pipfile version fragments. Parses `[project].dependencies`, `[project.optional-dependencies]`, Poetry dependency sections. Malformed TOML emits `dependency_manifest_parse_failure` limitation evidence.
+- **S05 — Poetry/Pipfile lockfile signals**: Poetry manifest-without-lockfile and lockfile-without-manifest detection. Pipfile-without-lockfile and Pipfile.lock-without-Pipfile detection. Pipfile dependency parsing.
+- **S06 — Runtime version pinning**: Detects `.python-version`, `.nvmrc`, `.node-version`, `.tool-versions`, `package.json.engines.node`. Missing runtime pins emit conservative TD-DEP findings. Python + Node.js only (Ruby/Java deferred). Conflict detection deferred.
+- **S07 — Traceability quality trend**: Append-only `traceability-quality-history.json`. `compute_traceability_quality_trend()` with heuristic trajectory (improving/stable/worsening/insufficient_data).
+- **S01 — Single authoritative `COVERAGE_PATTERNS` map** in `constants.py`: All 12 coverage patterns consolidated.
+- 47 new regression tests in `test_v330_connectors_formats.py` (33 functions + 14 parametrized cases).
+
+### Changed
+- Existing test assertions updated to filter runtime-version findings from TD-DEP checks.
+
 ## [3.2.0] - Unreleased
 
 ### Added

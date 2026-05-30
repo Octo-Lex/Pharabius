@@ -19,6 +19,29 @@ EVIDENCE_COVERAGE_GAP = "coverage_gap_detected"
 EVIDENCE_LONG_FUNCTION = "long_function_detected"
 EVIDENCE_BROAD_EXCEPTION = "broad_exception_detected"
 EVIDENCE_DEPENDENCY_SIGNAL = "dependency_health_signal"
+EVIDENCE_RUNTIME_VERSION_SIGNAL = "runtime_version_signal"
+
+# ── Coverage patterns (single authoritative map) ──────────────────────
+
+COVERAGE_PATTERNS: dict[str, str] = {
+    # Istanbul (Node.js)
+    "coverage/coverage-summary.json": "istanbul_json",
+    # Python coverage.py
+    "coverage.json": "python_coverage_json",
+    # LCOV (multi-language)
+    "coverage/lcov.info": "lcov",
+    "lcov.info": "lcov",
+    # Cobertura (Python, JVM, CI tools)
+    "coverage.xml": "cobertura_xml",
+    "coverage/cobertura.xml": "cobertura_xml",
+    "coverage/cobertura-coverage.xml": "cobertura_xml",
+    "target/site/cobertura/coverage.xml": "cobertura_xml",
+    # JaCoCo (Java/Kotlin)
+    "target/site/jacoco/jacoco.xml": "jacoco_xml",
+    "build/reports/jacoco/test/jacocoTestReport.xml": "jacoco_xml",
+    "jacoco.xml": "jacoco_xml",
+    "coverage/jacoco.xml": "jacoco_xml",
+}
 
 # ── Thresholds ─────────────────────────────────────────────────────────
 

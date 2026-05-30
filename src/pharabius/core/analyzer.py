@@ -1164,6 +1164,54 @@ def _analyze_coverage_gaps(store: EvidenceStore, builder: FindingBuilder) -> Non
     )
 
 
+def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-DEP: Generate findings from runtime version pinning signals."""
+    from pharabius.core.constants import EVIDENCE_RUNTIME_VERSION_SIGNAL
+
+    runtime_signals = [e for e in store.evidence if e.type == EVIDENCE_RUNTIME_VERSION_SIGNAL]
+    if not runtime_signals:
+        return
+
+    missing = [e for e in runtime_signals if e.metadata.get("signal") == "runtime_version_missing"]
+    if not missing:
+        return
+
+    runtimes = [e.metadata.get("runtime", "unknown") for e in missing]
+    breakdown = {**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2}
+    builder.add(
+        category="TD-DEP",
+        title=f"Missing runtime version pins for: {', '.join(runtimes)}",
+        description=(
+            f"Dependency manifests exist for {', '.join(runtimes)} but no runtime "
+            "version pinning file detected (.python-version, .nvmrc, .tool-versions, "
+            "or package.json engines). Runtime drift affects reproducibility."
+        ),
+        evidence_ids=_evidence_ids(missing),
+        locations=_locations(missing),
+        technical_impact=(
+            "Without runtime version pins, different environments may use "
+            "different runtime versions, causing subtle compatibility issues."
+        ),
+        business_impact=(
+            "Reproducibility risk is inferred from repository evidence. "
+            "Validate with the Product Engineering Team."
+        ),
+        risk_breakdown=breakdown,
+        remediation_effort="Small",
+        recommended_action=(
+            "Add a runtime version file (.python-version, .nvmrc, or "
+            ".tool-versions) or specify engines in package.json."
+        ),
+        verification_recommendations=["Verify CI uses the pinned runtime version."],
+        risks_and_cautions=[
+            "Some projects intentionally use latest runtime versions.",
+            "Docker images may already pin runtime versions.",
+        ],
+        confidence="Low",
+        suggested_owner_area="Product Engineering",
+    )
+
+
 def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
     """TD-DEP: Generate findings from dependency health signals."""
     from pharabius.core.constants import EVIDENCE_DEPENDENCY_SIGNAL
@@ -2026,6 +2074,7 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
     _analyze_broad_exceptions(store, builder)
     _analyze_coverage_gaps(store, builder)
     _analyze_dependency_signals(store, builder)
+    _analyze_runtime_version_signals(store, builder)
     _analyze_compliance_keywords(store, builder)
     _analyze_deployment_without_healthchecks(store, builder)
     _analyze_data_migration_risk(store, builder)

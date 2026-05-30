@@ -304,7 +304,7 @@ evolve independently. Sidecar output is never read by canonical commands.
 **Derived/export schemas** (SARIF, CSV, JSONL) follow their respective external standards.
 SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding data.
 
-## Implementation Status (v3.2.0)
+## Implementation Status (v3.3.0)
 
 | Capability | Status |
 |---|---|
@@ -317,18 +317,24 @@ SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding
 | Claims pipeline wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
 | Traceability matrices wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
 | Traceability quality metrics + grading | ✅ Implemented (v3.2.0) |
+| Traceability quality trend (historical) | ✅ Implemented (v3.3.0) |
 | Quality gate thresholds | ✅ Implemented |
 | Review decision sidecar | ✅ Implemented |
 | Trend trajectory analysis | ✅ Heuristic (not scientific) |
 | AI enrichment (optional) | ✅ OpenAI-compatible adapter |
 | Mock AI provider confidence fix | ✅ Fixed (v3.1.0) |
 | Shared constants module | ✅ Implemented (v3.2.0) |
+| Shared path normalization | ✅ Implemented (v3.3.0) |
 | `max_file_size_kb` enforcement | ✅ Implemented (v3.2.0) |
-| Dependency health signals (unpinned + lockfile conflict) | ✅ Partial (v3.2.0: Node + Python) |
-| Coverage-report ingestion (Istanbul/Python/LCOV) | ✅ Implemented (v3.2.0) |
+| Coverage ingestion (Istanbul/Python/LCOV) | ✅ Implemented (v3.2.0) |
+| Coverage ingestion (Cobertura/JaCoCo) | ✅ Implemented (v3.3.0) |
+| Dependency health signals (unpinned + lockfile conflict) | ✅ Partial (v3.2.0: Node + Python req) |
+| Dependency health signals (pyproject/Poetry/Pipfile) | ✅ Implemented (v3.3.0) |
+| Runtime version pinning (Python + Node) | ✅ Implemented (v3.3.0) |
 | TD-TEST low-coverage finding | ✅ Implemented (v3.2.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |
 | Long-function detection for non-Python | 🔜 Deferred (JS/Go/Swift) |
-| Pipfile/pyproject.toml/Poetry dep parsing | 🔜 Deferred |
+| Runtime version conflict detection | 🔜 Deferred |
+| Ruby/Java runtime pinning | 🔜 Deferred |

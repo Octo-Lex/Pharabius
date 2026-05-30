@@ -317,3 +317,183 @@ def write_traceability_quality(
     paths.append(md_path)
 
     return paths
+
+
+# ── Traceability quality trend (v3.3.0) ─────────────────────────────
+
+
+def load_quality_history(traceability_dir: Path) -> list[dict[str, object]]:
+    """Load traceability quality history from disk."""
+    import json
+
+    history_path = traceability_dir / "traceability-quality-history.json"
+    if not history_path.exists():
+        return []
+    try:
+        data = json.loads(history_path.read_text(encoding="utf-8"))
+        return data.get("snapshots", [])
+    except Exception:
+        return []
+
+
+def append_quality_snapshot(
+    traceability_dir: Path,
+    run_id: str,
+    quality: dict[str, object],
+) -> None:
+    """Append current quality snapshot to history file."""
+    import json
+    from datetime import UTC, datetime
+
+    traceability_dir.mkdir(parents=True, exist_ok=True)
+    history_path = traceability_dir / "traceability-quality-history.json"
+
+    existing: list[dict[str, object]] = []
+    if history_path.exists():
+        try:
+            data = json.loads(history_path.read_text(encoding="utf-8"))
+            existing = data.get("snapshots", [])
+        except Exception:
+            pass
+
+    snapshot_keys = [
+        "traceability_grade",
+        "findings_with_evidence_pct",
+        "claims_with_findings_pct",
+        "claims_with_work_packages_pct",
+        "work_packages_with_findings_pct",
+        "orphan_evidence_count",
+        "orphan_finding_count",
+        "broken_reference_count",
+    ]
+    snapshot: dict[str, object] = {
+        "run_id": run_id,
+        "timestamp": datetime.now(UTC).replace(microsecond=0).isoformat(),
+    }
+    for key in snapshot_keys:
+        if key in quality:
+            snapshot[key] = quality[key]
+    existing.append(snapshot)
+
+    history_path.write_text(
+        json.dumps({"schema_version": "1.0", "snapshots": existing}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def compute_traceability_quality_trend(
+    quality_history: list[dict[str, object]],
+) -> dict[str, object]:
+    """Compute traceability quality trend from historical snapshots.
+
+    Trajectory classification is heuristic:
+    - worsening: broken_reference_count increased OR grade dropped
+    - improving: broken_reference_count decreased OR grade improved
+    - stable: no meaningful change
+    - insufficient_data: fewer than 2 snapshots
+    """
+    if len(quality_history) < 2:
+        return {
+            "trajectory": "insufficient_data",
+            "snapshot_count": len(quality_history),
+            "deltas": {},
+            "warnings": [
+                f"Insufficient data: {len(quality_history)} snapshot(s). "
+                "At least 2 snapshots required for trend analysis."
+            ],
+        }
+
+    baseline = quality_history[0]
+    latest = quality_history[-1]
+
+    metric_keys = [
+        "findings_with_evidence_pct",
+        "claims_with_findings_pct",
+        "claims_with_work_packages_pct",
+        "work_packages_with_findings_pct",
+        "orphan_evidence_count",
+        "orphan_finding_count",
+        "broken_reference_count",
+    ]
+
+    deltas: dict[str, float] = {}
+    for key in metric_keys:
+        b = float(baseline.get(key, 0))
+        l = float(latest.get(key, 0))
+        deltas[key] = round(l - b, 2)
+
+    grade_order = {"weak": 0, "partial": 1, "usable": 2, "complete": 3}
+    bg = grade_order.get(str(baseline.get("traceability_grade", "")), 0)
+    lg = grade_order.get(str(latest.get("traceability_grade", "")), 0)
+
+    if deltas.get("broken_reference_count", 0) > 0 or lg < bg:
+        trajectory = "worsening"
+    elif deltas.get("broken_reference_count", 0) < 0 or lg > bg:
+        trajectory = "improving"
+    else:
+        trajectory = "stable"
+
+    warnings: list[str] = []
+    if trajectory == "worsening":
+        warnings.append("Traceability quality is degrading. Review recent changes.")
+    if bg == 0:
+        warnings.append("Baseline grade was 'weak'. Trend may not be meaningful.")
+
+    return {
+        "trajectory": trajectory,
+        "snapshot_count": len(quality_history),
+        "baseline_grade": baseline.get("traceability_grade"),
+        "latest_grade": latest.get("traceability_grade"),
+        "deltas": deltas,
+        "warnings": warnings,
+    }
+
+
+def write_traceability_quality_trend(
+    traceability_dir: Path, trend: dict[str, object]
+) -> list[Path]:
+    """Write traceability quality trend JSON and Markdown."""
+    import json
+
+    traceability_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+
+    json_path = traceability_dir / "traceability-quality-trend.json"
+    json_path.write_text(json.dumps(trend, indent=2) + "\n", encoding="utf-8")
+    paths.append(json_path)
+
+    lines: list[str] = []
+    lines.append("# Traceability Quality Trend")
+    lines.append("")
+    lines.append(f"**Trajectory:** {trend.get('trajectory', 'unknown')}")
+    lines.append(f"**Snapshots:** {trend.get('snapshot_count', 0)}")
+    if trend.get("baseline_grade"):
+        lines.append(f"**Baseline grade:** {trend['baseline_grade']}")
+    if trend.get("latest_grade"):
+        lines.append(f"**Latest grade:** {trend['latest_grade']}")
+    lines.append("")
+    lines.append("> Classification is heuristic, not a scientific measure.")
+    lines.append("")
+
+    deltas = trend.get("deltas", {})
+    if deltas:
+        lines.append("| Metric | Delta |")
+        lines.append("|---|---:|")
+        for key, val in deltas.items():
+            label = key.replace("_", " ").replace(" pct", " %").title()
+            lines.append(f"| {label} | {val} |")
+        lines.append("")
+
+    trend_warnings = trend.get("warnings", [])
+    if trend_warnings:
+        lines.append("## Warnings")
+        lines.append("")
+        for w in trend_warnings:
+            lines.append(f"- {w}")
+        lines.append("")
+
+    md_path = traceability_dir / "traceability-quality-trend.md"
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+    paths.append(md_path)
+
+    return paths

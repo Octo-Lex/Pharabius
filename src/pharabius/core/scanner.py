@@ -12,6 +12,7 @@ from pharabius.core.constants import (
     COMPLETENESS_PARTIAL,
     COMPLETENESS_SKIPPED,
     COVERAGE_LOW_THRESHOLD_PCT,
+    COVERAGE_PATTERNS,
     DEFAULT_MAX_FILE_SIZE_KB,
     EVIDENCE_BROAD_EXCEPTION,
     EVIDENCE_COVERAGE_GAP,
@@ -80,6 +81,7 @@ TEXT_EXTENSIONS = SOURCE_EXTENSIONS | {
 
 MANIFEST_FILES = {
     "package.json": "node_manifest",
+    "Pipfile": "pipfile_manifest",
     "package-lock.json": "node_lockfile",
     "yarn.lock": "node_lockfile",
     "pnpm-lock.yaml": "node_lockfile",
@@ -209,8 +211,15 @@ _RUST_GROUPED_USE = re.compile(r"^\s*use\s+([\w:]+)::\{([^}]+)\}\s*;", re.MULTIL
 _RUST_LINE_COMMENT = re.compile(r"^\s*//")
 
 
+from pharabius.core.path_utils import (
+    normalize_repo_path,
+    path_matches_exact_or_suffix,
+    relative_repo_path,
+)
+
+# Keep _relative as thin wrapper for backward compatibility with call sites
 def _relative(path: Path, root: Path) -> str:
-    return path.relative_to(root).as_posix()
+    return relative_repo_path(path, root)
 
 
 def _is_excluded(
@@ -657,6 +666,14 @@ def _detect_long_python_functions(
             )
 
 
+def _parse_dep_name(dep_str: str) -> str:
+    """Extract package name from a PEP 508 dependency string."""
+    name = dep_str
+    for ch in (">", "<", "~", "=", "!", " ", "\t", ";", "[", "("):
+        name = name.split(ch)[0]
+    return name.strip()
+
+
 def _detect_broad_exceptions(
     text: str, relative: str, builder: EvidenceBuilder,
 ) -> None:
@@ -791,6 +808,461 @@ def _check_python_unpinned_deps(
         )
 
 
+def _parse_pyproject_deps(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Parse pyproject.toml for dependency signals."""
+    from pharabius.core.dependency_utils import classify_python_specifier
+
+    try:
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib
+        text = _read_text(file_path)
+        data = tomllib.loads(text)
+    except Exception:
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary=f"Could not parse {relative}",
+            location_file=relative,
+            subject=relative,
+            raw_observation="dependency_manifest_parse_failure",
+            confidence="Low",
+            metadata={
+                "signal": "dependency_manifest_parse_failure",
+                "ecosystem": "Python",
+                "manifest": "pyproject.toml",
+                "reason": "toml_parse_error",
+                "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
+                "completeness": COMPLETENESS_PARTIAL,
+                "parser": PARSER_MANIFEST,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+        return
+
+    unpinned: list[dict[str, str]] = []
+    sections_found: list[str] = []
+
+    # PEP 621 [project].dependencies
+    project_deps = data.get("project", {}).get("dependencies", [])
+    if project_deps:
+        sections_found.append("project.dependencies")
+        for dep_str in project_deps:
+            name = _parse_dep_name(dep_str)
+            if classify_python_specifier(dep_str, "pep508") != "pinned":
+                unpinned.append({"name": name, "specifier": dep_str, "section": "project.dependencies"})
+
+    # PEP 621 [project].optional-dependencies
+    opt_deps = data.get("project", {}).get("optional-dependencies", {})
+    if opt_deps:
+        sections_found.append("project.optional-dependencies")
+        for group, deps in opt_deps.items():
+            for dep_str in deps:
+                name = _parse_dep_name(dep_str)
+                if classify_python_specifier(dep_str, "pep508") != "pinned":
+                    unpinned.append({"name": name, "specifier": dep_str, "section": f"project.optional-dependencies.{group}"})
+
+    # Poetry [tool.poetry.dependencies]
+    poetry_deps = data.get("tool", {}).get("poetry", {}).get("dependencies", {})
+    if poetry_deps:
+        sections_found.append("tool.poetry.dependencies")
+        for name, version in poetry_deps.items():
+            if name.lower() == "python":
+                continue
+            v = version if isinstance(version, str) else version.get("version", "")
+            if classify_python_specifier(str(v), "poetry") != "pinned":
+                unpinned.append({"name": name, "specifier": str(version), "section": "tool.poetry.dependencies"})
+
+    # Poetry [tool.poetry.group.*.dependencies]
+    poetry_groups = data.get("tool", {}).get("poetry", {}).get("group", {})
+    for group_name, group_data in poetry_groups.items():
+        group_deps = group_data.get("dependencies", {})
+        if group_deps:
+            sections_found.append(f"tool.poetry.group.{group_name}.dependencies")
+            for name, version in group_deps.items():
+                v = version if isinstance(version, str) else version.get("version", "")
+                if classify_python_specifier(str(v), "poetry") != "pinned":
+                    unpinned.append({"name": name, "specifier": str(version), "section": f"tool.poetry.group.{group_name}.dependencies"})
+
+    # Poetry [tool.poetry.dev-dependencies] (legacy)
+    dev_deps = data.get("tool", {}).get("poetry", {}).get("dev-dependencies", {})
+    if dev_deps:
+        sections_found.append("tool.poetry.dev-dependencies")
+        for name, version in dev_deps.items():
+            v = version if isinstance(version, str) else version.get("version", "")
+            if classify_python_specifier(str(v), "poetry") != "pinned":
+                unpinned.append({"name": name, "specifier": str(version), "section": "tool.poetry.dev-dependencies"})
+
+    if unpinned:
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary=f"Unpinned Python dependencies in {relative}",
+            location_file=relative,
+            subject=relative,
+            raw_observation=f"unpinned:{len(unpinned)}",
+            confidence="High",
+            metadata={
+                "signal": "unpinned_dependency",
+                "ecosystem": "Python",
+                "count": len(unpinned),
+                "examples": unpinned[:10],
+                "sections": sections_found,
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_MANIFEST,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+
+
+def _parse_pipfile_deps(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Parse Pipfile for unpinned dependency signals."""
+    from pharabius.core.dependency_utils import classify_python_specifier
+
+    try:
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib
+        text = _read_text(file_path)
+        data = tomllib.loads(text)
+    except Exception:
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary=f"Could not parse {relative}",
+            location_file=relative,
+            subject=relative,
+            raw_observation="dependency_manifest_parse_failure",
+            confidence="Low",
+            metadata={
+                "signal": "dependency_manifest_parse_failure",
+                "ecosystem": "Python",
+                "manifest": "Pipfile",
+                "reason": "toml_parse_error",
+                "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
+                "completeness": COMPLETENESS_PARTIAL,
+                "parser": PARSER_MANIFEST,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+        return
+
+    unpinned: list[dict[str, str]] = []
+    for section in ("packages", "dev-packages"):
+        deps = data.get(section, {})
+        for name, version in deps.items():
+            v = version if isinstance(version, str) else version.get("version", "*")
+            if classify_python_specifier(str(v), "pipfile") != "pinned":
+                unpinned.append({"name": name, "specifier": str(version), "section": section})
+
+    if unpinned:
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary=f"Unpinned Python dependencies in {relative}",
+            location_file=relative,
+            subject=relative,
+            raw_observation=f"unpinned:{len(unpinned)}",
+            confidence="High",
+            metadata={
+                "signal": "unpinned_dependency",
+                "ecosystem": "Python",
+                "count": len(unpinned),
+                "examples": unpinned[:10],
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_MANIFEST,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+
+
+def _check_poetry_lockfile(root: Path, builder: EvidenceBuilder) -> None:
+    """Check Poetry manifest/lockfile consistency at repository level.
+
+    Non-duplicative behavior: Poetry lockfile consistency depends on
+    readable pyproject.toml. If parsing fails, _parse_pyproject_deps
+    emits dependency_manifest_parse_failure; this function silently
+    skips additional lockfile analysis to avoid duplicate limitation evidence.
+    """
+    pyproject = root / "pyproject.toml"
+    poetry_lock = root / "poetry.lock"
+
+    # poetry.lock without pyproject.toml (check BEFORE early return)
+    if poetry_lock.exists() and not pyproject.exists():
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary="Poetry lockfile without pyproject.toml",
+            location_file=".",
+            subject="Python",
+            raw_observation="poetry_lockfile_without_manifest",
+            confidence="High",
+            metadata={
+                "signal": "poetry_lockfile_without_manifest",
+                "ecosystem": "Python",
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_FILESYSTEM,
+                "read_mode": READ_MODE_SKIPPED,
+            },
+        )
+        return
+
+    if not pyproject.exists():
+        return
+
+    try:
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib
+        text = pyproject.read_text(encoding="utf-8")
+        data = tomllib.loads(text)
+        has_poetry = bool(data.get("tool", {}).get("poetry"))
+    except Exception:
+        return  # Unparseable — _parse_pyproject_deps already emitted limitation
+
+    if has_poetry and not poetry_lock.exists():
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary="Poetry manifest without lockfile",
+            location_file=".",
+            subject="Python",
+            raw_observation="poetry_manifest_without_lockfile",
+            confidence="High",
+            metadata={
+                "signal": "poetry_manifest_without_lockfile",
+                "ecosystem": "Python",
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_FILESYSTEM,
+                "read_mode": READ_MODE_SKIPPED,
+            },
+        )
+
+
+def _check_pipfile_lockfile(root: Path, builder: EvidenceBuilder) -> None:
+    """Check Pipfile/Pipfile.lock consistency at repository level."""
+    pipfile = root / "Pipfile"
+    pipfile_lock = root / "Pipfile.lock"
+
+    # Pipfile.lock without Pipfile (check BEFORE early return)
+    if pipfile_lock.exists() and not pipfile.exists():
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary="Pipfile.lock without Pipfile",
+            location_file=".",
+            subject="Python",
+            raw_observation="pipfile_lock_without_manifest",
+            confidence="High",
+            metadata={
+                "signal": "pipfile_lock_without_manifest",
+                "ecosystem": "Python",
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_FILESYSTEM,
+                "read_mode": READ_MODE_SKIPPED,
+            },
+        )
+        return
+
+    if pipfile.exists() and not pipfile_lock.exists():
+        builder.add(
+            type_=EVIDENCE_DEPENDENCY_SIGNAL,
+            category="dependencies",
+            summary="Pipfile without Pipfile.lock",
+            location_file=".",
+            subject="Python",
+            raw_observation="pipfile_without_lockfile",
+            confidence="High",
+            metadata={
+                "signal": "pipfile_without_lockfile",
+                "ecosystem": "Python",
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_FILESYSTEM,
+                "read_mode": READ_MODE_SKIPPED,
+            },
+        )
+
+
+def _detect_runtime_version_pins(root: Path, builder: EvidenceBuilder) -> None:
+    """Detect runtime version pinning at repository level.
+
+    v3.3.0: Python + Node.js only. Ruby/Java deferred.
+    """
+    from pharabius.core.constants import EVIDENCE_RUNTIME_VERSION_SIGNAL
+
+    _RUNTIME_FILES: list[tuple[str, str, str]] = [
+        (".python-version", "Python", "python_version_file"),
+        (".nvmrc", "Node.js", "nvmrc"),
+        (".node-version", "Node.js", "node_version_file"),
+        (".tool-versions", "multi", "tool_versions"),
+    ]
+
+    detected_runtimes: dict[str, str] = {}
+
+    for filename, runtime, parser in _RUNTIME_FILES:
+        fpath = root / filename
+        if not fpath.exists():
+            continue
+        text = _read_text(fpath)
+        if not text:
+            continue
+
+        if parser == "tool_versions":
+            _parse_tool_versions(text, detected_runtimes, builder, EVIDENCE_RUNTIME_VERSION_SIGNAL)
+        else:
+            version = text.strip().split("\n")[0].strip()
+            if version:
+                detected_runtimes[runtime] = version
+                builder.add(
+                    type_=EVIDENCE_RUNTIME_VERSION_SIGNAL,
+                    category="dependencies",
+                    summary=f"{runtime} runtime version pinned: {version}",
+                    location_file=filename,
+                    subject=runtime,
+                    raw_observation=f"{runtime}:{version}",
+                    confidence="High",
+                    metadata={
+                        "signal": "runtime_version_pinned",
+                        "runtime": runtime,
+                        "version": version,
+                        "source_file": filename,
+                        "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                        "completeness": COMPLETENESS_COMPLETE,
+                        "parser": PARSER_FILESYSTEM,
+                        "read_mode": READ_MODE_TEXT,
+                    },
+                )
+
+    # Check package.json engines.node
+    pkg_json = root / "package.json"
+    if pkg_json.exists():
+        data = _read_json(pkg_json)
+        engines = data.get("engines", {})
+        node_engine = engines.get("node")
+        if node_engine and "Node.js" not in detected_runtimes:
+            detected_runtimes["Node.js"] = node_engine
+            builder.add(
+                type_=EVIDENCE_RUNTIME_VERSION_SIGNAL,
+                category="dependencies",
+                summary=f"Node.js runtime version pinned in package.json: {node_engine}",
+                location_file="package.json",
+                subject="Node.js",
+                raw_observation=f"Node.js:{node_engine}:engines",
+                confidence="High",
+                metadata={
+                    "signal": "runtime_version_pinned",
+                    "runtime": "Node.js",
+                    "version": node_engine,
+                    "source_file": "package.json",
+                    "source_field": "engines.node",
+                    "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                    "completeness": COMPLETENESS_COMPLETE,
+                    "parser": PARSER_MANIFEST,
+                    "read_mode": READ_MODE_JSON,
+                },
+            )
+
+    _check_missing_runtime_pins(root, detected_runtimes, builder, EVIDENCE_RUNTIME_VERSION_SIGNAL)
+
+
+def _parse_tool_versions(
+    text: str, detected: dict[str, str], builder: EvidenceBuilder, ev_type: str,
+) -> None:
+    """Parse .tool-versions for runtime pins.
+
+    v3.3.0: Python + Node.js only. Ruby/Java entries are ignored.
+    """
+    runtime_map = {"python": "Python", "nodejs": "Node.js"}
+    for line in text.strip().split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            continue
+        tool, version = parts
+        runtime = runtime_map.get(tool.lower())
+        if runtime:
+            detected[runtime] = version
+            builder.add(
+                type_=ev_type,
+                category="dependencies",
+                summary=f"{runtime} runtime version pinned via .tool-versions: {version}",
+                location_file=".tool-versions",
+                subject=runtime,
+                raw_observation=f"{runtime}:{version}:tool-versions",
+                confidence="High",
+                metadata={
+                    "signal": "runtime_version_pinned",
+                    "runtime": runtime,
+                    "version": version,
+                    "source_file": ".tool-versions",
+                    "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                    "completeness": COMPLETENESS_COMPLETE,
+                    "parser": PARSER_FILESYSTEM,
+                    "read_mode": READ_MODE_TEXT,
+                },
+            )
+
+
+def _check_missing_runtime_pins(
+    root: Path, detected: dict[str, str], builder: EvidenceBuilder, ev_type: str,
+) -> None:
+    """Emit evidence when manifests exist but runtime pins are missing."""
+    python_manifests = [root / "pyproject.toml", root / "requirements.txt", root / "Pipfile"]
+    has_python_manifest = any(p.exists() for p in python_manifests)
+    if has_python_manifest and "Python" not in detected:
+        builder.add(
+            type_=ev_type,
+            category="dependencies",
+            summary="Python manifest detected without runtime version pin",
+            location_file=".",
+            subject="Python",
+            raw_observation="runtime_version_missing:Python",
+            confidence="Medium",
+            metadata={
+                "signal": "runtime_version_missing",
+                "runtime": "Python",
+                "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
+                "completeness": COMPLETENESS_PARTIAL,
+                "parser": PARSER_FILESYSTEM,
+                "read_mode": READ_MODE_SKIPPED,
+            },
+        )
+
+    if (root / "package.json").exists() and "Node.js" not in detected:
+        builder.add(
+            type_=ev_type,
+            category="dependencies",
+            summary="Node.js manifest detected without runtime version pin",
+            location_file=".",
+            subject="Node.js",
+            raw_observation="runtime_version_missing:Node.js",
+            confidence="Medium",
+            metadata={
+                "signal": "runtime_version_missing",
+                "runtime": "Node.js",
+                "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
+                "completeness": COMPLETENESS_PARTIAL,
+                "parser": PARSER_FILESYSTEM,
+                "read_mode": READ_MODE_SKIPPED,
+            },
+        )
+
+
 def _check_node_lockfile_conflicts(root: Path, builder: EvidenceBuilder) -> None:
     """Detect when multiple Node.js lockfiles exist for the same ecosystem."""
     NODE_LOCKFILES = [
@@ -818,12 +1290,7 @@ def _check_node_lockfile_conflicts(root: Path, builder: EvidenceBuilder) -> None
         )
 
 
-_COVERAGE_PATTERNS: dict[str, str] = {
-    "coverage/coverage-summary.json": "istanbul_json",
-    "coverage.json": "python_coverage_json",
-    "coverage/lcov.info": "lcov",
-    "lcov.info": "lcov",
-}
+_COVERAGE_PATTERNS = COVERAGE_PATTERNS  # Re-export from constants for backward compat
 
 
 def _parse_istanbul_coverage(
@@ -992,6 +1459,154 @@ def _parse_lcov_coverage(
         )
 
 
+def _parse_cobertura_coverage(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Parse Cobertura XML coverage report.
+
+    Extracts line-rate and branch-rate from <coverage> root element.
+    Rates are decimals (0.82 = 82%).
+    """
+    import xml.etree.ElementTree as ET
+
+    text = _read_text(file_path)
+    if not text:
+        return
+
+    root_el = ET.fromstring(text)
+
+    line_rate = root_el.get("line-rate")
+    branch_rate = root_el.get("branch-rate")
+
+    if line_rate is not None:
+        try:
+            pct = round(float(line_rate) * 100, 1)
+            builder.add(
+                type_=EVIDENCE_COVERAGE_METRIC,
+                category="test_health",
+                summary=f"line coverage: {pct}% (Cobertura)",
+                location_file=relative,
+                subject="lines",
+                raw_observation=f"lines:{pct}%:line-rate={line_rate}",
+                confidence="High",
+                metadata={
+                    "metric": "lines",
+                    "percent": float(pct),
+                    "format": "cobertura_xml",
+                    "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                    "completeness": COMPLETENESS_COMPLETE,
+                    "parser": PARSER_COVERAGE,
+                    "read_mode": READ_MODE_TEXT,
+                },
+            )
+        except (ValueError, TypeError):
+            pass
+
+    if branch_rate is not None:
+        try:
+            pct = round(float(branch_rate) * 100, 1)
+            builder.add(
+                type_=EVIDENCE_COVERAGE_METRIC,
+                category="test_health",
+                summary=f"branch coverage: {pct}% (Cobertura)",
+                location_file=relative,
+                subject="branches",
+                raw_observation=f"branches:{pct}%:branch-rate={branch_rate}",
+                confidence="High",
+                metadata={
+                    "metric": "branches",
+                    "percent": float(pct),
+                    "format": "cobertura_xml",
+                    "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                    "completeness": COMPLETENESS_COMPLETE,
+                    "parser": PARSER_COVERAGE,
+                    "read_mode": READ_MODE_TEXT,
+                },
+            )
+        except (ValueError, TypeError):
+            pass
+
+
+def _parse_jacoco_coverage(
+    file_path: Path, relative: str, builder: EvidenceBuilder,
+) -> None:
+    """Parse JaCoCo XML coverage report.
+
+    JaCoCo uses <counter> elements with missed/covered attributes.
+    Formula: coverage_pct = covered / (covered + missed) * 100
+
+    Policy: prefer report-level counters. Only fall back to
+    package-level counters if report-level counters are absent.
+    Never sum report-level and child counters together.
+    """
+    import xml.etree.ElementTree as ET
+
+    text = _read_text(file_path)
+    if not text:
+        return
+
+    root_el = ET.fromstring(text)
+
+    report_counters = list(root_el.findall("counter"))
+
+    if report_counters:
+        counters_to_use = report_counters
+    else:
+        counters_to_use = []
+        for package in root_el.findall("package"):
+            counters_to_use.extend(package.findall("counter"))
+
+    TYPE_TO_METRIC = {
+        "LINE": "lines",
+        "BRANCH": "branches",
+        "METHOD": "methods",
+        "INSTRUCTION": "instructions",
+        "COMPLEXITY": "complexity",
+    }
+
+    aggregated: dict[str, dict[str, int]] = {}
+    for counter in counters_to_use:
+        ctype = counter.get("type")
+        if ctype is None:
+            continue
+        missed = int(counter.get("missed", 0))
+        covered = int(counter.get("covered", 0))
+        if ctype not in aggregated:
+            aggregated[ctype] = {"missed": 0, "covered": 0}
+        aggregated[ctype]["missed"] += missed
+        aggregated[ctype]["covered"] += covered
+
+    for ctype, data in aggregated.items():
+        metric = TYPE_TO_METRIC.get(ctype)
+        if metric is None:
+            continue
+        total = data["covered"] + data["missed"]
+        if total == 0:
+            continue
+        pct = round(data["covered"] / total * 100, 1)
+        builder.add(
+            type_=EVIDENCE_COVERAGE_METRIC,
+            category="test_health",
+            summary=f"{metric} coverage: {pct}% (JaCoCo)",
+            location_file=relative,
+            subject=metric,
+            raw_observation=f"{metric}:{pct}%:covered={data['covered']}/total={total}",
+            confidence="High",
+            metadata={
+                "metric": metric,
+                "percent": float(pct),
+                "format": "jacoco_xml",
+                "covered": data["covered"],
+                "missed": data["missed"],
+                "source": "report_level" if report_counters else "package_level",
+                "observation_strength": OBSERVATION_STRENGTH_DIRECT,
+                "completeness": COMPLETENESS_COMPLETE,
+                "parser": PARSER_COVERAGE,
+                "read_mode": READ_MODE_TEXT,
+            },
+        )
+
+
 def _scan_coverage_artifact(
     file_path: Path, relative: str, format_type: str, builder: EvidenceBuilder,
 ) -> None:
@@ -1009,7 +1624,7 @@ def _scan_coverage_artifact(
             "observation_strength": OBSERVATION_STRENGTH_DIRECT,
             "completeness": COMPLETENESS_COMPLETE,
             "parser": PARSER_COVERAGE,
-            "read_mode": READ_MODE_JSON if format_type != "lcov" else READ_MODE_TEXT,
+            "read_mode": READ_MODE_JSON if format_type in ("istanbul_json", "python_coverage_json") else READ_MODE_TEXT,
         },
     )
     try:
@@ -1019,6 +1634,10 @@ def _scan_coverage_artifact(
             _parse_python_coverage(file_path, relative, builder)
         elif format_type == "lcov":
             _parse_lcov_coverage(file_path, relative, builder)
+        elif format_type == "cobertura_xml":
+            _parse_cobertura_coverage(file_path, relative, builder)
+        elif format_type == "jacoco_xml":
+            _parse_jacoco_coverage(file_path, relative, builder)
     except Exception:
         # Malformed report — emit limitation evidence
         builder.add(
@@ -1035,7 +1654,7 @@ def _scan_coverage_artifact(
                 "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
                 "completeness": COMPLETENESS_PARTIAL,
                 "parser": PARSER_COVERAGE,
-                "read_mode": READ_MODE_JSON if format_type != "lcov" else READ_MODE_TEXT,
+                "read_mode": READ_MODE_JSON if format_type in ("istanbul_json", "python_coverage_json") else READ_MODE_TEXT,
             },
         )
 
@@ -1091,15 +1710,17 @@ def scan_repository(
 
     # Repository-level dependency signals
     _check_node_lockfile_conflicts(root, builder)
+    _check_poetry_lockfile(root, builder)
+    _check_pipfile_lockfile(root, builder)
+
+    # Runtime version pinning (v3.3.0)
+    _detect_runtime_version_pins(root, builder)
 
     # Repository-level coverage artifact scanning (v3.2.0)
     # Coverage dirs are normally excluded, so we scan them separately
     for pattern, format_type in _COVERAGE_PATTERNS.items():
         parts = pattern.split("/")
-        if len(parts) == 2:
-            candidate = root / parts[0] / parts[1]
-        else:
-            candidate = root / pattern
+        candidate = root / Path(*parts)
         if candidate.exists() and candidate.is_file():
             rel = _relative(candidate, root)
             _scan_coverage_artifact(candidate, rel, format_type, builder)
@@ -1169,6 +1790,10 @@ def scan_repository(
                 _check_node_unpinned_deps(file_path, relative, builder)
             if file_path.name == "requirements.txt":
                 _check_python_unpinned_deps(file_path, relative, builder)
+            if file_path.name == "pyproject.toml":
+                _parse_pyproject_deps(file_path, relative, builder)
+            if file_path.name == "Pipfile":
+                _parse_pipfile_deps(file_path, relative, builder)
 
         # Suffix-based manifest detection (.NET project files)
         if file_path.suffix in MANIFEST_SUFFIXES:
@@ -1239,10 +1864,10 @@ def scan_repository(
             )
 
         # Coverage report detection (v3.2.0) — handles files NOT in excluded dirs
-        normalized_rel = relative.replace("\\", "/")
         for pattern, format_type in _COVERAGE_PATTERNS.items():
-            if normalized_rel == pattern or normalized_rel.endswith("/" + pattern.split("/")[-1]):
+            if path_matches_exact_or_suffix(relative, pattern):
                 _scan_coverage_artifact(file_path, relative, format_type, builder)
+                break
                 break
                 break
 

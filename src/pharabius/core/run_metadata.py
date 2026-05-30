@@ -22,9 +22,13 @@ from pharabius.core.profiler import write_repository_profile
 from pharabius.core.reporter import write_reports
 from pharabius.core.scanner import write_evidence_store
 from pharabius.core.traceability import (
+    append_quality_snapshot,
     compute_traceability_quality,
+    compute_traceability_quality_trend,
+    load_quality_history,
     write_traceability_matrices,
     write_traceability_quality,
+    write_traceability_quality_trend,
 )
 from pharabius.schemas.run_metadata import RunMetadata, RunSummary
 
@@ -211,6 +215,13 @@ def execute_run(repository_root: Path) -> RunMetadata:
         work_packages=wp_dicts,
     )
     write_traceability_quality(traceability_dir, quality)
+
+    # Append snapshot to history and compute trend (v3.3.0)
+    run_id = metadata.get("run_id", "unknown") if (metadata := _load_json(workspace / "run-metadata.json")) else "unknown"
+    append_quality_snapshot(traceability_dir, run_id, quality)
+    history = load_quality_history(traceability_dir)
+    trend = compute_traceability_quality_trend(history)
+    write_traceability_quality_trend(traceability_dir, trend)
 
     files_written = _collect_files(workspace) if workspace.exists() else []
     limitations = _load_profile_limitations(root)
