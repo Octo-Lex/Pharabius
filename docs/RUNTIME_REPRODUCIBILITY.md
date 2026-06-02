@@ -1,5 +1,36 @@
 # Runtime Reproducibility Intelligence
 
+## Signal lifecycle
+
+1. **Parse**: Ecosystem-specific parsers extract raw version strings → `RuntimeEvidence`
+2. **Normalize**: Constraint model classifies as EXACT/RANGE/UNPINNED/MISSING/UNKNOWN
+3. **Detect conflicts**: Conflict module compares normalized evidence → `RuntimeConflictGroup`
+4. **Classify**: Policy module decides FINDING/ADVISORY/INFORMATIONAL
+5. **Emit**: Detector converts to `EvidenceItem` and emits to evidence store
+6. **Report**: Reporter surfaces runtime summary and conflict details
+
+## Package structure
+
+```text
+src/pharabius/core/runtime/
+  __init__.py          # Re-exports detect_runtime_version_pins
+  models.py            # RuntimeEvidence, RuntimeConstraint, RuntimeConflictGroup
+  constraints.py       # normalize_runtime_version, parse_constraint
+  ecosystems.py        # Python, Node, Ruby, Java parsers
+  tool_versions.py      # .tool-versions parser (shared)
+  docker.py             # Dockerfile FROM line extraction
+  github_actions.py     # GitHub Actions workflow parsing
+  conflict.py           # Conflict detection from RuntimeEvidence
+  policy.py             # classify_conflict, classify_missing_pin
+  detector.py           # Orchestrator → EvidenceBuilder
+```
+
+Boundary enforcement:
+- Parser modules produce `list[RuntimeEvidence]` — do NOT import EvidenceBuilder
+- Conflict module consumes `RuntimeEvidence` — does NOT know file formats
+- Policy module decides classification — does NOT parse files
+- Detector is the only module that imports EvidenceBuilder
+
 ## What runtime reproducibility means
 
 Runtime reproducibility means that the same codebase produces consistent results across different environments (development, CI, staging, production). Pharabius detects **runtime version declarations** from multiple sources and flags conflicts or missing declarations.

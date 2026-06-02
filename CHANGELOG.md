@@ -2,6 +2,27 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.9.0] - Unreleased
+
+### Added
+- **Runtime package split**: `src/pharabius/core/runtime/` package with 8 modules replacing the monolithic `runtime_parsers.py`.
+- **RuntimeEvidence IR**: canonical internal representation for runtime evidence with deterministic IDs.
+- **RuntimeConstraint model**: EXACT, RANGE, UNPINNED, MISSING, UNKNOWN constraint kinds.
+- **RuntimeConflictGroup model**: explicit conflict kinds (EXACT_EXACT_MISMATCH, RANGE_EXCLUDES_EXACT, DOCKERFILE_DIFFERS, CI_DIFFERS).
+- **Policy module**: centralized classify_conflict/classify_missing_pin/classify_evidence decisions.
+- **Runtime summary in enriched snapshot**: ecosystems detected/pinned/missing, conflict/advisory counts.
+- **Runtime section in foundation audit report**: pinned runtimes, missing pins, conflict alerts.
+- **22 new tests** in `test_v390_runtime_normalization.py`.
+
+### Changed
+- `runtime_parsers.py` reduced to backward-compatibility re-export shim (976 → 5 lines).
+- All runtime parsing logic moved to `runtime/` package modules.
+- Reporter gains runtime reproducibility section (6c).
+- Run history enriched snapshot gains `runtime_evidence_summary`.
+
+### Removed
+- No features removed. All v3.8.0 behavior preserved.
+
 ## [3.8.0] - Unreleased
 
 ### Added

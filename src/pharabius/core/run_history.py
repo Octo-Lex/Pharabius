@@ -239,6 +239,61 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
                 for f in findings
             ))
         },
+        # Runtime evidence summary (v3.9.0)
+        "runtime_evidence_summary": _build_runtime_summary(evidence_items, findings),
+    }
+
+
+def _build_runtime_summary(evidence_items: list[dict], findings: list[dict]) -> dict[str, Any]:
+    """Build runtime evidence summary from enriched snapshot data."""
+    from pharabius.core.constants import (
+        EVIDENCE_RUNTIME_VERSION_SIGNAL,
+        RUNTIME_SIGNAL_PINNED,
+        RUNTIME_SIGNAL_CONFLICT,
+        RUNTIME_SIGNAL_MISSING,
+    )
+
+    runtime_ev = [e for e in evidence_items if e.get("type") == EVIDENCE_RUNTIME_VERSION_SIGNAL]
+    if not runtime_ev:
+        return {
+            "ecosystems_detected": [],
+            "ecosystems_with_pins": [],
+            "ecosystems_missing_pins": [],
+            "runtime_conflicts": 0,
+            "runtime_advisories": 0,
+            "runtime_findings": 0,
+        }
+
+    ecosystems = set()
+    pinned = set()
+    missing = set()
+    for ev in runtime_ev:
+        rt = ev.get("metadata", {}).get("runtime", "")
+        signal = ev.get("metadata", {}).get("signal", "")
+        ecosystems.add(rt)
+        if signal == RUNTIME_SIGNAL_PINNED:
+            pinned.add(rt)
+        if signal == RUNTIME_SIGNAL_MISSING:
+            missing.add(rt)
+
+    runtime_conflicts = sum(
+        1 for f in findings
+        if "runtime version declarations conflict" in f.get("title", "")
+    )
+    runtime_advisories = sum(
+        1 for f in findings
+        if f.get("issue_type") == "advisory"
+        and "runtime" in f.get("title", "").lower()
+    )
+    runtime_findings = runtime_conflicts  # Conflicts are the only runtime findings
+
+    return {
+        "ecosystems_detected": sorted(ecosystems),
+        "ecosystems_with_pins": sorted(pinned),
+        "ecosystems_missing_pins": sorted(missing),
+        "runtime_conflicts": runtime_conflicts,
+        "runtime_advisories": runtime_advisories,
+        "runtime_findings": runtime_findings,
     }
 
 

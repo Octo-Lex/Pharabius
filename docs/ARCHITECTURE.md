@@ -335,7 +335,7 @@ scanner.py
 
 ---
 
-## Implementation Status (v3.8.0)
+## Implementation Status (v3.9.0)
 
 | Capability | Status |
 |---|---|
@@ -393,6 +393,12 @@ scanner.py
 | GitHub Actions runtime evidence | ✅ Implemented (v3.8.0) |
 | Constraint kind model (exact/range/partial) | ✅ Implemented (v3.8.0) |
 | Runtime reproducibility documentation | ✅ Implemented (v3.8.0) |
+| Runtime package split (8 modules) | ✅ Implemented (v3.9.0) |
+| RuntimeEvidence IR model | ✅ Implemented (v3.9.0) |
+| RuntimeConstraint model (5 kinds) | ✅ Implemented (v3.9.0) |
+| RuntimeConflictGroup model | ✅ Implemented (v3.9.0) |
+| Centralized signal policy | ✅ Implemented (v3.9.0) |
+| Runtime summary in history snapshot | ✅ Implemented (v3.9.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |

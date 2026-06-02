@@ -730,6 +730,44 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
                 f"| {a.category} | {a.title[:80]} | {a.severity} | {a.risk_score} |"
             )
 
+    # Runtime reproducibility section (v3.9.0)
+    runtime_evidence = [e for e in ctx.evidence_store.evidence if e.type == "runtime_version_signal"]
+    if runtime_evidence:
+        runtime_by_signal: dict[str, list] = {}
+        for re_ev in runtime_evidence:
+            sig = re_ev.metadata.get("signal", "unknown")
+            runtime_by_signal.setdefault(sig, []).append(re_ev)
+
+        lines.extend(
+            [
+                "",
+                "## 6c. Runtime Reproducibility",
+                "",
+            ]
+        )
+
+        if runtime_by_signal.get("runtime_version_conflict"):
+            lines.append("**Conflicts detected.** See debt register for details.")
+            lines.append("")
+
+        pinned = runtime_by_signal.get("runtime_version_pinned", [])
+        if pinned:
+            lines.append("| Runtime | Source | Version | Constraint |")
+            lines.append("|---|---|---|---|")
+            for p in pinned:
+                rt = p.metadata.get("runtime", "?")
+                src = p.metadata.get("source_file", "?")
+                ver = p.metadata.get("version", "?")
+                ck = p.metadata.get("constraint_kind", "?")
+                lines.append(f"| {rt} | {src} | {ver} | {ck} |")
+            lines.append("")
+
+        missing = runtime_by_signal.get("runtime_version_missing", [])
+        if missing:
+            runtimes = [m.metadata.get("runtime", "?") for m in missing]
+            lines.append(f"**Missing pins:** {', '.join(runtimes)}")
+            lines.append("")
+
     lines.extend(
         [
             "",
