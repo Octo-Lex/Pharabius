@@ -20,6 +20,10 @@ _TOOL_VERSIONS_RUNTIME_MAP: dict[str, tuple[str, RuntimeEcosystem]] = {
     "nodejs": ("Node.js", RuntimeEcosystem.NODE),
     "ruby": ("Ruby", RuntimeEcosystem.RUBY),
     "java": ("Java", RuntimeEcosystem.JAVA),
+    "golang": ("Go", RuntimeEcosystem.GO),
+    "rust": ("Rust", RuntimeEcosystem.RUST),
+    "dotnet": (".NET", RuntimeEcosystem.DOTNET),
+    "php": ("PHP", RuntimeEcosystem.PHP),
 }
 
 

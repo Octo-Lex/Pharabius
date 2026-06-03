@@ -17,11 +17,15 @@ src/pharabius/core/runtime/
   models.py            # RuntimeEvidence, RuntimeConstraint, RuntimeConflictGroup
   constraints.py       # normalize_runtime_version, parse_constraint
   ecosystems.py        # Python, Node, Ruby, Java parsers
+  go.py                # Go parser (go.mod go + toolchain directives)
+  rust.py              # Rust parser (rust-toolchain, rust-toolchain.toml, Cargo.toml)
+  dotnet.py            # .NET parser (global.json, .csproj)
+  php.py               # PHP parser (composer.json)
   tool_versions.py      # .tool-versions parser (shared)
   docker.py             # Dockerfile FROM line extraction
   github_actions.py     # GitHub Actions workflow parsing
   conflict.py           # Conflict detection from RuntimeEvidence
-  policy.py             # classify_conflict, classify_missing_pin
+  policy.py             # classify_conflict, classify_missing_pin, is_runtime_pin
   detector.py           # Orchestrator → EvidenceBuilder
 ```
 
@@ -79,6 +83,46 @@ Runtime reproducibility means that the same codebase produces consistent results
 | Tool versions | `.tool-versions` `java` entry | `exact` |
 | Maven compiler | `pom.xml` `maven.compiler.release/source` | `exact` |
 | Gradle build | `build.gradle` `sourceCompatibility/toolchain` | `exact` |
+
+### Go
+
+| Source | File | Constraint kind | Pin? |
+|--------|------|-----------------|------|
+| Compatibility baseline | `go.mod` `go` directive | `range` | No |
+| Toolchain pin | `go.mod` `toolchain` directive | `exact` | **Yes** |
+| Tool versions | `.tool-versions` `golang` entry | `exact` | **Yes** |
+
+Design note: The `go` directive in `go.mod` is a compatibility baseline, not a runtime pin. Only the `toolchain` directive selects a specific Go version for builds.
+
+### Rust
+
+| Source | File | Constraint kind | Pin? |
+|--------|------|-----------------|------|
+| Toolchain file | `rust-toolchain` | `exact` | **Yes** |
+| Toolchain TOML | `rust-toolchain.toml` `channel` | `exact` or `unknown` | Yes if exact |
+| Minimum version | `Cargo.toml` `rust-version` | `range` | No |
+| Tool versions | `.tool-versions` `rust` entry | `exact` | **Yes** |
+
+Design note: Named channels (`stable`, `beta`, `nightly`) are `UNKNOWN` — informational only. They prove detection but not reproducibility. `rust-version` is a minimum, not a pin.
+
+### .NET
+
+| Source | File | Constraint kind | Pin? |
+|--------|------|-----------------|------|
+| SDK pin | `global.json` `sdk.version` | `exact` | **Yes** |
+| Target framework | `.csproj` `TargetFramework` | `range` | No |
+| Multiple targets | `.csproj` `TargetFrameworks` | `range` | No |
+| Tool versions | `.tool-versions` `dotnet` entry | `exact` | **Yes** |
+
+Design note: `TargetFramework` describes compatibility intent. `global.json` controls SDK selection. .csproj scanning is bounded-recursive with `bin/`, `obj/`, and other build directories excluded.
+
+### PHP
+
+| Source | File | Constraint kind | Pin? |
+|--------|------|-----------------|------|
+| Manifest exact | `composer.json` `require.php` (exact) | `exact` | Yes (lower) |
+| Manifest range | `composer.json` `require.php` (range) | `range` | No |
+| Tool versions | `.tool-versions` `php` entry | `exact` | **Yes** |
 
 ### Container evidence
 
@@ -158,6 +202,10 @@ Missing runtime pin advisories are emitted only when a **manifest-based trigger*
 | Node.js | `package.json` |
 | Ruby | `Gemfile`, `.gemspec` |
 | Java | `pom.xml`, `build.gradle`, `build.gradle.kts` |
+| Go | `go.mod` |
+| Rust | `Cargo.toml`, `rust-toolchain`, `rust-toolchain.toml` |
+| .NET | `global.json`, `*.csproj`, `*.sln` |
+| PHP | `composer.json` |
 
 Missing-pin advisories:
 - Are classified as `issue_type="advisory"` (not technical debt)
@@ -176,3 +224,7 @@ Missing-pin advisories:
 5. **Java detection is conservative.** Maven profiles and Gradle script logic are not parsed.
 6. **Ruby is runtime-only.** No Gemfile dependency resolution or Gemspec analysis.
 7. **Malformed YAML produces limitation evidence.** No attempt to recover from malformed CI configs.
+8. **Go `go` directive is not a pin.** Only `toolchain` provides reproducibility evidence.
+9. **Rust named channels are informational.** `stable`/`beta`/`nightly` do not prove reproducibility.
+10. **.NET TargetFramework is not a pin.** Only `global.json` SDK version counts.
+11. **PHP Composer ranges are not pins.** Broad ranges prove compatibility, not reproducibility.

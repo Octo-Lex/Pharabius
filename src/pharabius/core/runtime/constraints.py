@@ -31,8 +31,8 @@ def parse_constraint(runtime: str, raw: str) -> RuntimeConstraint:
             raw=raw_stripped,
         )
 
-    # Range patterns: >=X.Y, ~> X.Y, ^X.Y, X.Y.x, <=X.Y
-    if re.match(r"^[><~^]", raw_stripped) or ".x" in raw_stripped.lower():
+    # Range patterns: >=X.Y, ~> X.Y, ^X.Y, X.Y.x, X.Y.*, <=X.Y
+    if re.match(r"^[><~^]", raw_stripped) or ".x" in raw_stripped.lower() or ".*" in raw_stripped:
         return _parse_range(runtime, raw_stripped)
 
     # Strip common prefixes

@@ -37,6 +37,7 @@ from pharabius.core.runtime.ecosystems import (
     detect_ruby_sources,
 )
 from pharabius.core.runtime.github_actions import detect_ci_sources
+from pharabius.core.runtime.go import detect_go_sources
 from pharabius.core.runtime.models import (
     Confidence,
     RuntimeConflictKind,
@@ -44,6 +45,10 @@ from pharabius.core.runtime.models import (
     RuntimeEvidence,
     RuntimeSourceType,
 )
+from pharabius.core.runtime.policy import is_runtime_pin
+from pharabius.core.runtime.php import detect_php_sources
+from pharabius.core.runtime.rust import detect_rust_sources
+from pharabius.core.runtime.dotnet import detect_dotnet_sources
 from pharabius.core.runtime.tool_versions import detect_tool_versions_sources
 from pharabius.schemas.evidence import EvidenceBuilder
 
@@ -55,6 +60,10 @@ _MISSING_PIN_TRIGGERS: dict[str, list[str]] = {
     "Node.js": ["package.json"],
     "Ruby": ["Gemfile", ".gemspec"],
     "Java": ["pom.xml", "build.gradle", "build.gradle.kts"],
+    "Go": ["go.mod"],
+    "Rust": ["Cargo.toml", "rust-toolchain", "rust-toolchain.toml"],
+    ".NET": ["global.json", "*.csproj", "*.sln"],
+    "PHP": ["composer.json"],
 }
 
 
@@ -73,6 +82,10 @@ def detect_runtime_version_pins(root: Path, builder: EvidenceBuilder) -> None:
     all_evidence.extend(detect_node_sources(root))
     all_evidence.extend(detect_ruby_sources(root))
     all_evidence.extend(detect_java_sources(root))
+    all_evidence.extend(detect_go_sources(root))
+    all_evidence.extend(detect_rust_sources(root))
+    all_evidence.extend(detect_dotnet_sources(root))
+    all_evidence.extend(detect_php_sources(root))
     all_evidence.extend(detect_tool_versions_sources(root))
     all_evidence.extend(detect_dockerfile_sources(root))
     all_evidence.extend(detect_ci_sources(root))
@@ -178,16 +191,20 @@ def _emit_missing_pins(
     builder: EvidenceBuilder,
 ) -> None:
     """Emit advisory evidence for missing runtime pins."""
-    detected_runtimes = {ev.runtime_name for ev in evidence
-                        if ev.constraint.kind != RuntimeConstraintKind.MISSING}
+    # Use is_runtime_pin() to determine which ecosystems have actual pins
+    pinned_runtimes = {ev.runtime_name for ev in evidence if is_runtime_pin(ev)}
+    # Also consider any detected ecosystem (even non-pin evidence) as "detected"
+    detected_runtimes = {ev.runtime_name for ev in evidence}
 
     for runtime_name, trigger_files in _MISSING_PIN_TRIGGERS.items():
-        if runtime_name in detected_runtimes:
-            continue
-        has_trigger = any((root / f).exists() for f in trigger_files)
-        if not has_trigger:
-            continue
-
+        if runtime_name in pinned_runtimes:
+            continue  # Has a real pin — skip
+        if runtime_name not in detected_runtimes:
+            # Check if ecosystem manifest exists even without any evidence
+            has_trigger = any((root / f).exists() for f in trigger_files)
+            if not has_trigger:
+                continue
+        # Ecosystem detected but no pin found → advisory
         builder.add(
             type_=EVIDENCE_RUNTIME_VERSION_SIGNAL,
             category="dependencies",

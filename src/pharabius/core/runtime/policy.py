@@ -13,6 +13,7 @@ from pharabius.core.runtime.models import (
     RuntimeEvidence,
     RuntimeSignalAction,
     RuntimeSignalClassification,
+    RuntimeSourceType,
     Severity,
 )
 
@@ -49,3 +50,47 @@ def classify_evidence(evidence: RuntimeEvidence) -> RuntimeSignalClassification:
     if evidence.constraint.kind == RuntimeConstraintKind.UNPINNED:
         return RuntimeSignalClassification.ADVISORY
     return RuntimeSignalClassification.INFORMATIONAL
+
+
+# ── Pin-quality predicate ────────────────────────────────────────────
+
+# Non-pin source details: compatibility baselines, minimum versions, targets
+_NON_PIN_SOURCE_DETAILS: set[str] = {
+    "go-directive",        # go.mod go directive: compatibility baseline
+    "target-framework",    # .csproj TargetFramework: compatibility target
+    "rust-version",        # Cargo.toml rust-version: minimum, not pin
+}
+
+
+def is_runtime_pin(evidence: RuntimeEvidence) -> bool:
+    """Determine whether evidence counts as a runtime reproducibility pin.
+
+    Compatibility baselines and minimum versions are NOT pins.
+    Only exact versions from pin-grade sources count.
+
+    Pin-quality rules:
+    - EXACT from version_file, tool_versions, or manifest → pin (with exceptions)
+    - RANGE → never a pin
+    - UNKNOWN → never a pin
+    - Source-specific exceptions: go-directive, target-framework, rust-version
+    """
+    # UNKNOWN evidence is detected but not pinned
+    if evidence.constraint.kind == RuntimeConstraintKind.UNKNOWN:
+        return False
+
+    # RANGE evidence is never a full pin
+    if evidence.constraint.kind == RuntimeConstraintKind.RANGE:
+        return False
+
+    # EXACT evidence — check source-specific exceptions
+    if evidence.constraint.kind == RuntimeConstraintKind.EXACT:
+        # Non-pin source details override EXACT status
+        if evidence.source_detail and evidence.source_detail in _NON_PIN_SOURCE_DETAILS:
+            return False
+        # Container and CI pins are scoped pins, not project-level pins
+        if evidence.source_type in (RuntimeSourceType.CONTAINER, RuntimeSourceType.CI):
+            return False
+        return True
+
+    # MISSING, UNPINNED → not pins
+    return False

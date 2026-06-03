@@ -2,6 +2,32 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.10.0] - Unreleased
+
+### Added
+- **Go runtime evidence**: `go.mod` go directive (RANGE baseline) and toolchain directive (EXACT pin), Docker FROM golang, GitHub Actions setup-go, .tool-versions golang.
+- **Rust runtime evidence**: `rust-toolchain` file, `rust-toolchain.toml` channel (exact or named), `Cargo.toml` rust-version (RANGE minimum), Docker FROM rust, .tool-versions rust. Named channels (stable/beta/nightly) → UNKNOWN.
+- **.NET runtime evidence**: `global.json` SDK pin (EXACT), `.csproj` TargetFramework(s) (RANGE), bounded recursive csproj scanning, Docker FROM dotnet, GitHub Actions setup-dotnet, .tool-versions dotnet.
+- **PHP runtime evidence**: `composer.json` require.php (EXACT or RANGE), Docker FROM php (with variant suffix handling), GitHub Actions shivammathur/setup-php, .tool-versions php.
+- **Pin-quality predicate**: `is_runtime_pin()` in policy.py distinguishes reproducibility pins from compatibility baselines.
+- **UNKNOWN evidence semantics**: UNKNOWN evidence proves detection but not reproducibility; coexists with missing-pin advisory.
+- **Shared parser contract tests**: `assert_runtime_parser_contract()` validates all required fields on RuntimeEvidence.
+- **Deterministic ID tests**: Stability across repeated scans, source_detail distinction.
+- **Benchmark fixture matrix**: 20 fixtures across Go/Rust/.NET/PHP × 5 scenarios (clean_pinned, missing_pin, conflict_ci, conflict_docker, unknown_dynamic).
+- **79 new tests** across 8 test files.
+
+### Changed
+- `RuntimeEcosystem` enum expanded: +GO, RUST, DOTNET, PHP (now 8 values).
+- `is_runtime_pin()` replaces constraint-kind-only check in `_emit_missing_pins()`. Compatibility baselines no longer suppress missing-pin advisories.
+- `constraints.py`: `.*` wildcard pattern now correctly produces RANGE constraint.
+- Docker, GitHub Actions, and .tool-versions parsers updated with new ecosystem mappings.
+
+### Non-goals
+- No configurable governance policy engine.
+- No lockfile-vs-manifest conflict detection.
+- No range-vs-range conflict detection.
+- No runtime risk-score redesign.
+
 ## [3.9.0] - Unreleased
 
 ### Added

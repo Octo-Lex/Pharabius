@@ -24,6 +24,9 @@ _GH_SETUP_ACTIONS: dict[str, tuple[str, str]] = {
     "actions/setup-node": ("node-version", "Node.js"),
     "ruby/setup-ruby": ("ruby-version", "Ruby"),
     "actions/setup-java": ("java-version", "Java"),
+    "actions/setup-go": ("go-version", "Go"),
+    "actions/setup-dotnet": ("dotnet-version", ".NET"),
+    "shivammathur/setup-php": ("php-version", "PHP"),
 }
 
 
@@ -148,5 +151,7 @@ def _parse_workflow(root: Path, wf_path: Path) -> list[RuntimeEvidence]:
 
 def _runtime_to_ecosystem(runtime: str) -> RuntimeEcosystem:
     mapping = {"Python": RuntimeEcosystem.PYTHON, "Node.js": RuntimeEcosystem.NODE,
-               "Ruby": RuntimeEcosystem.RUBY, "Java": RuntimeEcosystem.JAVA}
+               "Ruby": RuntimeEcosystem.RUBY, "Java": RuntimeEcosystem.JAVA,
+               "Go": RuntimeEcosystem.GO, ".NET": RuntimeEcosystem.DOTNET,
+               "PHP": RuntimeEcosystem.PHP}
     return mapping.get(runtime, RuntimeEcosystem.PYTHON)

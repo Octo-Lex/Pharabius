@@ -26,6 +26,10 @@ _FROM_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"FROM\s+openjdk[\-\:]?[\w]*?(\d+)"), "Java"),
     (re.compile(r"FROM\s+maven:\S*?[\-_](\d+)"), "Java"),
     (re.compile(r"FROM\s+gradle:\S*?[\-_]jdk(\d+)"), "Java"),
+    (re.compile(r"FROM\s+golang:(\d+(?:\.\d+)?)"), "Go"),
+    (re.compile(r"FROM\s+rust:(\d+(?:\.\d+)?)"), "Rust"),
+    (re.compile(r"FROM\s+mcr\.microsoft\.com/dotnet/(?:sdk|aspnet|runtime):(\d+(?:\.\d+)?)"), ".NET"),
+    (re.compile(r"FROM\s+php:(\d+(?:\.\d+)?)"), "PHP"),
 ]
 
 _RUNTIME_NAME_PATTERNS: list[tuple[re.Pattern, str]] = [
@@ -33,6 +37,10 @@ _RUNTIME_NAME_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"FROM\s+node[:\s]"), "Node.js"),
     (re.compile(r"FROM\s+ruby[:\s]"), "Ruby"),
     (re.compile(r"FROM\s+(eclipse-temurin|openjdk|maven|gradle)[:\-_]"), "Java"),
+    (re.compile(r"FROM\s+golang[:\s]"), "Go"),
+    (re.compile(r"FROM\s+rust[:\s]"), "Rust"),
+    (re.compile(r"FROM\s+mcr\.microsoft\.com/dotnet/"), ".NET"),
+    (re.compile(r"FROM\s+php[:\s]"), "PHP"),
 ]
 
 
@@ -99,5 +107,7 @@ def detect_dockerfile_sources(root: Path) -> list[RuntimeEvidence]:
 def _runtime_to_ecosystem(runtime: str):
     from pharabius.core.runtime.models import RuntimeEcosystem
     mapping = {"Python": RuntimeEcosystem.PYTHON, "Node.js": RuntimeEcosystem.NODE,
-               "Ruby": RuntimeEcosystem.RUBY, "Java": RuntimeEcosystem.JAVA}
+               "Ruby": RuntimeEcosystem.RUBY, "Java": RuntimeEcosystem.JAVA,
+               "Go": RuntimeEcosystem.GO, "Rust": RuntimeEcosystem.RUST,
+               ".NET": RuntimeEcosystem.DOTNET, "PHP": RuntimeEcosystem.PHP}
     return mapping.get(runtime, RuntimeEcosystem.PYTHON)

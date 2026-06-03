@@ -399,9 +399,16 @@ scanner.py
 | RuntimeConflictGroup model | ✅ Implemented (v3.9.0) |
 | Centralized signal policy | ✅ Implemented (v3.9.0) |
 | Runtime summary in history snapshot | ✅ Implemented (v3.9.0) |
+| Go runtime evidence | ✅ Implemented (v3.10.0) |
+| Rust runtime evidence | ✅ Implemented (v3.10.0) |
+| .NET runtime evidence | ✅ Implemented (v3.10.0) |
+| PHP runtime evidence | ✅ Implemented (v3.10.0) |
+| Pin-quality predicate (is_runtime_pin) | ✅ Implemented (v3.10.0) |
+| UNKNOWN evidence semantics | ✅ Implemented (v3.10.0) |
+| Benchmark fixture matrix (20 fixtures) | ✅ Implemented (v3.10.0) |
 | Schema-Budget Coupling | 📋 Design only |
 | AST-based analysis | 🔜 Deferred |
 | Dependency vulnerability scanning | 🔜 Deferred |
 | Long-function detection for non-Python | 🔜 Deferred (JS/Go/Swift) |
 | Runtime version conflict detection | 🔜 Deferred |
-| Ruby/Java runtime pinning | 🔜 Deferred |
+| Ruby/Java runtime pinning | ✅ Implemented (v3.8.0) |

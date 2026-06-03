@@ -18,6 +18,10 @@ class RuntimeEcosystem(str, Enum):
     NODE = "Node.js"
     RUBY = "Ruby"
     JAVA = "Java"
+    GO = "Go"
+    RUST = "Rust"
+    DOTNET = ".NET"
+    PHP = "PHP"
 
 
 class RuntimeConstraintKind(str, Enum):
