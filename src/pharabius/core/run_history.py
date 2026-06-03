@@ -241,6 +241,8 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
         },
         # Runtime evidence summary (v3.9.0)
         "runtime_evidence_summary": _build_runtime_summary(evidence_items, findings),
+        # Signal governance summary (v3.12.0)
+        "signal_summary": _build_signal_summary(evidence_items, findings),
     }
 
 
@@ -294,6 +296,63 @@ def _build_runtime_summary(evidence_items: list[dict], findings: list[dict]) -> 
         "runtime_conflicts": runtime_conflicts,
         "runtime_advisories": runtime_advisories,
         "runtime_findings": runtime_findings,
+    }
+
+
+def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> dict[str, Any]:
+    """Build signal governance summary from evidence items (v3.12.0).
+
+    Reconstructs governed signal dispositions from evidence metadata.
+    Runtime evidence maps to findings (conflicts), advisories (missing pins),
+    or informational (pinned/observed).
+    """
+    from pharabius.core.constants import (
+        EVIDENCE_RUNTIME_VERSION_SIGNAL,
+        RUNTIME_SIGNAL_PINNED,
+        RUNTIME_SIGNAL_CONFLICT,
+        RUNTIME_SIGNAL_MISSING,
+    )
+
+    by_family: dict[str, int] = {}
+    by_disposition: dict[str, int] = {"finding": 0, "advisory": 0, "informational": 0, "suppressed": 0}
+    by_severity: dict[str, int] = {}
+    by_confidence: dict[str, int] = {}
+    total = 0
+
+    for ev in evidence_items:
+        ev_type = str(ev.get("type", ""))
+        meta = ev.get("metadata", {}) or {}
+
+        # Determine family and disposition from evidence type
+        if ev_type == EVIDENCE_RUNTIME_VERSION_SIGNAL:
+            family = "runtime"
+            signal = meta.get("signal", "")
+            if signal == RUNTIME_SIGNAL_CONFLICT:
+                disposition = "finding"
+            elif signal == RUNTIME_SIGNAL_MISSING:
+                disposition = "advisory"
+            else:
+                disposition = "informational"
+        else:
+            # Non-runtime evidence: not yet governed, skip
+            continue
+
+        total += 1
+        by_family[family] = by_family.get(family, 0) + 1
+        by_disposition[disposition] += 1
+
+        sev = meta.get("observation_strength", "Medium")
+        by_severity[sev] = by_severity.get(sev, 0) + 1
+
+        conf = str(ev.get("confidence", "Medium"))
+        by_confidence[conf] = by_confidence.get(conf, 0) + 1
+
+    return {
+        "total": total,
+        "by_family": by_family,
+        "by_disposition": by_disposition,
+        "by_severity": by_severity,
+        "by_confidence": by_confidence,
     }
 
 

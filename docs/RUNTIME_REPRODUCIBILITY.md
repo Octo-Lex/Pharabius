@@ -228,3 +228,14 @@ Missing-pin advisories:
 9. **Rust named channels are informational.** `stable`/`beta`/`nightly` do not prove reproducibility.
 10. **.NET TargetFramework is not a pin.** Only `global.json` SDK version counts.
 11. **PHP Composer ranges are not pins.** Broad ranges prove compatibility, not reproducibility.
+
+## v3.12.0 — Signal Governance Integration
+
+Runtime evidence now adapts into platform-level governed signals via `core/signals/adapters.py`:
+- Runtime conflicts → `GovernedSignal(disposition=FINDING)`
+- Missing pins → `GovernedSignal(disposition=ADVISORY)`
+- Observed evidence → `GovernedSignal(disposition=INFORMATIONAL)`
+
+The analyzer consumes dispositions through explicit branching (no catch-all fallback).
+Runtime-specific IR (`RuntimeEvidence`, `RuntimeConflictGroup`) is preserved unchanged.
+See `docs/SIGNAL_GOVERNANCE.md` for the full signal lifecycle.

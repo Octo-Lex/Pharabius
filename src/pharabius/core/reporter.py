@@ -768,6 +768,9 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
             lines.append(f"**Missing pins:** {', '.join(runtimes)}")
             lines.append("")
 
+    # Signal governance summary (v3.12.0)
+    _add_signal_governance_section(lines, ctx)
+
     lines.extend(
         [
             "",
@@ -869,3 +872,41 @@ def write_reports(repository_root: Path) -> ReportWriteResult:
         files_written.append(path)
 
     return ReportWriteResult(files_written=files_written)
+
+
+def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None:
+    """Add signal governance summary section to the foundation report (v3.12.0)."""
+    from pharabius.core.constants import EVIDENCE_RUNTIME_VERSION_SIGNAL
+    from pharabius.core.constants import RUNTIME_SIGNAL_CONFLICT, RUNTIME_SIGNAL_MISSING
+
+    runtime_evidence = [e for e in ctx.evidence_store.evidence if e.type == EVIDENCE_RUNTIME_VERSION_SIGNAL]
+    if not runtime_evidence:
+        return
+
+    # Count by disposition
+    findings = 0
+    advisories = 0
+    informational = 0
+    for ev in runtime_evidence:
+        signal = ev.metadata.get("signal", "")
+        if signal == RUNTIME_SIGNAL_CONFLICT:
+            findings += 1
+        elif signal == RUNTIME_SIGNAL_MISSING:
+            advisories += 1
+        else:
+            informational += 1
+
+    lines.extend([
+        "",
+        "## 6d. Signal Governance Summary",
+        "",
+        "| Family | Findings | Advisories | Informational | Suppressed |",
+        "|---|---:|---:|---:|---:|",
+        f"| Runtime | {findings} | {advisories} | {informational} | 0 |",
+        "",
+        "> Findings are promoted into the technical debt register.",
+        "> Advisories are reportable but do not generate work packages.",
+        "> Informational signals provide context and coverage visibility.",
+        "> Suppressed signals are omitted from normal reports unless diagnostics are enabled.",
+        "",
+    ])

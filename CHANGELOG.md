@@ -2,6 +2,28 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.12.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/` package — platform-level signal governance foundation
+- `SignalDisposition` enum (FINDING, ADVISORY, INFORMATIONAL, SUPPRESSED)
+- `SignalFamily` enum (RUNTIME, DEPENDENCY, TEST, SECURITY, ARCHITECTURE, DOCUMENTATION, BUILD, OBSERVABILITY)
+- `GovernedSignal` frozen dataclass — policy result after evidence interpretation
+- `should_create_advisory()` policy predicate — explicit advisory branching
+- `should_create_finding()`, `should_create_work_package()`, `is_reportable()`, `is_informational()` predicates
+- Runtime signal adapters: conflict→FINDING, missing pin→ADVISORY, evidence→INFORMATIONAL
+- Evidence-based adapters for analyzer consumption
+- `_analyze_runtime_version_signals()` uses explicit disposition branching
+- `SignalSummary` and `build_signal_summary()` for run-history integration
+- Signal governance summary in foundation audit report (section 6d)
+- `signal_summary` field in run-history snapshots
+- `docs/SIGNAL_GOVERNANCE.md` — signal lifecycle, disposition rules, promotion rules
+- 38 new contract tests (S01-S07)
+
+### Changed
+- Analyzer runtime signal analysis uses `should_create_finding()` and `should_create_advisory()` (no catch-all fallback)
+- No behavior changes — identical finding/advisory output to v3.11.0
+
 ## [3.11.0] - Unreleased
 
 ### Added
