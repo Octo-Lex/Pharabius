@@ -120,6 +120,43 @@ via `build_signal_summary()`, not from raw evidence type heuristics.
 Runtime, documentation, build, and process families all appear in the
 signal governance report section.
 
+## v3.15.0 — Governance Hardening
+
+Enforcement layer for all migrated families:
+
+- **Invariant registry** (`invariants.py`): 8 named platform rules (INV_001–INV_008)
+- **Signal validation** (`validation.py`): `validate_governed_signal()` checks completeness, traceability, and invariant compliance
+- **Signal diagnostics** (`validation.py`): `diagnose_signal()` returns structured `SignalDiagnostic` instances
+- **Output behavior** (`policy.py`): `output_behavior()` maps dispositions to complete behavior profiles
+- **SUPPRESSED summary handling**: Excluded from normal summaries; included only with `include_diagnostics=True`
+
+### Invariant reference
+
+| Code | Rule | Severity |
+|------|------|----------|
+| INV_001 | FINDING is the only source of technical debt findings | critical |
+| INV_002 | ADVISORY never creates work packages | critical |
+| INV_003 | INFORMATIONAL signals are non-actionable | critical |
+| INV_004 | SUPPRESSED signals are diagnostics-only | critical |
+| INV_005 | Signal IDs are deterministic (SIG-{FAMILY}-{hex12}) | warning |
+| INV_006 | FINDING signals must include evidence_ids | critical |
+| INV_007 | Migrated analyzers use signal policy helpers | critical |
+| INV_008 | Signal summaries count governed signal instances | warning |
+
+### Signal family migration checklist
+
+- [ ] Adapter returns `GovernedSignal`
+- [ ] Signal IDs are deterministic
+- [ ] Disposition is explicit
+- [ ] Analyzer uses signal policy helpers
+- [ ] Findings only from `FINDING`
+- [ ] Advisories only from `ADVISORY`
+- [ ] Work packages only from `FINDING`
+- [ ] Informational signals are summary-only
+- [ ] Summary is built from `GovernedSignal`
+- [ ] Contract tests cover the migrated family
+- [ ] `validate_governed_signal()` passes for all adapter outputs
+
 ## Non-goals (v3.13.0)
 
 - No security signal migration

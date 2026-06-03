@@ -319,7 +319,7 @@ The scanner was refactored in v3.4.0 from a monolithic 2048-line file into focus
 | `core/path_utils.py` | Path normalization and pattern matching utilities | `normalize_repo_path()`, `relative_repo_path()`, etc. |
 | `core/dependency_utils.py` | PEP 508 / Poetry / Pipfile specifier classification | `classify_python_specifier()` |
 | `core/run_history.py` | Run history snapshots, index, trend computation, rendering | `build_current_run_snapshot()`, `build_run_history_summary()` |
-| `core/signals/` | Platform-level signal governance (models, policy, adapters, summary) | `GovernedSignal`, `SignalDisposition`, signal promotion predicates, docs/build/process adapters |
+| `core/signals/` | Platform-level signal governance (models, policy, adapters, summary, validation, invariants) | `GovernedSignal`, `SignalDisposition`, `output_behavior()`, `validate_governed_signal()`, invariant registry |
 | `schemas/evidence.py` | `EvidenceStore`, `EvidenceItem`, `EvidenceLocation`, `EvidenceBuilder` | Data models + builder |
 
 ### Module dependency graph

@@ -2,6 +2,25 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.15.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/invariants.py` — 8 named governance invariants (INV_001–INV_008)
+- `SignalValidationSeverity` — fixed enum (CRITICAL, WARNING, INFO) for validation/diagnostics
+- `src/pharabius/core/signals/validation.py` — `validate_governed_signal()` and `diagnose_signal()`
+- `SignalValidationViolation` — structured violations with invariant codes
+- `SignalDiagnostic` — structured diagnostics for test-facing analysis
+- `output_behavior()` in policy.py — complete output mapping per disposition
+- `SignalOutputBehavior` frozen dataclass (creates_finding, creates_advisory, creates_work_package, etc.)
+- `build_signal_summary(include_diagnostics=False)` — SUPPRESSED excluded from normal summaries
+- 84 new governance conformance, validation, boundary, and diagnostic tests
+
+### Changed
+- SUPPRESSED signals excluded from normal signal summaries by default (include_diagnostics=True to include)
+- Signal validation uses structured `SignalValidationViolation` with invariant codes
+
+### Migration checklist added to docs/SIGNAL_GOVERNANCE.md
+
 ## [3.14.0] - Unreleased
 
 ### Added

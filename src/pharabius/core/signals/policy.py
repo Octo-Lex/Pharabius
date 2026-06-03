@@ -13,7 +13,81 @@ Important:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from pharabius.core.signals.models import GovernedSignal, SignalDisposition
+
+
+@dataclass(frozen=True)
+class SignalOutputBehavior:
+    """Complete output behavior for a governed signal.
+
+    Derived from the canonical predicate functions. Use this to avoid
+    repeated branching in analyzers and tests.
+    """
+    creates_finding: bool
+    creates_advisory: bool
+    creates_work_package: bool
+    appears_in_report_detail: bool
+    appears_in_summary: bool
+    diagnostics_only: bool
+
+
+def output_behavior(signal: GovernedSignal) -> SignalOutputBehavior:
+    """Derive complete output behavior from a signal's disposition.
+
+    Mapping:
+        FINDING       → finding + work_package + detail + summary
+        ADVISORY      → advisory + detail + summary
+        INFORMATIONAL → summary only
+        SUPPRESSED    → diagnostics only (no summary, no detail)
+    """
+    if signal.disposition == SignalDisposition.FINDING:
+        return SignalOutputBehavior(
+            creates_finding=True,
+            creates_advisory=False,
+            creates_work_package=True,
+            appears_in_report_detail=True,
+            appears_in_summary=True,
+            diagnostics_only=False,
+        )
+    elif signal.disposition == SignalDisposition.ADVISORY:
+        return SignalOutputBehavior(
+            creates_finding=False,
+            creates_advisory=True,
+            creates_work_package=False,
+            appears_in_report_detail=True,
+            appears_in_summary=True,
+            diagnostics_only=False,
+        )
+    elif signal.disposition == SignalDisposition.INFORMATIONAL:
+        return SignalOutputBehavior(
+            creates_finding=False,
+            creates_advisory=False,
+            creates_work_package=False,
+            appears_in_report_detail=False,
+            appears_in_summary=True,
+            diagnostics_only=False,
+        )
+    elif signal.disposition == SignalDisposition.SUPPRESSED:
+        return SignalOutputBehavior(
+            creates_finding=False,
+            creates_advisory=False,
+            creates_work_package=False,
+            appears_in_report_detail=False,
+            appears_in_summary=False,
+            diagnostics_only=True,
+        )
+    else:
+        # Unknown disposition — safe defaults
+        return SignalOutputBehavior(
+            creates_finding=False,
+            creates_advisory=False,
+            creates_work_package=False,
+            appears_in_report_detail=False,
+            appears_in_summary=False,
+            diagnostics_only=True,
+        )
 
 
 def should_create_finding(signal: GovernedSignal) -> bool:

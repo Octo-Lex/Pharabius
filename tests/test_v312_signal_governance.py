@@ -244,9 +244,19 @@ class TestSignalSummary:
             _signal(SignalDisposition.INFORMATIONAL, "i1"),
             _signal(SignalDisposition.SUPPRESSED, "s1"),
         ]
+        # SUPPRESSED excluded from normal summary (v3.15.0)
         summary = build_signal_summary(signals)
-        assert summary.total == 4
-        assert summary.by_disposition == {"finding": 1, "advisory": 1, "informational": 1, "suppressed": 1}
+        assert summary.total == 3
+        assert summary.by_disposition == {"finding": 1, "advisory": 1, "informational": 1}
+
+    def test_suppressed_included_in_diagnostics_summary(self) -> None:
+        signals = [
+            _signal(SignalDisposition.FINDING, "f1"),
+            _signal(SignalDisposition.SUPPRESSED, "s1"),
+        ]
+        summary = build_signal_summary(signals, include_diagnostics=True)
+        assert summary.total == 2
+        assert "suppressed" in summary.by_disposition
 
     def test_groups_by_family(self) -> None:
         sig1 = _signal(SignalDisposition.FINDING, "f1")
