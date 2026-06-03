@@ -213,3 +213,186 @@ def runtime_missing_pin_to_signal_from_evidence(
             "runtimes": runtimes,
         },
     )
+
+
+# ── Documentation signal adapters (v3.13.0) ───────────────────────────
+
+
+def docs_missing_to_signal(
+    evidence_ids: list[str],
+    category: str = "TD-DOC",
+    title: str = "No documentation evidence detected",
+    summary: str = (
+        "The repository scan did not detect common documentation files such as README, "
+        "docs, ADRs, changelog, or contributing guidance."
+    ),
+    explanation: str = (
+        "Missing documentation increases onboarding cost and makes architectural intent, "
+        "setup steps, and operational procedures harder to verify."
+    ),
+) -> GovernedSignal:
+    """Adapt missing documentation into a GovernedSignal (ADVISORY).
+
+    Missing documentation is advisory — it does not generate work packages.
+    The analyzer preserves its own title/description/severity/risk fields;
+    this adapter provides the signal-level representation.
+    """
+    signal_id = make_signal_id("documentation", "missing_documentation", evidence_ids[:1])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.DOCUMENTATION,
+        kind="missing_documentation",
+        disposition=SignalDisposition.ADVISORY,
+        category=category,
+        severity="Low",
+        confidence="Low",
+        evidence_ids=evidence_ids,
+        source_signal_ids=[],
+        title=title,
+        summary=summary,
+        explanation=explanation,
+        metadata={"missing_docs": True},
+    )
+
+
+def docs_evidence_to_signal(
+    evidence_item: object,
+) -> GovernedSignal:
+    """Adapt a detected documentation file into a GovernedSignal (INFORMATIONAL).
+
+    Detected documentation provides coverage context — informational only.
+    """
+    ev_id = getattr(evidence_item, "evidence_id", "unknown")
+    file_path = getattr(getattr(evidence_item, "location", None), "file", "")
+
+    signal_id = make_signal_id("documentation", "documentation_evidence", [ev_id])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.DOCUMENTATION,
+        kind="documentation_evidence",
+        disposition=SignalDisposition.INFORMATIONAL,
+        category="TD-DOC",
+        severity="Low",
+        confidence="Medium",
+        evidence_ids=[ev_id],
+        source_signal_ids=[],
+        title=f"Documentation file detected: {file_path or 'unknown'}",
+        summary=f"Documentation evidence found at {file_path or 'unknown'}.",
+        explanation="Detected documentation file provides coverage context.",
+        metadata={"source_file": file_path},
+    )
+
+
+# ── Build signal adapters (v3.13.0) ────────────────────────────────────
+
+
+def build_missing_ci_to_signal(
+    evidence_ids: list[str],
+    category: str = "TD-BUILD",
+    title: str = "No CI/CD workflow evidence detected",
+    summary: str = (
+        "The repository scan did not detect common CI/CD workflow files such as GitHub "
+        "Actions, GitLab CI, Jenkins, Bitbucket Pipelines, or Azure Pipelines."
+    ),
+    explanation: str = (
+        "Without automated quality gates, formatting, linting, type checking, tests, and "
+        "architecture checks may not be enforced consistently before merge."
+    ),
+) -> GovernedSignal:
+    """Adapt missing CI/CD into a GovernedSignal (ADVISORY).
+
+    Missing CI/CD is advisory — it does not generate work packages.
+    """
+    signal_id = make_signal_id("build", "missing_ci_cd", evidence_ids[:1])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.BUILD,
+        kind="missing_ci_cd",
+        disposition=SignalDisposition.ADVISORY,
+        category=category,
+        severity="Low",
+        confidence="Low",
+        evidence_ids=evidence_ids,
+        source_signal_ids=[],
+        title=title,
+        summary=summary,
+        explanation=explanation,
+        metadata={"missing_ci": True},
+    )
+
+
+def build_ci_evidence_to_signal(
+    evidence_item: object,
+) -> GovernedSignal:
+    """Adapt a detected CI/deployment file into a GovernedSignal (INFORMATIONAL).
+
+    Detected CI evidence provides coverage context — informational only.
+    """
+    ev_id = getattr(evidence_item, "evidence_id", "unknown")
+    file_path = getattr(getattr(evidence_item, "location", None), "file", "")
+
+    signal_id = make_signal_id("build", "ci_evidence", [ev_id])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.BUILD,
+        kind="ci_evidence",
+        disposition=SignalDisposition.INFORMATIONAL,
+        category="TD-BUILD",
+        severity="Low",
+        confidence="Medium",
+        evidence_ids=[ev_id],
+        source_signal_ids=[],
+        title=f"CI/CD evidence detected: {file_path or 'unknown'}",
+        summary=f"CI/CD evidence found at {file_path or 'unknown'}.",
+        explanation="Detected CI/CD file provides coverage context.",
+        metadata={"source_file": file_path},
+    )
+
+
+# ── Process signal adapters (v3.13.0) ─────────────────────────────────
+
+
+def process_missing_artifacts_to_signal(
+    missing_artifacts: list[str],
+    evidence_ids: list[str],
+    category: str = "TD-PROCESS",
+    title: str = "Missing repository process artifacts",
+    summary: str = "",
+    explanation: str = (
+        "Missing process artifacts weaken code review, onboarding, and release governance. "
+        "Impact depends on team size and repository criticality."
+    ),
+) -> GovernedSignal:
+    """Adapt missing process artifacts into a GovernedSignal (ADVISORY).
+
+    Missing CODEOWNERS/CONTRIBUTING/PR templates are process advisories.
+    They do not generate work packages.
+    """
+    signal_id = make_signal_id("process", "missing_process_artifacts", evidence_ids[:1])
+
+    if not summary:
+        summary = (
+            f"{len(missing_artifacts)} process artifact(s) missing: "
+            f"{', '.join(missing_artifacts[:5])}. "
+            "These artifacts support code review quality, onboarding, and release governance."
+        )
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.PROCESS,
+        kind="missing_process_artifacts",
+        disposition=SignalDisposition.ADVISORY,
+        category=category,
+        severity="Low",
+        confidence="Low",
+        evidence_ids=evidence_ids,
+        source_signal_ids=[],
+        title=title,
+        summary=summary,
+        explanation=explanation,
+        metadata={"missing_artifacts": missing_artifacts},
+    )

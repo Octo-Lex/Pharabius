@@ -30,6 +30,7 @@ class SignalFamily(str, Enum):
     DOCUMENTATION = "documentation"
     BUILD = "build"
     OBSERVABILITY = "observability"
+    PROCESS = "process"
 
 
 @dataclass(frozen=True)

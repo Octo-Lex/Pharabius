@@ -86,3 +86,33 @@ class GovernedSignal:
 - No persistent SignalStore (signals reconstructed from existing evidence)
 - No security/dependency/architecture policy rewrite
 - No risk-score redesign
+
+## v3.13.0 — Additional reference families
+
+Documentation and build/CI signals adopted as governed signal families:
+- `docs_missing_to_signal()` → `DOCUMENTATION` / `ADVISORY`
+- `docs_evidence_to_signal()` → `DOCUMENTATION` / `INFORMATIONAL`
+- `build_missing_ci_to_signal()` → `BUILD` / `ADVISORY`
+- `build_ci_evidence_to_signal()` → `BUILD` / `INFORMATIONAL`
+- `process_missing_artifacts_to_signal()` → `PROCESS` / `ADVISORY`
+
+The `PROCESS` family covers CODEOWNERS, CONTRIBUTING, and PR template
+observations. It is distinct from `BUILD` — process artifacts are governance,
+not CI/CD quality.
+
+Signal summary is now signal-driven: built from `GovernedSignal` instances
+via `build_signal_summary()`, not from raw evidence type heuristics.
+
+Runtime, documentation, build, and process families all appear in the
+signal governance report section.
+
+## Non-goals (v3.13.0)
+
+- No security signal migration
+- No architecture signal migration
+- No dependency vulnerability migration
+- No configurable policy engine
+- No persistent SignalStore
+- No frontend governance dashboard
+- No risk-score rewrite
+- No remediation automation

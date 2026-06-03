@@ -483,6 +483,14 @@ def _analyze_missing_ci(store: EvidenceStore, builder: FindingBuilder) -> None:
     manifests = _evidence_by_type(store, "manifest_detected")
     supporting_evidence = manifests or store.evidence[:1]
 
+    # v3.13.0: governed signal disposition check
+    from pharabius.core.signals.adapters import build_missing_ci_to_signal
+    from pharabius.core.signals.policy import should_create_advisory
+
+    signal = build_missing_ci_to_signal(evidence_ids=_evidence_ids(supporting_evidence))
+    if not should_create_advisory(signal):
+        return
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 3,
@@ -534,6 +542,14 @@ def _analyze_missing_docs(store: EvidenceStore, builder: FindingBuilder) -> None
         return
 
     supporting_evidence = store.evidence[:1]
+
+    # v3.13.0: governed signal disposition check
+    from pharabius.core.signals.adapters import docs_missing_to_signal
+    from pharabius.core.signals.policy import should_create_advisory
+
+    signal = docs_missing_to_signal(evidence_ids=_evidence_ids(supporting_evidence))
+    if not should_create_advisory(signal):
+        return
 
     breakdown = {
         **RISK_SCORE_TEMPLATE,
@@ -1926,6 +1942,17 @@ def _analyze_missing_process_artifacts(store: EvidenceStore, builder: FindingBui
 
     # Only flag if multiple artifacts are missing
     if len(missing) < 3:
+        return
+
+    # v3.13.0: governed signal disposition check
+    from pharabius.core.signals.adapters import process_missing_artifacts_to_signal
+    from pharabius.core.signals.policy import should_create_advisory
+
+    signal = process_missing_artifacts_to_signal(
+        missing_artifacts=missing,
+        evidence_ids=_first_evidence_id(store),
+    )
+    if not should_create_advisory(signal):
         return
 
     breakdown = {

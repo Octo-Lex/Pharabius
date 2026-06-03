@@ -300,60 +300,166 @@ def _build_runtime_summary(evidence_items: list[dict], findings: list[dict]) -> 
 
 
 def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> dict[str, Any]:
-    """Build signal governance summary from evidence items (v3.12.0).
+    """Build signal governance summary from governed signals (v3.13.0).
 
-    Reconstructs governed signal dispositions from evidence metadata.
-    Runtime evidence maps to findings (conflicts), advisories (missing pins),
-    or informational (pinned/observed).
+    Reconstructs governed signals from evidence, then builds summary
+    from the signal instances. This avoids raw-evidence-type heuristics
+    and keeps the summary signal-driven.
     """
     from pharabius.core.constants import (
         EVIDENCE_RUNTIME_VERSION_SIGNAL,
-        RUNTIME_SIGNAL_PINNED,
         RUNTIME_SIGNAL_CONFLICT,
         RUNTIME_SIGNAL_MISSING,
     )
+    from pharabius.core.signals.models import (
+        GovernedSignal,
+        SignalDisposition,
+        SignalFamily,
+        make_signal_id,
+    )
+    from pharabius.core.signals.adapters import (
+        docs_missing_to_signal,
+        build_missing_ci_to_signal,
+        process_missing_artifacts_to_signal,
+    )
+    from pharabius.core.signals.summary import build_signal_summary, signal_summary_to_dict
 
-    by_family: dict[str, int] = {}
-    by_disposition: dict[str, int] = {"finding": 0, "advisory": 0, "informational": 0, "suppressed": 0}
-    by_severity: dict[str, int] = {}
-    by_confidence: dict[str, int] = {}
-    total = 0
+    signals = []
 
-    for ev in evidence_items:
-        ev_type = str(ev.get("type", ""))
+    # ── Runtime signals ──
+    runtime_evidence = [ev for ev in evidence_items if str(ev.get("type", "")) == EVIDENCE_RUNTIME_VERSION_SIGNAL]
+    runtime_conflict_items = []
+    runtime_missing_items = []
+    runtime_info_items = []
+
+    for ev in runtime_evidence:
         meta = ev.get("metadata", {}) or {}
-
-        # Determine family and disposition from evidence type
-        if ev_type == EVIDENCE_RUNTIME_VERSION_SIGNAL:
-            family = "runtime"
-            signal = meta.get("signal", "")
-            if signal == RUNTIME_SIGNAL_CONFLICT:
-                disposition = "finding"
-            elif signal == RUNTIME_SIGNAL_MISSING:
-                disposition = "advisory"
-            else:
-                disposition = "informational"
+        signal_kind = meta.get("signal", "")
+        if signal_kind == RUNTIME_SIGNAL_CONFLICT:
+            runtime_conflict_items.append(ev)
+        elif signal_kind == RUNTIME_SIGNAL_MISSING:
+            runtime_missing_items.append(ev)
         else:
-            # Non-runtime evidence: not yet governed, skip
-            continue
+            runtime_info_items.append(ev)
 
-        total += 1
-        by_family[family] = by_family.get(family, 0) + 1
-        by_disposition[disposition] += 1
+    for ev in runtime_conflict_items:
+        # Dict-based adapter: construct signal directly from dict fields
+        ev_id = ev.get("evidence_id", "unknown")
+        meta = ev.get("metadata", {}) or {}
+        runtime = meta.get("runtime", "unknown")
+        conflict_kind = meta.get("conflict_reason", "unknown")
+        signals.append(GovernedSignal(
+            signal_id=make_signal_id("runtime", conflict_kind, [ev_id]),
+            family=SignalFamily.RUNTIME,
+            kind=conflict_kind,
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=[ev_id],
+            source_signal_ids=[],
+            title=f"{runtime} runtime version declarations conflict",
+            summary=f"Multiple {runtime} runtime version declarations disagree.",
+            explanation=ev.get("summary", ""),
+            metadata={"runtime_name": runtime, "conflict_kind": conflict_kind},
+        ))
+    if runtime_missing_items:
+        ev_ids = [ev.get("evidence_id", "unknown") for ev in runtime_missing_items]
+        runtimes = list({ev.get("metadata", {}).get("runtime", "unknown") for ev in runtime_missing_items})
+        signals.append(GovernedSignal(
+            signal_id=make_signal_id("runtime", "missing_runtime_pin", runtimes),
+            family=SignalFamily.RUNTIME,
+            kind="missing_runtime_pin",
+            disposition=SignalDisposition.ADVISORY,
+            category="TD-DEP",
+            severity="Low",
+            confidence="Low",
+            evidence_ids=ev_ids,
+            source_signal_ids=[],
+            title=f"Missing runtime version pins for: {', '.join(runtimes)}",
+            summary=f"Dependency manifests exist for {', '.join(runtimes)} but no runtime version pinning file detected.",
+            explanation=f"{', '.join(runtimes)} manifests detected but no reproducibility pin found.",
+            metadata={"runtimes": runtimes},
+        ))
 
-        sev = meta.get("observation_strength", "Medium")
-        by_severity[sev] = by_severity.get(sev, 0) + 1
+    # ── Documentation signals ──
+    docs_evidence = [ev for ev in evidence_items if str(ev.get("type", "")) == "documentation_file_detected"]
+    for ev in docs_evidence:
+        ev_id = ev.get("evidence_id", "unknown")
+        file_path = ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
+        signals.append(GovernedSignal(
+            signal_id=make_signal_id("documentation", "documentation_evidence", [ev_id]),
+            family=SignalFamily.DOCUMENTATION,
+            kind="documentation_evidence",
+            disposition=SignalDisposition.INFORMATIONAL,
+            category="TD-DOC",
+            severity="Low",
+            confidence="Medium",
+            evidence_ids=[ev_id],
+            source_signal_ids=[],
+            title=f"Documentation file detected: {file_path}",
+            summary=f"Documentation evidence found at {file_path}.",
+            explanation="Detected documentation file provides coverage context.",
+            metadata={"source_file": file_path},
+        ))
 
-        conf = str(ev.get("confidence", "Medium"))
-        by_confidence[conf] = by_confidence.get(conf, 0) + 1
+    # Documentation advisories come from debt register
+    doc_advisory = next(
+        (f for f in findings if f.get("category") == "TD-DOC" and f.get("issue_type") == "advisory"),
+        None,
+    )
+    if doc_advisory:
+        ev_ids = doc_advisory.get("evidence_ids", []) or []
+        signals.append(docs_missing_to_signal(evidence_ids=ev_ids))
 
-    return {
-        "total": total,
-        "by_family": by_family,
-        "by_disposition": by_disposition,
-        "by_severity": by_severity,
-        "by_confidence": by_confidence,
-    }
+    # ── Build signals ──
+    for ev in [e for e in evidence_items if str(e.get("type", "")) == "deployment_file_detected"]:
+        ev_id = ev.get("evidence_id", "unknown")
+        file_path = ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
+        signals.append(GovernedSignal(
+            signal_id=make_signal_id("build", "ci_evidence", [ev_id]),
+            family=SignalFamily.BUILD,
+            kind="ci_evidence",
+            disposition=SignalDisposition.INFORMATIONAL,
+            category="TD-BUILD",
+            severity="Low",
+            confidence="Medium",
+            evidence_ids=[ev_id],
+            source_signal_ids=[],
+            title=f"CI/CD evidence detected: {file_path}",
+            summary=f"CI/CD evidence found at {file_path}.",
+            explanation="Detected CI/CD file provides coverage context.",
+            metadata={"source_file": file_path},
+        ))
+
+    build_advisory = next(
+        (f for f in findings if f.get("category") == "TD-BUILD" and f.get("issue_type") == "advisory"),
+        None,
+    )
+    if build_advisory:
+        ev_ids = build_advisory.get("evidence_ids", []) or []
+        signals.append(build_missing_ci_to_signal(evidence_ids=ev_ids))
+
+    # ── Process signals ──
+    process_advisory = next(
+        (f for f in findings if f.get("category") == "TD-PROCESS" and f.get("issue_type") == "advisory"),
+        None,
+    )
+    if process_advisory:
+        ev_ids = process_advisory.get("evidence_ids", []) or []
+        desc = process_advisory.get("description", "")
+        missing = []
+        for token in ["CODEOWNERS", "CONTRIBUTING", "PULL_REQUEST_TEMPLATE"]:
+            if token.lower() in desc.lower():
+                missing.append(token)
+        signals.append(process_missing_artifacts_to_signal(
+            missing_artifacts=missing or ["unknown"],
+            evidence_ids=ev_ids,
+        ))
+
+    # ── Build summary from signals ──
+    summary = build_signal_summary(signals)
+    return signal_summary_to_dict(summary)
 
 
 def write_run_history_snapshot(workspace: Path, snapshot: dict[str, Any]) -> Path:

@@ -875,26 +875,88 @@ def write_reports(repository_root: Path) -> ReportWriteResult:
 
 
 def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None:
-    """Add signal governance summary section to the foundation report (v3.12.0)."""
+    """Add signal governance summary section to the foundation report (v3.13.0).
+
+    Builds from GovernedSignal instances, not raw evidence heuristics.
+    """
     from pharabius.core.constants import EVIDENCE_RUNTIME_VERSION_SIGNAL
     from pharabius.core.constants import RUNTIME_SIGNAL_CONFLICT, RUNTIME_SIGNAL_MISSING
+    from pharabius.core.signals.adapters import (
+        runtime_conflict_to_signal_from_evidence,
+        runtime_missing_pin_to_signal_from_evidence,
+        docs_missing_to_signal,
+        docs_evidence_to_signal,
+        build_missing_ci_to_signal,
+        build_ci_evidence_to_signal,
+        process_missing_artifacts_to_signal,
+    )
+    from pharabius.core.signals.summary import build_signal_summary
 
-    runtime_evidence = [e for e in ctx.evidence_store.evidence if e.type == EVIDENCE_RUNTIME_VERSION_SIGNAL]
-    if not runtime_evidence:
+    signals = []
+
+    # ── Runtime signals ──
+    for ev in ctx.evidence_store.evidence:
+        if ev.type != EVIDENCE_RUNTIME_VERSION_SIGNAL:
+            continue
+        signal_kind = ev.metadata.get("signal", "")
+        if signal_kind == RUNTIME_SIGNAL_CONFLICT:
+            signals.append(runtime_conflict_to_signal_from_evidence(ev))
+        elif signal_kind == RUNTIME_SIGNAL_MISSING:
+            signals.append(runtime_missing_pin_to_signal_from_evidence([ev]))
+        # Informational runtime evidence not needed for report summary
+
+    # ── Documentation signals ──
+    docs_evidence = [e for e in ctx.evidence_store.evidence if e.type == "documentation_file_detected"]
+    for ev in docs_evidence:
+        signals.append(docs_evidence_to_signal(ev))
+
+    # Check for documentation advisory in findings
+    doc_advisory = next(
+        (f for f in ctx.debt_register.findings if f.category == "TD-DOC" and f.issue_type == "advisory"),
+        None,
+    )
+    if doc_advisory:
+        signals.append(docs_missing_to_signal(evidence_ids=doc_advisory.evidence_ids[:1] if doc_advisory.evidence_ids else []))
+
+    # ── Build signals ──
+    ci_evidence = [e for e in ctx.evidence_store.evidence if e.type == "deployment_file_detected"]
+    for ev in ci_evidence:
+        signals.append(build_ci_evidence_to_signal(ev))
+
+    build_advisory = next(
+        (f for f in ctx.debt_register.findings if f.category == "TD-BUILD" and f.issue_type == "advisory"),
+        None,
+    )
+    if build_advisory:
+        signals.append(build_missing_ci_to_signal(evidence_ids=build_advisory.evidence_ids))
+
+    # ── Process signals ──
+    process_advisory = next(
+        (f for f in ctx.debt_register.findings if f.category == "TD-PROCESS" and f.issue_type == "advisory"),
+        None,
+    )
+    if process_advisory:
+        desc = process_advisory.description or ""
+        missing = [t for t in ["CODEOWNERS", "CONTRIBUTING", "PULL_REQUEST_TEMPLATE"] if t.lower() in desc.lower()]
+        signals.append(process_missing_artifacts_to_signal(
+            missing_artifacts=missing or ["unknown"],
+            evidence_ids=process_advisory.evidence_ids,
+        ))
+
+    if not signals:
         return
 
-    # Count by disposition
-    findings = 0
-    advisories = 0
-    informational = 0
-    for ev in runtime_evidence:
-        signal = ev.metadata.get("signal", "")
-        if signal == RUNTIME_SIGNAL_CONFLICT:
-            findings += 1
-        elif signal == RUNTIME_SIGNAL_MISSING:
-            advisories += 1
-        else:
-            informational += 1
+    # ── Build summary from signals ──
+    summary = build_signal_summary(signals)
+
+    # Count by family and disposition
+    family_rows: dict[str, dict[str, int]] = {}
+    for signal in signals:
+        fam = signal.family.value
+        disp = signal.disposition.value
+        if fam not in family_rows:
+            family_rows[fam] = {"finding": 0, "advisory": 0, "informational": 0, "suppressed": 0}
+        family_rows[fam][disp] += 1
 
     lines.extend([
         "",
@@ -902,7 +964,13 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
         "",
         "| Family | Findings | Advisories | Informational | Suppressed |",
         "|---|---:|---:|---:|---:|",
-        f"| Runtime | {findings} | {advisories} | {informational} | 0 |",
+    ])
+
+    for fam in sorted(family_rows.keys()):
+        r = family_rows[fam]
+        lines.append(f"| {fam.title()} | {r['finding']} | {r['advisory']} | {r['informational']} | {r['suppressed']} |")
+
+    lines.extend([
         "",
         "> Findings are promoted into the technical debt register.",
         "> Advisories are reportable but do not generate work packages.",

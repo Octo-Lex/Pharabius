@@ -2,6 +2,25 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.13.0] - Unreleased
+
+### Added
+- `SignalFamily.PROCESS` — governance/process signal family (distinct from BUILD)
+- Documentation signal adapters: `docs_missing_to_signal` (ADVISORY), `docs_evidence_to_signal` (INFORMATIONAL)
+- Build signal adapters: `build_missing_ci_to_signal` (ADVISORY), `build_ci_evidence_to_signal` (INFORMATIONAL)
+- Process signal adapter: `process_missing_artifacts_to_signal` (ADVISORY)
+- `_analyze_missing_docs()` uses governed signal disposition (`should_create_advisory`)
+- `_analyze_missing_ci()` uses governed signal disposition (`should_create_advisory`)
+- `_analyze_missing_process_artifacts()` uses governed signal disposition (`should_create_advisory`)
+- Signal summary is signal-driven: built from GovernedSignal instances, not raw evidence heuristics
+- Signal governance report section (6d) now shows runtime, documentation, build, and process families
+- `docs/SIGNAL_GOVERNANCE.md` updated with documentation/build/process reference families
+- 62 new contract tests (S01-S08)
+
+### Changed
+- Run-history signal summary built from GovernedSignal instances (was raw evidence type heuristics)
+- Report signal section groups by family (was runtime-only)
+
 ## [3.12.0] - Unreleased
 
 ### Added
