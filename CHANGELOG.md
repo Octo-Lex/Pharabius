@@ -2,6 +2,26 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.14.0] - Unreleased
+
+### Added
+- Test signal adapters: `scan_test_missing_to_signal` (FINDING),
+  `scan_test_risk_sensitive_without_tests_to_signal` (FINDING),
+  `scan_test_coverage_gap_to_signal` (FINDING),
+  `scan_test_evidence_to_signal` (INFORMATIONAL),
+  `scan_test_coverage_evidence_to_signal` (INFORMATIONAL)
+- `_analyze_missing_tests()` uses governed signal disposition (`should_create_finding`)
+- `_analyze_risk_sensitive_without_tests()` uses governed signal disposition
+- `_analyze_coverage_gaps()` uses governed signal disposition
+- Signal summary includes `test` family (test files, coverage reports, test findings)
+- Report signal section (6d) shows test family alongside runtime/docs/build/process
+- `docs/SIGNAL_GOVERNANCE.md` updated with test family
+- 51 new contract tests
+
+### Changed
+- Run-history signal summary includes test health signals
+- Report signal section groups test findings with existing families
+
 ## [3.13.0] - Unreleased
 
 ### Added

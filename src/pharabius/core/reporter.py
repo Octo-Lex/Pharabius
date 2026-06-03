@@ -889,6 +889,11 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
         build_missing_ci_to_signal,
         build_ci_evidence_to_signal,
         process_missing_artifacts_to_signal,
+        scan_test_missing_to_signal,
+        scan_test_risk_sensitive_without_tests_to_signal,
+        scan_test_coverage_gap_to_signal,
+        scan_test_evidence_to_signal,
+        scan_test_coverage_evidence_to_signal,
     )
     from pharabius.core.signals.summary import build_signal_summary
 
@@ -941,6 +946,40 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
         signals.append(process_missing_artifacts_to_signal(
             missing_artifacts=missing or ["unknown"],
             evidence_ids=process_advisory.evidence_ids,
+        ))
+
+    # ── Test signals ──
+    test_evidence = [e for e in ctx.evidence_store.evidence if e.type == "test_file_detected"]
+    for ev in test_evidence:
+        signals.append(scan_test_evidence_to_signal(ev))
+
+    coverage_types = {"coverage_report_detected", "coverage_metric_detected"}
+    for ev in [e for e in ctx.evidence_store.evidence if e.type in coverage_types]:
+        signals.append(scan_test_coverage_evidence_to_signal(ev))
+
+    # Test-related findings from debt register
+    test_findings = [
+        f for f in ctx.debt_register.findings
+        if f.category == "TD-TEST" and f.issue_type != "advisory"
+    ]
+    for f in test_findings:
+        if "coverage" in (f.title or "").lower():
+            signals.append(scan_test_coverage_gap_to_signal(
+                evidence_ids=f.evidence_ids,
+                low_count=f.evidence_ids.__len__(),
+            ))
+        else:
+            signals.append(scan_test_missing_to_signal(evidence_ids=f.evidence_ids))
+
+    # Risk-sensitive without tests
+    risk_sensitive_finding = next(
+        (f for f in ctx.debt_register.findings
+         if f.category == "TD-SEC" and "test" in (f.title or "").lower() and f.issue_type != "advisory"),
+        None,
+    )
+    if risk_sensitive_finding:
+        signals.append(scan_test_risk_sensitive_without_tests_to_signal(
+            evidence_ids=risk_sensitive_finding.evidence_ids,
         ))
 
     if not signals:

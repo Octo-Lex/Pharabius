@@ -100,6 +100,20 @@ The `PROCESS` family covers CODEOWNERS, CONTRIBUTING, and PR template
 observations. It is distinct from `BUILD` — process artifacts are governance,
 not CI/CD quality.
 
+## v3.14.0 — Test health signals
+
+Test health signals adopted as governed signal family:
+- `scan_test_missing_to_signal()` → `TEST` / `FINDING` (no tests = actionable debt)
+- `scan_test_risk_sensitive_without_tests_to_signal()` → `TEST` / `FINDING` (security/compliance risk)
+- `scan_test_coverage_gap_to_signal()` → `TEST` / `FINDING` (low coverage = actionable debt)
+- `scan_test_evidence_to_signal()` → `TEST` / `INFORMATIONAL` (test file detected)
+- `scan_test_coverage_evidence_to_signal()` → `TEST` / `INFORMATIONAL` (coverage report detected)
+
+Test findings are distinct from documentation/build/process advisories.
+Missing tests, risk-sensitive areas without tests, and low coverage are all
+actionable technical debt — they create work packages and register in the
+tech debt summary. Test file and coverage report evidence are informational.
+
 Signal summary is now signal-driven: built from `GovernedSignal` instances
 via `build_signal_summary()`, not from raw evidence type heuristics.
 

@@ -396,3 +396,180 @@ def process_missing_artifacts_to_signal(
         explanation=explanation,
         metadata={"missing_artifacts": missing_artifacts},
     )
+
+
+# ── Test signal adapters (v3.14.0) ───────────────────────────────────
+
+
+def scan_test_missing_to_signal(
+    evidence_ids: list[str],
+    has_risk_signals: bool = False,
+    category: str = "TD-TEST",
+    title: str = "No test evidence detected",
+    summary: str = (
+        "The repository scan did not detect test files or package test scripts. "
+        "This increases regression risk and weakens confidence in future remediation work."
+    ),
+    explanation: str = (
+        "Without detectable tests, changes to existing behavior are harder to verify and "
+        "technical debt remediation becomes riskier."
+    ),
+) -> GovernedSignal:
+    """Adapt missing tests into a GovernedSignal (FINDING).
+
+    Missing tests are a finding — they represent actionable technical debt.
+    """
+    severity = "High" if has_risk_signals else "Medium"
+    signal_id = make_signal_id("test", "missing_tests", evidence_ids[:1])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.TEST,
+        kind="missing_tests",
+        disposition=SignalDisposition.FINDING,
+        category=category,
+        severity=severity,
+        confidence="Medium",
+        evidence_ids=evidence_ids,
+        source_signal_ids=[],
+        title=title,
+        summary=summary,
+        explanation=explanation,
+        metadata={"has_risk_signals": has_risk_signals},
+    )
+
+
+def scan_test_risk_sensitive_without_tests_to_signal(
+    evidence_ids: list[str],
+    category: str = "TD-SEC",
+    title: str = "Risk-sensitive areas detected without test evidence",
+    summary: str = (
+        "The repository contains security, compliance, operational, or business-sensitive "
+        "signals, but the scan did not detect automated test evidence."
+    ),
+    explanation: str = (
+        "Risk-sensitive paths without detectable tests increase the probability of unsafe "
+        "behavioral changes during maintenance or remediation."
+    ),
+) -> GovernedSignal:
+    """Adapt risk-sensitive-without-tests into a GovernedSignal (FINDING).
+
+    This is a higher-severity finding — risk-sensitive areas need test coverage.
+    """
+    signal_id = make_signal_id("test", "risk_sensitive_without_tests", evidence_ids[:1])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.TEST,
+        kind="risk_sensitive_without_tests",
+        disposition=SignalDisposition.FINDING,
+        category=category,
+        severity="High",
+        confidence="Medium",
+        evidence_ids=evidence_ids,
+        source_signal_ids=[],
+        title=title,
+        summary=summary,
+        explanation=explanation,
+        metadata={"risk_sensitive": True},
+    )
+
+
+def scan_test_coverage_gap_to_signal(
+    evidence_ids: list[str],
+    low_count: int = 0,
+    threshold_pct: float = 0.0,
+    category: str = "TD-TEST",
+    title: str = "",
+    summary: str = "",
+    explanation: str = "Low test coverage means changes are more likely to introduce undetected regressions.",
+) -> GovernedSignal:
+    """Adapt coverage gaps into a GovernedSignal (FINDING).
+
+    Low coverage is a finding — it represents actionable test debt.
+    """
+    if not title:
+        title = f"Low test coverage detected ({low_count} metric(s) below {threshold_pct:.0f}%)"
+    if not summary:
+        summary = (
+            f"Coverage report shows {low_count} metric(s) below "
+            f"{threshold_pct:.0f}%. "
+            "Low coverage increases regression risk."
+        )
+
+    signal_id = make_signal_id("test", "coverage_gap", evidence_ids[:1])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.TEST,
+        kind="coverage_gap",
+        disposition=SignalDisposition.FINDING,
+        category=category,
+        severity="Medium",
+        confidence="Medium",
+        evidence_ids=evidence_ids,
+        source_signal_ids=[],
+        title=title,
+        summary=summary,
+        explanation=explanation,
+        metadata={"low_count": low_count, "threshold_pct": threshold_pct},
+    )
+
+
+def scan_test_evidence_to_signal(
+    evidence_item: object,
+) -> GovernedSignal:
+    """Adapt a detected test file into a GovernedSignal (INFORMATIONAL).
+
+    Detected test files provide coverage context — informational only.
+    """
+    ev_id = getattr(evidence_item, "evidence_id", "unknown")
+    file_path = getattr(getattr(evidence_item, "location", None), "file", "")
+
+    signal_id = make_signal_id("test", "test_evidence", [ev_id])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.TEST,
+        kind="test_evidence",
+        disposition=SignalDisposition.INFORMATIONAL,
+        category="TD-TEST",
+        severity="Low",
+        confidence="Medium",
+        evidence_ids=[ev_id],
+        source_signal_ids=[],
+        title=f"Test file detected: {file_path or 'unknown'}",
+        summary=f"Test evidence found at {file_path or 'unknown'}.",
+        explanation="Detected test file provides coverage context.",
+        metadata={"source_file": file_path},
+    )
+
+
+def scan_test_coverage_evidence_to_signal(
+    evidence_item: object,
+) -> GovernedSignal:
+    """Adapt a detected coverage report/metric into a GovernedSignal (INFORMATIONAL).
+
+    Detected coverage evidence provides context — informational only.
+    """
+    ev_id = getattr(evidence_item, "evidence_id", "unknown")
+    file_path = getattr(getattr(evidence_item, "location", None), "file", "")
+    ev_type = getattr(evidence_item, "type", "unknown")
+
+    signal_id = make_signal_id("test", "coverage_evidence", [ev_id])
+
+    return GovernedSignal(
+        signal_id=signal_id,
+        family=SignalFamily.TEST,
+        kind="coverage_evidence",
+        disposition=SignalDisposition.INFORMATIONAL,
+        category="TD-TEST",
+        severity="Low",
+        confidence="Medium",
+        evidence_ids=[ev_id],
+        source_signal_ids=[],
+        title=f"Coverage evidence detected: {file_path or ev_type}",
+        summary=f"Coverage evidence found: {ev_type}.",
+        explanation="Detected coverage report/metric provides test coverage context.",
+        metadata={"source_file": file_path, "evidence_type": ev_type},
+    )

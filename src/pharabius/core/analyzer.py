@@ -368,6 +368,17 @@ def _analyze_missing_tests(store: EvidenceStore, builder: FindingBuilder) -> Non
     risk_items = _risk_signal_items(store)
     supporting_evidence = risk_items or store.evidence[:1]
 
+    # v3.14.0: governed signal disposition check
+    from pharabius.core.signals.adapters import scan_test_missing_to_signal
+    from pharabius.core.signals.policy import should_create_finding
+
+    signal = scan_test_missing_to_signal(
+        evidence_ids=_evidence_ids(supporting_evidence),
+        has_risk_signals=bool(risk_items),
+    )
+    if not should_create_finding(signal):
+        return
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 5,
@@ -419,6 +430,16 @@ def _analyze_risk_sensitive_without_tests(store: EvidenceStore, builder: Finding
     risk_items = _risk_signal_items(store)
 
     if not risk_items or _has_tests(store):
+        return
+
+    # v3.14.0: governed signal disposition check
+    from pharabius.core.signals.adapters import scan_test_risk_sensitive_without_tests_to_signal
+    from pharabius.core.signals.policy import should_create_finding
+
+    signal = scan_test_risk_sensitive_without_tests_to_signal(
+        evidence_ids=_evidence_ids(risk_items),
+    )
+    if not should_create_finding(signal):
         return
 
     breakdown = {
@@ -1145,6 +1166,18 @@ def _analyze_coverage_gaps(store: EvidenceStore, builder: FindingBuilder) -> Non
         if m.metadata.get("percent", 100) < COVERAGE_LOW_THRESHOLD_PCT
     ]
     if not low_metrics:
+        return
+
+    # v3.14.0: governed signal disposition check
+    from pharabius.core.signals.adapters import scan_test_coverage_gap_to_signal
+    from pharabius.core.signals.policy import should_create_finding
+
+    signal = scan_test_coverage_gap_to_signal(
+        evidence_ids=_evidence_ids(low_metrics),
+        low_count=len(low_metrics),
+        threshold_pct=COVERAGE_LOW_THRESHOLD_PCT,
+    )
+    if not should_create_finding(signal):
         return
 
     breakdown = {

@@ -321,6 +321,8 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
         docs_missing_to_signal,
         build_missing_ci_to_signal,
         process_missing_artifacts_to_signal,
+        scan_test_missing_to_signal,
+        scan_test_risk_sensitive_without_tests_to_signal,
     )
     from pharabius.core.signals.summary import build_signal_summary, signal_summary_to_dict
 
@@ -456,6 +458,58 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
             missing_artifacts=missing or ["unknown"],
             evidence_ids=ev_ids,
         ))
+
+    # ── Test signals ──
+    test_evidence = [ev for ev in evidence_items if str(ev.get("type", "")) == "test_file_detected"]
+    for ev in test_evidence:
+        ev_id = ev.get("evidence_id", "unknown")
+        file_path = ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
+        signals.append(GovernedSignal(
+            signal_id=make_signal_id("test", "test_evidence", [ev_id]),
+            family=SignalFamily.TEST,
+            kind="test_evidence",
+            disposition=SignalDisposition.INFORMATIONAL,
+            category="TD-TEST",
+            severity="Low",
+            confidence="Medium",
+            evidence_ids=[ev_id],
+            source_signal_ids=[],
+            title=f"Test file detected: {file_path}",
+            summary=f"Test evidence found at {file_path}.",
+            explanation="Detected test file provides coverage context.",
+            metadata={"source_file": file_path},
+        ))
+
+    # Coverage evidence
+    coverage_types = {"coverage_report_detected", "coverage_metric_detected"}
+    for ev in [e for e in evidence_items if str(e.get("type", "")) in coverage_types]:
+        ev_id = ev.get("evidence_id", "unknown")
+        ev_type = str(ev.get("type", ""))
+        signals.append(GovernedSignal(
+            signal_id=make_signal_id("test", "coverage_evidence", [ev_id]),
+            family=SignalFamily.TEST,
+            kind="coverage_evidence",
+            disposition=SignalDisposition.INFORMATIONAL,
+            category="TD-TEST",
+            severity="Low",
+            confidence="Medium",
+            evidence_ids=[ev_id],
+            source_signal_ids=[],
+            title=f"Coverage evidence detected: {ev_type}",
+            summary=f"Coverage evidence found: {ev_type}.",
+            explanation="Detected coverage report/metric provides test coverage context.",
+            metadata={"evidence_type": ev_type},
+        ))
+
+    # Test-related findings from debt register
+    for f in findings:
+        cat = f.get("category", "")
+        if cat == "TD-TEST" and f.get("issue_type", "technical_debt") != "advisory":
+            ev_ids = f.get("evidence_ids", []) or []
+            signals.append(scan_test_missing_to_signal(evidence_ids=ev_ids))
+        elif cat == "TD-SEC" and "test" in f.get("title", "").lower():
+            ev_ids = f.get("evidence_ids", []) or []
+            signals.append(scan_test_risk_sensitive_without_tests_to_signal(evidence_ids=ev_ids))
 
     # ── Build summary from signals ──
     summary = build_signal_summary(signals)
