@@ -8,6 +8,7 @@ from pathlib import Path
 from pharabius.core.io_helpers import read_text
 from pharabius.core.runtime.constraints import parse_constraint
 from pharabius.core.runtime.models import (
+    RuntimeSourceGrade,
     Confidence,
     RuntimeConstraint,
     RuntimeConstraintKind,
@@ -80,6 +81,7 @@ def detect_dockerfile_sources(root: Path) -> list[RuntimeEvidence]:
                             constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw="ARG"),
                             source_type=RuntimeSourceType.CONTAINER,
                             source_path=rel_path,
+                            source_grade=RuntimeSourceGrade.CONTAINER,
                             confidence=Confidence.LOW,
                         ))
                 continue
@@ -97,6 +99,7 @@ def detect_dockerfile_sources(root: Path) -> list[RuntimeEvidence]:
                         constraint=constraint,
                         source_type=RuntimeSourceType.CONTAINER,
                         source_path=rel_path,
+                        source_grade=RuntimeSourceGrade.CONTAINER,
                         confidence=Confidence.MEDIUM,
                         raw_version=version,
                     ))

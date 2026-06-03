@@ -17,6 +17,7 @@ from pharabius.core.runtime.models import (
     RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
 
@@ -45,9 +46,11 @@ def _parse_go_mod(text: str) -> list[RuntimeEvidence]:
         version = m.group(1)
         # go directive is always a compatibility baseline (RANGE)
         # regardless of whether it looks like an exact version
+        # go 1.22 means >=1.22 (minimum version), not [1.22, 1.23)
         constraint = RuntimeConstraint(
             kind=RuntimeConstraintKind.RANGE,
             value=version,
+            lower_bound=version,
             raw=version,
         )
         evidence.append(RuntimeEvidence(
@@ -57,6 +60,7 @@ def _parse_go_mod(text: str) -> list[RuntimeEvidence]:
             constraint=constraint,
             source_type=RuntimeSourceType.MANIFEST,
             source_path="go.mod",
+            source_grade=RuntimeSourceGrade.MANIFEST_RANGE,
             source_detail="go-directive",
             confidence=Confidence.HIGH,
             raw_version=version,
@@ -76,6 +80,7 @@ def _parse_go_mod(text: str) -> list[RuntimeEvidence]:
             constraint=constraint,
             source_type=RuntimeSourceType.MANIFEST,
             source_path="go.mod",
+            source_grade=RuntimeSourceGrade.MANIFEST_PIN,
             source_detail="toolchain",
             confidence=Confidence.HIGH,
             raw_version=raw,

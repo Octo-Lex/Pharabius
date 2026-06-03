@@ -2,6 +2,26 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.11.0] - Unreleased
+
+### Added
+- `RuntimeSourceGrade` enum (LOCKFILE, TOOL_PIN, VERSION_FILE, MANIFEST_PIN, MANIFEST_RANGE, CONTAINER, CI, UNKNOWN)
+- `source_grade` field on `RuntimeEvidence` (mandatory, no default)
+- `PIN_VIOLATES_MANIFEST_RANGE` conflict kind — deterministic pin vs manifest range
+- `INCOMPATIBLE_RANGES` conflict kind — definitely disjoint range sources
+- `is_deterministic_project_pin()` and `is_manifest_compatibility_range()` policy predicates
+- `ranges_are_disjoint()` constraint helper
+- Go directive now sets `lower_bound` on RANGE constraint for conflict detection
+- .NET TargetFramework now sets `lower_bound`/`upper_bound` on RANGE constraint
+- 5 semantic conflict benchmark fixtures (Go, Rust, .NET, PHP)
+- Contract test enforces `source_grade != UNKNOWN` (parsers must set explicitly)
+- 29 new tests (S01: 19, S02-S04: 9, S06: 10)
+
+### Changed
+- Conflict precedence: PIN_VIOLATES_MANIFEST_RANGE before EXACT_EXACT_MISMATCH
+- Go directive grade: MANIFEST_RANGE (was incorrectly MANIFEST_PIN from script)
+- Conflict explanations now include source_grade labels
+
 ## [3.10.0] - Unreleased
 
 ### Added

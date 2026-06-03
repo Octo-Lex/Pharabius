@@ -177,3 +177,48 @@ def _extract_major(version: str) -> int | None:
 def _extract_minor(version: str) -> int | None:
     m = re.match(r"\d+\.(\d+)", version)
     return int(m.group(1)) if m else None
+
+
+def ranges_are_disjoint(
+    constraint_a: RuntimeConstraint,
+    constraint_b: RuntimeConstraint,
+) -> bool:
+    """Check if two ranges are definitely disjoint.
+
+    Conservative: only returns True when both ranges have enough
+    normalized bounds to prove no intersection.
+    """
+    # Need at least lower_bound on one and upper_bound on the other
+    if constraint_a.lower_bound and constraint_b.upper_bound:
+        lb_a = _extract_major(constraint_a.lower_bound)
+        ub_b = _extract_major(constraint_b.upper_bound)
+        lb_a_minor = _extract_minor(constraint_a.lower_bound)
+        ub_b_minor = _extract_minor(constraint_b.upper_bound)
+        if lb_a is not None and ub_b is not None:
+            # a >= X, b < Y where X >= Y → disjoint
+            # Note: >=X and <Y are disjoint if X >= Y
+            if lb_a > ub_b:
+                return True
+            if lb_a == ub_b:
+                # Same major — check minor
+                if lb_a_minor is not None and ub_b_minor is not None and lb_a_minor >= ub_b_minor:
+                    return True
+                elif lb_a_minor is None and ub_b_minor is None:
+                    # >=X and <X are disjoint (X not included in <X)
+                    return True
+
+    if constraint_b.lower_bound and constraint_a.upper_bound:
+        lb_b = _extract_major(constraint_b.lower_bound)
+        ub_a = _extract_major(constraint_a.upper_bound)
+        lb_b_minor = _extract_minor(constraint_b.lower_bound)
+        ub_a_minor = _extract_minor(constraint_a.upper_bound)
+        if lb_b is not None and ub_a is not None:
+            if lb_b > ub_a:
+                return True
+            if lb_b == ub_a:
+                if lb_b_minor is not None and ub_a_minor is not None and lb_b_minor >= ub_a_minor:
+                    return True
+                elif lb_b_minor is None and ub_a_minor is None:
+                    return True
+
+    return False

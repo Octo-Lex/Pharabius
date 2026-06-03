@@ -9,6 +9,7 @@ import yaml
 from pharabius.core.io_helpers import read_text
 from pharabius.core.runtime.constraints import parse_constraint
 from pharabius.core.runtime.models import (
+    RuntimeSourceGrade,
     Confidence,
     RuntimeConstraint,
     RuntimeConstraintKind,
@@ -59,6 +60,7 @@ def _parse_workflow(root: Path, wf_path: Path) -> list[RuntimeEvidence]:
             constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw="malformed"),
             source_type=RuntimeSourceType.CI,
             source_path=rel_path,
+            source_grade=RuntimeSourceGrade.CI,
             confidence=Confidence.LOW,
         )]
 
@@ -110,6 +112,7 @@ def _parse_workflow(root: Path, wf_path: Path) -> list[RuntimeEvidence]:
                     constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw="matrix"),
                     source_type=RuntimeSourceType.CI,
                     source_path=rel_path,
+                    source_grade=RuntimeSourceGrade.CI,
                     source_detail=uses_base,
                     confidence=Confidence.LOW,
                 ))
@@ -126,6 +129,7 @@ def _parse_workflow(root: Path, wf_path: Path) -> list[RuntimeEvidence]:
                         constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw=v_str),
                         source_type=RuntimeSourceType.CI,
                         source_path=rel_path,
+                        source_grade=RuntimeSourceGrade.CI,
                         source_detail=uses_base,
                         confidence=Confidence.LOW,
                         raw_version=v_str,
@@ -141,6 +145,7 @@ def _parse_workflow(root: Path, wf_path: Path) -> list[RuntimeEvidence]:
                 constraint=constraint,
                 source_type=RuntimeSourceType.CI,
                 source_path=rel_path,
+                source_grade=RuntimeSourceGrade.CI,
                 source_detail=uses_base,
                 confidence=Confidence.MEDIUM,
                 raw_version=version_str,

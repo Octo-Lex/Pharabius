@@ -42,6 +42,7 @@ from pharabius.core.runtime.models import (
     RuntimeEcosystem,
     RuntimeEvidence,
     RuntimeSignalClassification,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
 from pharabius.core.runtime.policy import (
@@ -202,6 +203,7 @@ class TestPolicyClassification:
             constraint=RuntimeConstraint(kind=RuntimeConstraintKind.EXACT, value="3.12"),
             source_type=RuntimeSourceType.VERSION_FILE,
             source_path=".python-version",
+            source_grade=RuntimeSourceGrade.VERSION_FILE,
         )
         result = classify_evidence(ev)
         assert result == RuntimeSignalClassification.INFORMATIONAL

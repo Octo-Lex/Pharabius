@@ -17,6 +17,7 @@ from pharabius.core.runtime.models import (
     RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
 from pharabius.core.runtime.policy import is_runtime_pin
@@ -29,6 +30,7 @@ def _evidence(
     value: str = "3.11",
     source_type: RuntimeSourceType = RuntimeSourceType.VERSION_FILE,
     source_path: str = ".python-version",
+    source_grade: RuntimeSourceGrade = RuntimeSourceGrade.VERSION_FILE,
     source_detail: str | None = None,
     confidence: Confidence = Confidence.HIGH,
 ) -> RuntimeEvidence:
@@ -39,6 +41,7 @@ def _evidence(
         constraint=RuntimeConstraint(kind=kind, value=value),
         source_type=source_type,
         source_path=source_path,
+        source_grade=source_grade,
         source_detail=source_detail,
         confidence=confidence,
         raw_version=value,

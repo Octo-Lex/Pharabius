@@ -1,0 +1,8 @@
+{
+  "description": "Go: toolchain 1.22.4 within go 1.22 baseline → no conflict",
+  "files": {
+    "go.mod": "module github.com/example/project\n\ngo 1.22\n\ntoolchain go1.22.4\n"
+  },
+  "expected_conflicts": [],
+  "expected_advisories": ["missing_exact_pin"]
+}

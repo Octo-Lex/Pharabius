@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from pharabius.core.runtime.models import RuntimeEvidence
+from pharabius.core.runtime.models import RuntimeEvidence, RuntimeSourceGrade
 
 
 # ── Contract helper ──────────────────────────────────────────────────
@@ -27,6 +27,9 @@ def assert_runtime_parser_contract(evidence: list[RuntimeEvidence]) -> None:
         assert item.runtime_name, "Every evidence item must have a runtime_name"
         assert item.constraint.kind, "Every evidence item must have a constraint kind"
         assert item.source_path, "Every evidence item must have a source_path"
+        assert item.source_grade != RuntimeSourceGrade.UNKNOWN, (
+            f"source_grade must be explicitly set (got UNKNOWN for {item.source_path})"
+        )
 
 
 # ── Fixture helpers ──────────────────────────────────────────────────

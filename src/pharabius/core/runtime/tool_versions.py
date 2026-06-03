@@ -7,6 +7,7 @@ from pathlib import Path
 from pharabius.core.io_helpers import read_text
 from pharabius.core.runtime.constraints import parse_constraint
 from pharabius.core.runtime.models import (
+    RuntimeSourceGrade,
     Confidence,
     RuntimeEcosystem,
     RuntimeEvidence,
@@ -58,6 +59,7 @@ def detect_tool_versions_sources(root: Path) -> list[RuntimeEvidence]:
             constraint=constraint,
             source_type=RuntimeSourceType.TOOL_VERSIONS,
             source_path=".tool-versions",
+            source_grade=RuntimeSourceGrade.TOOL_PIN,
             source_detail=tool,
             confidence=Confidence.HIGH,
             raw_version=version,

@@ -13,6 +13,7 @@ from pharabius.core.runtime.models import (
     RuntimeEvidence,
     RuntimeSignalAction,
     RuntimeSignalClassification,
+    RuntimeSourceGrade,
     RuntimeSourceType,
     Severity,
 )
@@ -50,6 +51,24 @@ def classify_evidence(evidence: RuntimeEvidence) -> RuntimeSignalClassification:
     if evidence.constraint.kind == RuntimeConstraintKind.UNPINNED:
         return RuntimeSignalClassification.ADVISORY
     return RuntimeSignalClassification.INFORMATIONAL
+
+
+def is_deterministic_project_pin(evidence: RuntimeEvidence) -> bool:
+    """Is this evidence a deterministic reproducibility pin?"""
+    return (
+        evidence.constraint.kind == RuntimeConstraintKind.EXACT
+        and evidence.source_grade in {
+            RuntimeSourceGrade.LOCKFILE,
+            RuntimeSourceGrade.TOOL_PIN,
+            RuntimeSourceGrade.VERSION_FILE,
+            RuntimeSourceGrade.MANIFEST_PIN,
+        }
+    )
+
+
+def is_manifest_compatibility_range(evidence: RuntimeEvidence) -> bool:
+    """Is this evidence a manifest compatibility range?"""
+    return evidence.source_grade == RuntimeSourceGrade.MANIFEST_RANGE
 
 
 # ── Pin-quality predicate ────────────────────────────────────────────

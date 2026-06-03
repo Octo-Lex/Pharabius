@@ -6,7 +6,8 @@ Does NOT know about file formats or parsing.
 
 from __future__ import annotations
 
-from pharabius.core.runtime.constraints import range_excludes_exact
+from pharabius.core.runtime.constraints import range_excludes_exact, ranges_are_disjoint
+from pharabius.core.runtime.policy import is_deterministic_project_pin, is_manifest_compatibility_range
 from pharabius.core.runtime.models import (
     RuntimeConflictGroup,
     RuntimeConflictKind,
@@ -20,8 +21,10 @@ from pharabius.core.runtime.models import (
 _CONFLICT_PRECEDENCE = [
     RuntimeConflictKind.CI_DIFFERS,
     RuntimeConflictKind.DOCKERFILE_DIFFERS,
+    RuntimeConflictKind.PIN_VIOLATES_MANIFEST_RANGE,
     RuntimeConflictKind.EXACT_EXACT_MISMATCH,
     RuntimeConflictKind.RANGE_EXCLUDES_EXACT,
+    RuntimeConflictKind.INCOMPATIBLE_RANGES,
 ]
 
 
@@ -52,14 +55,26 @@ def detect_conflicts(evidence: list[RuntimeEvidence]) -> list[RuntimeConflictGro
                 break  # Deduplicate: one conflict per runtime from source-specific
 
         else:
-            # 2. Exact vs exact
+            # 2. Pin violates manifest range
+            group = _check_pin_vs_manifest_range(runtime_name, exacts, ranges)
+            if group:
+                conflicts.append(group)
+                continue
+
+            # 3. Exact vs exact
             group = _check_exact_exact(runtime_name, exacts)
             if group:
                 conflicts.append(group)
                 continue
 
-            # 3. Range excludes exact
+            # 4. Range excludes exact (remaining cases)
             group = _check_range_exact(runtime_name, exacts, ranges)
+            if group:
+                conflicts.append(group)
+                continue
+
+            # 5. Range vs range (conservative)
+            group = _check_range_vs_range(runtime_name, ranges)
             if group:
                 conflicts.append(group)
 
@@ -93,6 +108,35 @@ def _check_source_vs_pin(
                     explanation=(
                         f"{pin_ev.source_path}={pin_ev.constraint.value} "
                         f"conflicts with {src_ev.source_path}={src_ev.constraint.value}"
+                    ),
+                )
+    return None
+
+
+def _check_pin_vs_manifest_range(
+    runtime_name: str,
+    exacts: list[RuntimeEvidence],
+    ranges: list[RuntimeEvidence],
+) -> RuntimeConflictGroup | None:
+    """Check if a deterministic project pin violates a manifest compatibility range."""
+    det_pins = [e for e in exacts if is_deterministic_project_pin(e)]
+    manifest_ranges = [e for e in ranges if is_manifest_compatibility_range(e)]
+    if not det_pins or not manifest_ranges:
+        return None
+
+    for pin_ev in det_pins:
+        for rng_ev in manifest_ranges:
+            if range_excludes_exact(rng_ev.constraint, pin_ev.constraint.value or ""):
+                return RuntimeConflictGroup(
+                    ecosystem=pin_ev.ecosystem,
+                    runtime_name=runtime_name,
+                    conflict_kind=RuntimeConflictKind.PIN_VIOLATES_MANIFEST_RANGE,
+                    evidence=[pin_ev, rng_ev],
+                    explanation=(
+                        f"{pin_ev.source_path} ({pin_ev.source_grade.value}) "
+                        f"{pin_ev.constraint.value} violates "
+                        f"{rng_ev.source_path} ({rng_ev.source_grade.value}) "
+                        f"{rng_ev.constraint.raw}"
                     ),
                 )
     return None
@@ -140,6 +184,32 @@ def _check_range_exact(
                     explanation=(
                         f"{rng_ev.source_path}={rng_ev.constraint.raw} "
                         f"excludes {exact_ev.source_path}={exact_ev.constraint.value}"
+                    ),
+                )
+    return None
+
+
+def _check_range_vs_range(
+    runtime_name: str,
+    ranges: list[RuntimeEvidence],
+) -> RuntimeConflictGroup | None:
+    """Check for definitely disjoint ranges (conservative)."""
+    if len(ranges) < 2:
+        return None
+    for i in range(len(ranges)):
+        for j in range(i + 1, len(ranges)):
+            a, b = ranges[i], ranges[j]
+            if ranges_are_disjoint(a.constraint, b.constraint):
+                return RuntimeConflictGroup(
+                    ecosystem=a.ecosystem,
+                    runtime_name=runtime_name,
+                    conflict_kind=RuntimeConflictKind.INCOMPATIBLE_RANGES,
+                    evidence=[a, b],
+                    explanation=(
+                        f"{a.source_path} ({a.source_grade.value}) "
+                        f"{a.constraint.raw} incompatible with "
+                        f"{b.source_path} ({b.source_grade.value}) "
+                        f"{b.constraint.raw}"
                     ),
                 )
     return None

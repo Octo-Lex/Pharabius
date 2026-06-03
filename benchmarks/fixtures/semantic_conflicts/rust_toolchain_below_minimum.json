@@ -1,0 +1,9 @@
+{
+  "description": "Rust: toolchain 1.70 below rust-version 1.76 → PIN_VIOLATES_MANIFEST_RANGE",
+  "files": {
+    "rust-toolchain": "1.70.0\n",
+    "Cargo.toml": "[package]\nname = \"example\"\nrust-version = \"1.76\"\n"
+  },
+  "expected_conflicts": ["pin_violates_manifest_range"],
+  "expected_advisories": []
+}

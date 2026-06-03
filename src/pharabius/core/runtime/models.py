@@ -40,6 +40,18 @@ class RuntimeSourceType(str, Enum):
     CI = "ci"
 
 
+class RuntimeSourceGrade(str, Enum):
+    """How strong is this evidence as a reproducibility signal?"""
+    LOCKFILE = "lockfile"          # Exact, deterministic: rust-toolchain, rust-toolchain.toml
+    TOOL_PIN = "tool_pin"          # .tool-versions entry
+    VERSION_FILE = "version_file"  # .python-version, .nvmrc
+    MANIFEST_PIN = "manifest_pin"  # go.mod toolchain, global.json sdk, composer.json exact
+    MANIFEST_RANGE = "manifest_range"  # go.mod go, Cargo.toml rust-version, ^8.2
+    CONTAINER = "container"        # Dockerfile FROM
+    CI = "ci"                      # GitHub Actions
+    UNKNOWN = "unknown"            # Not set — parsers MUST override
+
+
 class Confidence(str, Enum):
     HIGH = "High"
     MEDIUM = "Medium"
@@ -58,6 +70,8 @@ class RuntimeConflictKind(str, Enum):
     RANGE_EXCLUDES_EXACT = "range_excludes_exact"
     DOCKERFILE_DIFFERS = "dockerfile_differs_from_manifest"
     CI_DIFFERS = "ci_differs_from_project_pin"
+    PIN_VIOLATES_MANIFEST_RANGE = "pin_violates_manifest_range"
+    INCOMPATIBLE_RANGES = "incompatible_ranges"
 
 
 class RuntimeSignalClassification(str, Enum):
@@ -94,6 +108,7 @@ class RuntimeEvidence:
     constraint: RuntimeConstraint
     source_type: RuntimeSourceType
     source_path: str
+    source_grade: RuntimeSourceGrade  # No default — parsers MUST set explicitly
     source_detail: str | None = None
     confidence: Confidence = Confidence.HIGH
     raw_version: str | None = None

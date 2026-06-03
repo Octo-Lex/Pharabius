@@ -12,6 +12,7 @@ from pharabius.core.io_helpers import read_json
 from pharabius.core.runtime.constraints import parse_constraint
 from pharabius.core.runtime.ecosystems import _make_id
 from pharabius.core.runtime.models import (
+    RuntimeSourceGrade,
     Confidence,
     RuntimeConstraint,
     RuntimeConstraintKind,
@@ -42,6 +43,7 @@ def detect_php_sources(root: Path) -> list[RuntimeEvidence]:
                         constraint=constraint,
                         source_type=RuntimeSourceType.MANIFEST,
                         source_path="composer.json",
+                        source_grade=RuntimeSourceGrade.MANIFEST_PIN,
                         source_detail="require.php",
                         confidence=Confidence.HIGH,
                         raw_version=php_constraint,

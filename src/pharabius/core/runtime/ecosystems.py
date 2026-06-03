@@ -12,6 +12,7 @@ from pharabius.core.runtime.models import (
     RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
 
@@ -41,6 +42,7 @@ def detect_python_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.VERSION_FILE,
                     source_path=".python-version",
+                    source_grade=RuntimeSourceGrade.VERSION_FILE,
                     confidence=Confidence.HIGH,
                     raw_version=version,
                 ))
@@ -61,6 +63,7 @@ def detect_python_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.VERSION_FILE,
                     source_path="runtime.txt",
+                    source_grade=RuntimeSourceGrade.VERSION_FILE,
                     confidence=Confidence.HIGH,
                     raw_version=version_clean,
                 ))
@@ -81,6 +84,7 @@ def detect_python_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.MANIFEST,
                     source_path="pyproject.toml",
+                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
                     source_detail="requires-python",
                     confidence=Confidence.HIGH,
                     raw_version=version_spec,
@@ -108,6 +112,7 @@ def detect_node_sources(root: Path) -> list[RuntimeEvidence]:
                         constraint=constraint,
                         source_type=RuntimeSourceType.VERSION_FILE,
                         source_path=filename,
+                        source_grade=RuntimeSourceGrade.VERSION_FILE,
                         confidence=Confidence.HIGH,
                         raw_version=version,
                     ))
@@ -127,6 +132,7 @@ def detect_node_sources(root: Path) -> list[RuntimeEvidence]:
                 constraint=constraint,
                 source_type=RuntimeSourceType.MANIFEST,
                 source_path="package.json",
+                source_grade=RuntimeSourceGrade.MANIFEST_PIN,
                 source_detail="engines.node",
                 confidence=Confidence.HIGH,
                 raw_version=node_engine,
@@ -154,6 +160,7 @@ def detect_ruby_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.VERSION_FILE,
                     source_path=".ruby-version",
+                    source_grade=RuntimeSourceGrade.VERSION_FILE,
                     confidence=Confidence.HIGH,
                     raw_version=version,
                 ))
@@ -174,6 +181,7 @@ def detect_ruby_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.MANIFEST,
                     source_path="Gemfile",
+                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
                     source_detail="ruby",
                     confidence=Confidence.HIGH,
                     raw_version=version,
@@ -201,6 +209,7 @@ def detect_java_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.VERSION_FILE,
                     source_path=".java-version",
+                    source_grade=RuntimeSourceGrade.VERSION_FILE,
                     confidence=Confidence.HIGH,
                     raw_version=version,
                 ))
@@ -222,6 +231,7 @@ def detect_java_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.MANIFEST,
                     source_path="pom.xml",
+                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
                     source_detail="maven.compiler",
                     confidence=Confidence.HIGH,
                     raw_version=version,
@@ -245,6 +255,7 @@ def detect_java_sources(root: Path) -> list[RuntimeEvidence]:
                         constraint=constraint,
                         source_type=RuntimeSourceType.MANIFEST,
                         source_path=gradle_file,
+                        source_grade=RuntimeSourceGrade.VERSION_FILE,
                         confidence=Confidence.HIGH,
                         raw_version=version,
                     ))

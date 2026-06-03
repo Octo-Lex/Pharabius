@@ -17,6 +17,7 @@ from pharabius.core.runtime.models import (
     RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
 
@@ -69,6 +70,7 @@ def detect_rust_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.MANIFEST,
                     source_path="Cargo.toml",
+                    source_grade=RuntimeSourceGrade.MANIFEST_RANGE,
                     source_detail="rust-version",
                     confidence=Confidence.MEDIUM,
                     raw_version=version,
@@ -97,6 +99,7 @@ def _rust_toolchain_evidence(version: str, source_path: str) -> RuntimeEvidence:
         constraint=constraint,
         source_type=RuntimeSourceType.VERSION_FILE,
         source_path=source_path,
+        source_grade=RuntimeSourceGrade.LOCKFILE,
         confidence=confidence,
         raw_version=version,
     )

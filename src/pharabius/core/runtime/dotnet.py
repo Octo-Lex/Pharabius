@@ -17,6 +17,7 @@ from pharabius.core.runtime.models import (
     RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
 
@@ -43,6 +44,7 @@ def detect_dotnet_sources(root: Path) -> list[RuntimeEvidence]:
                     constraint=constraint,
                     source_type=RuntimeSourceType.MANIFEST,
                     source_path="global.json",
+                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
                     source_detail="sdk",
                     confidence=Confidence.HIGH,
                     raw_version=str(version),
@@ -97,12 +99,24 @@ def _target_framework_evidence(target: str, source_path: str) -> RuntimeEvidence
     """Create evidence for a .NET target framework."""
     # Extract version from net8.0, net9.0, netcoreapp3.1, etc.
     version = re.sub(r"^(net|netcoreapp|netframework)", "", target, flags=re.IGNORECASE)
-    # Target frameworks are compatibility targets, not pins → RANGE
-    constraint = RuntimeConstraint(
-        kind=RuntimeConstraintKind.RANGE,
-        value=version if version else target,
-        raw=target,
-    )
+    # Only set bounds for modern netX.Y monikers (Correction 4)
+    m_ver = re.match(r'(\d+)\.(\d+)', version)
+    if m_ver:
+        major_v, minor_v = int(m_ver.group(1)), int(m_ver.group(2))
+        constraint = RuntimeConstraint(
+            kind=RuntimeConstraintKind.RANGE,
+            value=version,
+            lower_bound=f"{major_v}.{minor_v}",
+            upper_bound=f"{major_v + 1}.0",
+            raw=target,
+        )
+    else:
+        # Legacy monikers: netstandard2.0, netcoreapp3.1, net48 — no bounds
+        constraint = RuntimeConstraint(
+            kind=RuntimeConstraintKind.RANGE,
+            value=version if version else target,
+            raw=target,
+        )
     return RuntimeEvidence(
         runtime_evidence_id=_make_id(".NET", source_path, "target-framework", target),
         ecosystem=RuntimeEcosystem.DOTNET,
@@ -110,6 +124,7 @@ def _target_framework_evidence(target: str, source_path: str) -> RuntimeEvidence
         constraint=constraint,
         source_type=RuntimeSourceType.MANIFEST,
         source_path=source_path,
+        source_grade=RuntimeSourceGrade.MANIFEST_RANGE,
         source_detail="target-framework",
         confidence=Confidence.MEDIUM,
         raw_version=target,
