@@ -12,6 +12,10 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+
+from pharabius_platform.db import init_db
+from pharabius_platform.main import app
+from pharabius_platform.models import Base
 from tests.test_run_history_navigation import (
     ADMIN_TOKEN,
     EVIDENCE_JSON,
@@ -20,10 +24,6 @@ from tests.test_run_history_navigation import (
     _full_bundle,
     _upload,
 )
-
-from pharabius_platform.db import init_db
-from pharabius_platform.main import app
-from pharabius_platform.models import Base
 
 # Run B metadata with different run_id
 RUN_METADATA_B = json.dumps(
@@ -222,15 +222,11 @@ async def seeded_two_runs(client: AsyncClient) -> dict[str, object]:
 
 
 class TestComparisonValidation:
-    async def test_compare_requires_both_run_ids(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_compare_requires_both_run_ids(self, client: AsyncClient) -> None:
         resp = await client.get("/api/v1/repositories/some-repo/runs/compare")
         assert resp.status_code == 422
 
-    async def test_compare_rejects_missing_run(
-        self, client: AsyncClient, seeded_two_runs
-    ) -> None:
+    async def test_compare_rejects_missing_run(self, client: AsyncClient, seeded_two_runs) -> None:
         data = seeded_two_runs
         fake_uuid = "00000000-0000-0000-0000-000000000000"
         resp = await client.get(
@@ -239,29 +235,29 @@ class TestComparisonValidation:
         )
         assert resp.status_code == 404
 
-    async def test_compare_rejects_cross_repo(
-        self, client: AsyncClient, seeded_two_runs
-    ) -> None:
+    async def test_compare_rejects_cross_repo(self, client: AsyncClient, seeded_two_runs) -> None:
         data = seeded_two_runs
         # Upload to a different repo with unique content
-        other_findings = json.dumps({
-            "schema_version": "1.0",
-            "findings": [
-                {
-                    "id": "TD-OTHER-001",
-                    "category": "TD-ARCH",
-                    "title": "Other finding",
-                    "description": "",
-                    "severity": "Low",
-                    "evidence_ids": [],
-                    "risk_score": 1,
-                    "priority": "Low",
-                    "technical_impact": "Low",
-                    "business_impact": "Low",
-                    "recommended_action": "None",
-                },
-            ],
-        })
+        other_findings = json.dumps(
+            {
+                "schema_version": "1.0",
+                "findings": [
+                    {
+                        "id": "TD-OTHER-001",
+                        "category": "TD-ARCH",
+                        "title": "Other finding",
+                        "description": "",
+                        "severity": "Low",
+                        "evidence_ids": [],
+                        "risk_score": 1,
+                        "priority": "Low",
+                        "technical_impact": "Low",
+                        "business_impact": "Low",
+                        "recommended_action": "None",
+                    },
+                ],
+            }
+        )
         other_bundle = _full_bundle(findings=other_findings)
         run_key = ".ai-debt/runs/RUN-20260529-120000.json"
         other_bundle[run_key] = other_bundle.pop(run_key)  # keep same key
@@ -393,9 +389,7 @@ class TestFindingDelta:
 
 
 class TestWorkPackageDelta:
-    async def test_work_package_changed(
-        self, client: AsyncClient, seeded_two_runs
-    ) -> None:
+    async def test_work_package_changed(self, client: AsyncClient, seeded_two_runs) -> None:
         data = seeded_two_runs
         resp = await client.get(
             f"/api/v1/repositories/{data['repo_id']}/runs/compare",
@@ -412,9 +406,7 @@ class TestWorkPackageDelta:
         assert wp["package_id"] == "WP-001"
         assert wp["status"] == "changed"
 
-    async def test_work_package_changed_fields(
-        self, client: AsyncClient, seeded_two_runs
-    ) -> None:
+    async def test_work_package_changed_fields(self, client: AsyncClient, seeded_two_runs) -> None:
         data = seeded_two_runs
         resp = await client.get(
             f"/api/v1/repositories/{data['repo_id']}/runs/compare",
@@ -430,9 +422,7 @@ class TestWorkPackageDelta:
 
 
 class TestTraceabilityDelta:
-    async def test_traceability_improved(
-        self, client: AsyncClient, seeded_two_runs
-    ) -> None:
+    async def test_traceability_improved(self, client: AsyncClient, seeded_two_runs) -> None:
         data = seeded_two_runs
         resp = await client.get(
             f"/api/v1/repositories/{data['repo_id']}/runs/compare",
@@ -453,38 +443,42 @@ class TestTraceabilityDelta:
     ) -> None:
         """Two runs with zero evidence IDs → traceability unchanged."""
         # First run
-        findings_a = json.dumps({
-            "schema_version": "1.0",
-            "findings": [
-                {
-                    "id": "TD-001",
-                    "category": "TD-ARCH",
-                    "title": "Test A",
-                    "description": "A.",
-                    "severity": "Low",
-                    "evidence_ids": [],
-                    "risk_score": 1,
-                    "priority": "Low",
-                    "technical_impact": "Low",
-                    "business_impact": "Low",
-                    "recommended_action": "None",
-                },
-            ],
-        })
-        meta_a = json.dumps({
-            "schema_version": "1.0",
-            "run_id": "RUN-EMPTY-A",
-            "timestamp": "2026-05-29T14:00:00Z",
-            "repository": "/test",
-            "commit": "eee111",
-            "branch": "main",
-            "tool_version": "3.0.0",
-            "analysis_mode": "baseline",
-            "commands_run": ["scan"],
-            "files_written": [],
-            "limitations": [],
-            "summary": {"finding_count": 1, "evidence_count": 0},
-        })
+        findings_a = json.dumps(
+            {
+                "schema_version": "1.0",
+                "findings": [
+                    {
+                        "id": "TD-001",
+                        "category": "TD-ARCH",
+                        "title": "Test A",
+                        "description": "A.",
+                        "severity": "Low",
+                        "evidence_ids": [],
+                        "risk_score": 1,
+                        "priority": "Low",
+                        "technical_impact": "Low",
+                        "business_impact": "Low",
+                        "recommended_action": "None",
+                    },
+                ],
+            }
+        )
+        meta_a = json.dumps(
+            {
+                "schema_version": "1.0",
+                "run_id": "RUN-EMPTY-A",
+                "timestamp": "2026-05-29T14:00:00Z",
+                "repository": "/test",
+                "commit": "eee111",
+                "branch": "main",
+                "tool_version": "3.0.0",
+                "analysis_mode": "baseline",
+                "commands_run": ["scan"],
+                "files_written": [],
+                "limitations": [],
+                "summary": {"finding_count": 1, "evidence_count": 0},
+            }
+        )
         bundle_a = _full_bundle(
             findings=findings_a,
             run_metadata=meta_a,
@@ -494,38 +488,42 @@ class TestTraceabilityDelta:
         a = await _upload(client, bundle_a)
 
         # Second run (different title and metadata → different hash)
-        findings_b = json.dumps({
-            "schema_version": "1.0",
-            "findings": [
-                {
-                    "id": "TD-001",
-                    "category": "TD-ARCH",
-                    "title": "Test B",
-                    "description": "B.",
-                    "severity": "Low",
-                    "evidence_ids": [],
-                    "risk_score": 1,
-                    "priority": "Low",
-                    "technical_impact": "Low",
-                    "business_impact": "Low",
-                    "recommended_action": "None",
-                },
-            ],
-        })
-        meta_b = json.dumps({
-            "schema_version": "1.0",
-            "run_id": "RUN-EMPTY-B",
-            "timestamp": "2026-05-29T15:00:00Z",
-            "repository": "/test",
-            "commit": "fff222",
-            "branch": "main",
-            "tool_version": "3.0.0",
-            "analysis_mode": "baseline",
-            "commands_run": ["scan"],
-            "files_written": [],
-            "limitations": [],
-            "summary": {"finding_count": 1, "evidence_count": 0},
-        })
+        findings_b = json.dumps(
+            {
+                "schema_version": "1.0",
+                "findings": [
+                    {
+                        "id": "TD-001",
+                        "category": "TD-ARCH",
+                        "title": "Test B",
+                        "description": "B.",
+                        "severity": "Low",
+                        "evidence_ids": [],
+                        "risk_score": 1,
+                        "priority": "Low",
+                        "technical_impact": "Low",
+                        "business_impact": "Low",
+                        "recommended_action": "None",
+                    },
+                ],
+            }
+        )
+        meta_b = json.dumps(
+            {
+                "schema_version": "1.0",
+                "run_id": "RUN-EMPTY-B",
+                "timestamp": "2026-05-29T15:00:00Z",
+                "repository": "/test",
+                "commit": "fff222",
+                "branch": "main",
+                "tool_version": "3.0.0",
+                "analysis_mode": "baseline",
+                "commands_run": ["scan"],
+                "files_written": [],
+                "limitations": [],
+                "summary": {"finding_count": 1, "evidence_count": 0},
+            }
+        )
         bundle_b = _full_bundle(
             findings=findings_b,
             run_metadata=meta_b,

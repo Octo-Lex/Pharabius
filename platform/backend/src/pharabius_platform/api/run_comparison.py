@@ -112,9 +112,7 @@ def _wp_summary(
 # --- Delta engines ---
 
 
-def _compute_changed_fields(
-    baseline_canon: dict, comparison_canon: dict
-) -> list[str]:
+def _compute_changed_fields(baseline_canon: dict, comparison_canon: dict) -> list[str]:
     """Return list of field names that differ between canonical dicts."""
     changed = []
     for key in baseline_canon:
@@ -162,27 +160,31 @@ def _compute_findings_delta(
     # Added
     for fid in sorted(added_ids):
         f = comparison_by_fid[fid]
-        deltas.append({
-            "finding_id": fid,
-            "status": "added",
-            "baseline": None,
-            "comparison": _finding_summary(f),
-            "changed_fields": [],
-            "traceability_change": None,
-        })
+        deltas.append(
+            {
+                "finding_id": fid,
+                "status": "added",
+                "baseline": None,
+                "comparison": _finding_summary(f),
+                "changed_fields": [],
+                "traceability_change": None,
+            }
+        )
         counts["added"] += 1
 
     # Removed
     for fid in sorted(removed_ids):
         f = baseline_by_fid[fid]
-        deltas.append({
-            "finding_id": fid,
-            "status": "removed",
-            "baseline": _finding_summary(f),
-            "comparison": None,
-            "changed_fields": [],
-            "traceability_change": None,
-        })
+        deltas.append(
+            {
+                "finding_id": fid,
+                "status": "removed",
+                "baseline": _finding_summary(f),
+                "comparison": None,
+                "changed_fields": [],
+                "traceability_change": None,
+            }
+        )
         counts["removed"] += 1
 
     # Common (changed or unchanged)
@@ -204,20 +206,22 @@ def _compute_findings_delta(
 
         t_status = _traceability_status(b_unresolved, c_unresolved, b_resolved, c_resolved)
 
-        deltas.append({
-            "finding_id": fid,
-            "status": status,
-            "baseline": _finding_summary(bf),
-            "comparison": _finding_summary(cf),
-            "changed_fields": changed_fields,
-            "traceability_change": {
-                "baseline_evidence_ids": len(b_ev),
-                "comparison_evidence_ids": len(c_ev),
-                "baseline_resolved": b_resolved,
-                "comparison_resolved": c_resolved,
-                "status": t_status,
-            },
-        })
+        deltas.append(
+            {
+                "finding_id": fid,
+                "status": status,
+                "baseline": _finding_summary(bf),
+                "comparison": _finding_summary(cf),
+                "changed_fields": changed_fields,
+                "traceability_change": {
+                    "baseline_evidence_ids": len(b_ev),
+                    "comparison_evidence_ids": len(c_ev),
+                    "baseline_resolved": b_resolved,
+                    "comparison_resolved": c_resolved,
+                    "status": t_status,
+                },
+            }
+        )
         counts[status] += 1
 
     return deltas, counts
@@ -256,26 +260,30 @@ def _compute_wp_delta(
 
     for pid in sorted(added_ids):
         wp, _, resolved, missing = comparison_by_pid[pid]
-        deltas.append({
-            "package_id": pid,
-            "status": "added",
-            "baseline": None,
-            "comparison": _wp_summary(wp, resolved, missing),
-            "changed_fields": [],
-            "traceability_change": None,
-        })
+        deltas.append(
+            {
+                "package_id": pid,
+                "status": "added",
+                "baseline": None,
+                "comparison": _wp_summary(wp, resolved, missing),
+                "changed_fields": [],
+                "traceability_change": None,
+            }
+        )
         counts["added"] += 1
 
     for pid in sorted(removed_ids):
         wp, _, resolved, missing = baseline_by_pid[pid]
-        deltas.append({
-            "package_id": pid,
-            "status": "removed",
-            "baseline": _wp_summary(wp, resolved, missing),
-            "comparison": None,
-            "changed_fields": [],
-            "traceability_change": None,
-        })
+        deltas.append(
+            {
+                "package_id": pid,
+                "status": "removed",
+                "baseline": _wp_summary(wp, resolved, missing),
+                "comparison": None,
+                "changed_fields": [],
+                "traceability_change": None,
+            }
+        )
         counts["removed"] += 1
 
     for pid in sorted(common_ids):
@@ -286,24 +294,24 @@ def _compute_wp_delta(
         c_canon = _canonicalize_work_package(c_wp, c_debt_ids)
         changed_fields = _compute_changed_fields(b_canon, c_canon)
         status = "changed" if changed_fields else "unchanged"
-        t_status = _traceability_status(
-            b_missing, c_missing, b_resolved, c_resolved
-        )
+        t_status = _traceability_status(b_missing, c_missing, b_resolved, c_resolved)
 
-        deltas.append({
-            "package_id": pid,
-            "status": status,
-            "baseline": _wp_summary(b_wp, b_resolved, b_missing),
-            "comparison": _wp_summary(c_wp, c_resolved, c_missing),
-            "changed_fields": changed_fields,
-            "traceability_change": {
-                "baseline_resolved_links": b_resolved,
-                "comparison_resolved_links": c_resolved,
-                "baseline_missing_links": b_missing,
-                "comparison_missing_links": c_missing,
-                "status": t_status,
-            },
-        })
+        deltas.append(
+            {
+                "package_id": pid,
+                "status": status,
+                "baseline": _wp_summary(b_wp, b_resolved, b_missing),
+                "comparison": _wp_summary(c_wp, c_resolved, c_missing),
+                "changed_fields": changed_fields,
+                "traceability_change": {
+                    "baseline_resolved_links": b_resolved,
+                    "comparison_resolved_links": c_resolved,
+                    "baseline_missing_links": b_missing,
+                    "comparison_missing_links": c_missing,
+                    "status": t_status,
+                },
+            }
+        )
         counts[status] += 1
 
     return deltas, counts
@@ -338,11 +346,9 @@ def _compute_traceability_delta(
         ev_status = "unchanged"
     elif not baseline_evidence_ids and not comparison_evidence_ids:
         # No evidence store in either run
-        ev_status = ("unchanged" if b_unique_count == 0 and c_unique_count == 0 else "unavailable")
+        ev_status = "unchanged" if b_unique_count == 0 and c_unique_count == 0 else "unavailable"
     else:
-        ev_status = _traceability_status(
-            b_unresolved, c_unresolved, b_resolved, c_resolved
-        )
+        ev_status = _traceability_status(b_unresolved, c_unresolved, b_resolved, c_resolved)
 
     # Work package linkage
     b_total_links = 0
@@ -492,7 +498,8 @@ async def compare_runs(
     result_ev = await session.execute(stmt_ev)
     ev_rows = result_ev.all()
     baseline_evidence_ids = {
-        row[0] for row in ev_rows
+        row[0]
+        for row in ev_rows
         # We need to filter by run, but we fetched both. Let's fix this.
     }
 
@@ -526,8 +533,10 @@ async def compare_runs(
 
     if include_findings:
         findings_delta, findings_counts = _compute_findings_delta(
-            baseline_findings, comparison_findings,
-            baseline_evidence_ids, comparison_evidence_ids,
+            baseline_findings,
+            comparison_findings,
+            baseline_evidence_ids,
+            comparison_evidence_ids,
         )
 
     # Work packages delta
@@ -542,9 +551,12 @@ async def compare_runs(
 
     if include_traceability:
         traceability_delta = _compute_traceability_delta(
-            baseline_findings, comparison_findings,
-            baseline_evidence_ids, comparison_evidence_ids,
-            baseline_wps, comparison_wps,
+            baseline_findings,
+            comparison_findings,
+            baseline_evidence_ids,
+            comparison_evidence_ids,
+            baseline_wps,
+            comparison_wps,
         )
 
     # Summary (always computed)

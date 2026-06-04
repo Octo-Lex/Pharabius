@@ -22,9 +22,7 @@ from pharabius_platform.models import Base
 
 ADMIN_TOKEN = "test-admin-token"
 os.environ.setdefault("ADMIN_TOKEN", ADMIN_TOKEN)
-os.environ.setdefault(
-    "DATABASE_URL", "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true"
-)
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true")
 
 PROFILE_JSON = json.dumps(
     {
@@ -498,17 +496,13 @@ class TestCrossRunIsolation:
         assert run2_id != run1_id
 
         # Run 2 (latest) should show no work packages
-        resp = await client.get(
-            f"/api/v1/repositories/{repo_id}/work-packages?run_id={run2_id}"
-        )
+        resp = await client.get(f"/api/v1/repositories/{repo_id}/work-packages?run_id={run2_id}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 0
 
         # Run 1 should still have work packages
-        resp = await client.get(
-            f"/api/v1/repositories/{repo_id}/work-packages?run_id={run1_id}"
-        )
+        resp = await client.get(f"/api/v1/repositories/{repo_id}/work-packages?run_id={run1_id}")
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 

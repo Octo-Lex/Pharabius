@@ -79,9 +79,9 @@ async def get_repository(
     # Latest run
     run_result = await session.execute(
         select(Run)
-            .where(Run.repository_id == repo.id)
-            .order_by(Run.run_timestamp.desc(), Run.id.desc())
-            .limit(1)
+        .where(Run.repository_id == repo.id)
+        .order_by(Run.run_timestamp.desc(), Run.id.desc())
+        .limit(1)
     )
     latest_run = run_result.scalar_one_or_none()
 
@@ -326,8 +326,7 @@ async def _batch_run_enrichment(
     Returns {run_id: {evidence_count, work_package_count, warning_count}}.
     """
     result: dict[_uuid.UUID, dict[str, object]] = {
-        rid: {"evidence_count": 0, "work_package_count": 0, "warning_count": 0}
-        for rid in run_ids
+        rid: {"evidence_count": 0, "work_package_count": 0, "warning_count": 0} for rid in run_ids
     }
 
     if not run_ids:

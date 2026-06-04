@@ -169,9 +169,7 @@ async def upload_bundle(
         # Extract run metadata from parsed bundle if available
         run_meta = parsed.runs[0] if parsed.runs else None
         run_id_str = (
-            run_meta.run_id
-            if run_meta
-            else f"RUN-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+            run_meta.run_id if run_meta else f"RUN-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
         )
         tool_version = (
             run_meta.tool_version

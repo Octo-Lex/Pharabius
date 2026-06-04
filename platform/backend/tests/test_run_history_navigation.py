@@ -22,9 +22,7 @@ from pharabius_platform.models import Base
 
 ADMIN_TOKEN = "test-admin-token"
 os.environ.setdefault("ADMIN_TOKEN", ADMIN_TOKEN)
-os.environ.setdefault(
-    "DATABASE_URL", "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true"
-)
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true")
 
 PROFILE_JSON = json.dumps(
     {
@@ -339,9 +337,7 @@ class TestLatestRunDeterminism:
         assert data["run"] is not None
         assert data["run"]["is_latest"] is True
 
-    async def test_two_runs_latest_matches_list(
-        self, client: AsyncClient, seeded_two_runs
-    ) -> None:
+    async def test_two_runs_latest_matches_list(self, client: AsyncClient, seeded_two_runs) -> None:
         repo_id = seeded_two_runs["repo_id"]
         resp_list = await client.get(f"/api/v1/repositories/{repo_id}/runs")
         runs = resp_list.json()["runs"]
@@ -361,9 +357,7 @@ class TestFindingsScopedByRun:
     ) -> None:
         repo_id = seeded_two_runs["repo_id"]
         run1_id = seeded_two_runs["run1_id"]
-        resp = await client.get(
-            f"/api/v1/repositories/{repo_id}/findings?run_id={run1_id}"
-        )
+        resp = await client.get(f"/api/v1/repositories/{repo_id}/findings?run_id={run1_id}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 2
@@ -386,9 +380,7 @@ class TestFindingsScopedByRun:
     ) -> None:
         repo_id = seeded_two_runs["repo_id"]
         run1_id = seeded_two_runs["run1_id"]
-        resp = await client.get(
-            f"/api/v1/repositories/{repo_id}/findings?run_id={run1_id}"
-        )
+        resp = await client.get(f"/api/v1/repositories/{repo_id}/findings?run_id={run1_id}")
         titles = [f["title"] for f in resp.json()["findings"]]
         assert "Auth boundary drift v2" not in titles
 
@@ -399,12 +391,8 @@ class TestFindingsScopedByRun:
         run1_id = seeded_two_runs["run1_id"]
         run2_id = seeded_two_runs["run2_id"]
 
-        resp1 = await client.get(
-            f"/api/v1/repositories/{repo_id}/findings?run_id={run1_id}"
-        )
-        resp2 = await client.get(
-            f"/api/v1/repositories/{repo_id}/findings?run_id={run2_id}"
-        )
+        resp1 = await client.get(f"/api/v1/repositories/{repo_id}/findings?run_id={run1_id}")
+        resp2 = await client.get(f"/api/v1/repositories/{repo_id}/findings?run_id={run2_id}")
 
         arch1 = next(f for f in resp1.json()["findings"] if f["finding_id"] == "TD-ARCH-001")
         arch2 = next(f for f in resp2.json()["findings"] if f["finding_id"] == "TD-ARCH-001")
@@ -458,21 +446,15 @@ class TestWorkPackagesScopedByRun:
     async def test_wp_list_with_run_id(self, client: AsyncClient, seeded_single) -> None:
         repo_id = seeded_single["repository_id"]
         run_id = seeded_single["run_id"]
-        resp = await client.get(
-            f"/api/v1/repositories/{repo_id}/work-packages?run_id={run_id}"
-        )
+        resp = await client.get(f"/api/v1/repositories/{repo_id}/work-packages?run_id={run_id}")
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
-    async def test_wp_cross_run_isolation(
-        self, client: AsyncClient, seeded_two_runs
-    ) -> None:
+    async def test_wp_cross_run_isolation(self, client: AsyncClient, seeded_two_runs) -> None:
         repo_id = seeded_two_runs["repo_id"]
         run2_id = seeded_two_runs["run2_id"]
         # Run 2 has no work packages
-        resp = await client.get(
-            f"/api/v1/repositories/{repo_id}/work-packages?run_id={run2_id}"
-        )
+        resp = await client.get(f"/api/v1/repositories/{repo_id}/work-packages?run_id={run2_id}")
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
 
@@ -481,9 +463,7 @@ class TestWorkPackagesScopedByRun:
 
 
 class TestUploadRunMetadata:
-    async def test_upload_stores_run_metadata(
-        self, client: AsyncClient, seeded_single
-    ) -> None:
+    async def test_upload_stores_run_metadata(self, client: AsyncClient, seeded_single) -> None:
         repo_id = seeded_single["repository_id"]
         run_id = seeded_single["run_id"]
         resp = await client.get(f"/api/v1/repositories/{repo_id}/runs/{run_id}")
@@ -493,16 +473,12 @@ class TestUploadRunMetadata:
         assert data["branch_name"] == "main"
         assert data["analysis_mode"] == "deterministic-no-ai"
 
-    async def test_upload_response_enriched(
-        self, client: AsyncClient, seeded_single
-    ) -> None:
+    async def test_upload_response_enriched(self, client: AsyncClient, seeded_single) -> None:
         assert seeded_single["created_at"] is not None
         assert seeded_single["is_latest"] is True
         assert isinstance(seeded_single["warnings"], list)
 
-    async def test_upload_without_run_metadata(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_upload_without_run_metadata(self, client: AsyncClient) -> None:
         result = await _upload(
             client,
             {
@@ -556,9 +532,7 @@ class TestDegradedStates:
         assert data["summary"]["work_package_count"] == 0
         assert data["capabilities"]["has_work_packages"] is False
 
-    async def test_warning_count_from_degraded_links(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_warning_count_from_degraded_links(self, client: AsyncClient) -> None:
         wp = WP_MARKDOWN.replace("- `TD-ARCH-001`", "- `TD-ARCH-001`\n- `TD-ARCH-999`")
         result = await _upload(client, _full_bundle(wp=wp))
         repo_id = result["repository_id"]
