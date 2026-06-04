@@ -3,6 +3,7 @@
 Proves v3.9.0 architecture is real by validating that every runtime parser
 produces well-formed RuntimeEvidence with all required fields.
 """
+
 from __future__ import annotations
 
 import re
@@ -12,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from pharabius.core.runtime.models import RuntimeEvidence, RuntimeSourceGrade
-
 
 # ── Contract helper ──────────────────────────────────────────────────
 
@@ -95,6 +95,7 @@ def tool_versions_repo(tmp_path: Path) -> Path:
 class TestPythonParserContract:
     def test_python_sources_pass_contract(self, python_repo: Path) -> None:
         from pharabius.core.runtime.ecosystems import detect_python_sources
+
         evidence = detect_python_sources(python_repo)
         assert_runtime_parser_contract(evidence)
 
@@ -102,6 +103,7 @@ class TestPythonParserContract:
 class TestNodeParserContract:
     def test_node_sources_pass_contract(self, node_repo: Path) -> None:
         from pharabius.core.runtime.ecosystems import detect_node_sources
+
         evidence = detect_node_sources(node_repo)
         assert_runtime_parser_contract(evidence)
 
@@ -109,6 +111,7 @@ class TestNodeParserContract:
 class TestRubyParserContract:
     def test_ruby_sources_pass_contract(self, ruby_repo: Path) -> None:
         from pharabius.core.runtime.ecosystems import detect_ruby_sources
+
         evidence = detect_ruby_sources(ruby_repo)
         assert_runtime_parser_contract(evidence)
 
@@ -116,6 +119,7 @@ class TestRubyParserContract:
 class TestJavaParserContract:
     def test_java_sources_pass_contract(self, java_repo: Path) -> None:
         from pharabius.core.runtime.ecosystems import detect_java_sources
+
         evidence = detect_java_sources(java_repo)
         assert_runtime_parser_contract(evidence)
 
@@ -123,6 +127,7 @@ class TestJavaParserContract:
 class TestDockerParserContract:
     def test_dockerfile_sources_pass_contract(self, docker_repo: Path) -> None:
         from pharabius.core.runtime.docker import detect_dockerfile_sources
+
         evidence = detect_dockerfile_sources(docker_repo)
         assert_runtime_parser_contract(evidence)
 
@@ -130,6 +135,7 @@ class TestDockerParserContract:
 class TestCIParserContract:
     def test_ci_sources_pass_contract(self, ci_repo: Path) -> None:
         from pharabius.core.runtime.github_actions import detect_ci_sources
+
         evidence = detect_ci_sources(ci_repo)
         assert_runtime_parser_contract(evidence)
 
@@ -137,6 +143,7 @@ class TestCIParserContract:
 class TestToolVersionsContract:
     def test_tool_versions_pass_contract(self, tool_versions_repo: Path) -> None:
         from pharabius.core.runtime.tool_versions import detect_tool_versions_sources
+
         evidence = detect_tool_versions_sources(tool_versions_repo)
         assert_runtime_parser_contract(evidence)
 
@@ -149,6 +156,7 @@ class TestParserBoundary:
 
     def test_ecosystems_does_not_import_detector(self) -> None:
         import importlib
+
         mod = importlib.import_module("pharabius.core.runtime.ecosystems")
         source = inspect_getsource(mod)
         assert "detector" not in source
@@ -156,6 +164,7 @@ class TestParserBoundary:
 
     def test_docker_does_not_import_detector(self) -> None:
         import importlib
+
         mod = importlib.import_module("pharabius.core.runtime.docker")
         source = inspect_getsource(mod)
         assert "detector" not in source
@@ -163,6 +172,7 @@ class TestParserBoundary:
 
     def test_github_actions_does_not_import_detector(self) -> None:
         import importlib
+
         mod = importlib.import_module("pharabius.core.runtime.github_actions")
         source = inspect_getsource(mod)
         assert "detector" not in source
@@ -171,6 +181,7 @@ class TestParserBoundary:
 
 def inspect_getsource(mod) -> str:
     import inspect
+
     return inspect.getsource(mod)
 
 
@@ -182,12 +193,14 @@ class TestDeterministicIDs:
 
     def test_ids_are_unique_within_single_scan(self, python_repo: Path) -> None:
         from pharabius.core.runtime.ecosystems import detect_python_sources
+
         evidence = detect_python_sources(python_repo)
         ids = [e.runtime_evidence_id for e in evidence]
         assert len(ids) == len(set(ids)), "Evidence IDs must be unique"
 
     def test_ids_are_stable_across_runs(self, python_repo: Path) -> None:
         from pharabius.core.runtime.ecosystems import detect_python_sources
+
         run1 = detect_python_sources(python_repo)
         run2 = detect_python_sources(python_repo)
         ids1 = sorted(e.runtime_evidence_id for e in run1)
@@ -197,6 +210,7 @@ class TestDeterministicIDs:
     def test_ids_distinguish_source_detail(self, tmp_path: Path) -> None:
         """Two sources with same ecosystem but different source_detail produce different IDs."""
         from pharabius.core.runtime.ecosystems import detect_python_sources
+
         (tmp_path / ".python-version").write_text("3.11.5\n")
         (tmp_path / "pyproject.toml").write_text('requires-python = "3.11.5"\n')
         evidence = detect_python_sources(tmp_path)

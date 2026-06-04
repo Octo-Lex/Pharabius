@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from pharabius.core.signals.models import SignalDisposition, SignalFamily
 
-
 # ═══════════════════════════════════════════════════════════════════════
 # Family inventory
 # ═══════════════════════════════════════════════════════════════════════
@@ -32,7 +31,11 @@ GOVERNED_FAMILY_INVENTORY: dict[str, dict] = {
             "_analyze_missing_pin",
             "_analyze_runtimes",
         ],
-        "dispositions": {SignalDisposition.FINDING, SignalDisposition.ADVISORY, SignalDisposition.INFORMATIONAL},
+        "dispositions": {
+            SignalDisposition.FINDING,
+            SignalDisposition.ADVISORY,
+            SignalDisposition.INFORMATIONAL,
+        },
         "categories": {"TD-DEP"},  # Runtime findings use TD-DEP category
         "evidence_caps": {},
     },
@@ -112,7 +115,11 @@ GOVERNED_FAMILY_INVENTORY: dict[str, dict] = {
             "_analyze_dependency_signals",
             "_emit_lockfile_finding",
         ],
-        "dispositions": {SignalDisposition.FINDING, SignalDisposition.ADVISORY, SignalDisposition.INFORMATIONAL},
+        "dispositions": {
+            SignalDisposition.FINDING,
+            SignalDisposition.ADVISORY,
+            SignalDisposition.INFORMATIONAL,
+        },
         "categories": {"TD-DEP"},
         "evidence_caps": {},
     },

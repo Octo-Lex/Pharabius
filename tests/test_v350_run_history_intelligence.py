@@ -22,6 +22,8 @@ import pytest
 
 from pharabius.core.constants import EVIDENCE_SOURCE_FILE_SKIPPED
 from pharabius.core.run_history import (
+    _is_history_snapshot_file,
+    _is_run_metadata_file,
     build_current_run_snapshot,
     build_run_history_index,
     build_run_history_summary,
@@ -33,8 +35,6 @@ from pharabius.core.run_history import (
     write_run_history_index,
     write_run_history_snapshot,
     write_run_history_summary,
-    _is_run_metadata_file,
-    _is_history_snapshot_file,
 )
 
 
@@ -136,14 +136,23 @@ class TestEnrichedSnapshot:
         snapshot = build_current_run_snapshot(workspace, "RUN-20260530-143000")
 
         required_fields = [
-            "schema_version", "run_id", "timestamp",
-            "findings_by_category", "risk_by_category",
-            "total_risk_score", "average_risk_score", "max_risk_score",
-            "evidence_type_counts", "evidence_observation_strength_counts",
+            "schema_version",
+            "run_id",
+            "timestamp",
+            "findings_by_category",
+            "risk_by_category",
+            "total_risk_score",
+            "average_risk_score",
+            "max_risk_score",
+            "evidence_type_counts",
+            "evidence_observation_strength_counts",
             "limitation_evidence_count",
             "findings_with_evidence_pct",
-            "orphan_evidence_count", "orphan_finding_count", "broken_reference_count",
-            "claim_count", "work_package_count",
+            "orphan_evidence_count",
+            "orphan_finding_count",
+            "broken_reference_count",
+            "claim_count",
+            "work_package_count",
             "traceability_grade",
         ]
         for field in required_fields:
@@ -187,8 +196,16 @@ class TestEnrichedSnapshot:
 
     def test_snapshot_source_file_skipped_uses_type(self, tmp_path):
         evidence = [
-            {"evidence_id": "EVD-001", "type": EVIDENCE_SOURCE_FILE_SKIPPED, "metadata": {"reason": "file_size_limit"}},
-            {"evidence_id": "EVD-002", "type": EVIDENCE_SOURCE_FILE_SKIPPED, "metadata": {"reason": "file_size_limit"}},
+            {
+                "evidence_id": "EVD-001",
+                "type": EVIDENCE_SOURCE_FILE_SKIPPED,
+                "metadata": {"reason": "file_size_limit"},
+            },
+            {
+                "evidence_id": "EVD-002",
+                "type": EVIDENCE_SOURCE_FILE_SKIPPED,
+                "metadata": {"reason": "file_size_limit"},
+            },
         ]
         workspace = _make_workspace_with_findings(tmp_path, evidence_items=evidence)
         snapshot = build_current_run_snapshot(workspace, "RUN-001")
@@ -204,7 +221,9 @@ class TestRunHistoryIndex:
     def test_run_history_index_created(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10, "evidence_count": 50},
         )
         index = build_run_history_index(workspace)
@@ -216,11 +235,15 @@ class TestRunHistoryIndex:
     def test_run_history_index_does_not_index_itself(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         # Write a pre-existing index file
-        (workspace / "runs" / "run-history-index.json").write_text('{"test": true}', encoding="utf-8")
+        (workspace / "runs" / "run-history-index.json").write_text(
+            '{"test": true}', encoding="utf-8"
+        )
 
         index = build_run_history_index(workspace)
         run_ids = [r["run_id"] for r in index["runs"]]
@@ -230,7 +253,9 @@ class TestRunHistoryIndex:
     def test_history_snapshot_not_treated_as_run_metadata(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         # Write a snapshot file
@@ -244,7 +269,9 @@ class TestRunHistoryIndex:
     def test_old_run_without_snapshot_marked_not_enriched(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         # No snapshot file
@@ -270,7 +297,9 @@ class TestFindingTrend:
     def test_first_run_insufficient_data(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         index = build_run_history_index(workspace)
@@ -280,19 +309,26 @@ class TestFindingTrend:
     def test_finding_trend_partial_without_prior_snapshot(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         _write_run_metadata(
-            workspace / "runs", "RUN-002", "2026-05-30T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-002",
+            "2026-05-30T12:00:00+00:00",
             {"finding_count": 8},
         )
         # Only second run has snapshot
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-002",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 5, "TD-DEP": 3},
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-002",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 5, "TD-DEP": 3},
+            },
+        )
 
         index = build_run_history_index(workspace)
         trend = compute_finding_trend(index)
@@ -303,23 +339,33 @@ class TestFindingTrend:
     def test_finding_trend_complete_with_two_snapshots(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-001",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 8, "TD-DEP": 2},
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-001",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 8, "TD-DEP": 2},
+            },
+        )
         _write_run_metadata(
-            workspace / "runs", "RUN-002", "2026-05-30T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-002",
+            "2026-05-30T12:00:00+00:00",
             {"finding_count": 9},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-002",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 6, "TD-DEP": 3},
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-002",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 6, "TD-DEP": 3},
+            },
+        )
 
         index = build_run_history_index(workspace)
         trend = compute_finding_trend(index)
@@ -331,23 +377,33 @@ class TestFindingTrend:
     def test_new_category_tracked_as_added(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 5},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-001",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 5},
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-001",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 5},
+            },
+        )
         _write_run_metadata(
-            workspace / "runs", "RUN-002", "2026-05-30T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-002",
+            "2026-05-30T12:00:00+00:00",
             {"finding_count": 7},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-002",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 5, "TD-DEP": 2},
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-002",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 5, "TD-DEP": 2},
+            },
+        )
 
         index = build_run_history_index(workspace)
         trend = compute_finding_trend(index)
@@ -356,23 +412,33 @@ class TestFindingTrend:
     def test_removed_category_tracked_as_zero(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 5},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-001",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 3, "TD-DEP": 2},
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-001",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 3, "TD-DEP": 2},
+            },
+        )
         _write_run_metadata(
-            workspace / "runs", "RUN-002", "2026-05-30T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-002",
+            "2026-05-30T12:00:00+00:00",
             {"finding_count": 3},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-002",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 3},
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-002",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 3},
+            },
+        )
 
         index = build_run_history_index(workspace)
         trend = compute_finding_trend(index)
@@ -387,7 +453,9 @@ class TestRiskTrend:
     def test_risk_trend_insufficient_data(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         index = build_run_history_index(workspace)
@@ -397,21 +465,33 @@ class TestRiskTrend:
     def test_risk_trend_with_two_enriched_runs(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-001", "schema_version": "1.0",
-            "total_risk_score": 100,
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-001",
+                "schema_version": "1.0",
+                "total_risk_score": 100,
+            },
+        )
         _write_run_metadata(
-            workspace / "runs", "RUN-002", "2026-05-30T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-002",
+            "2026-05-30T12:00:00+00:00",
             {"finding_count": 8},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-002", "schema_version": "1.0",
-            "total_risk_score": 80,
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-002",
+                "schema_version": "1.0",
+                "total_risk_score": 80,
+            },
+        )
 
         index = build_run_history_index(workspace)
         trend = compute_risk_trend(index)
@@ -427,7 +507,9 @@ class TestEvidenceCoverageTrend:
     def test_evidence_coverage_trend_insufficient_data(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         index = build_run_history_index(workspace)
@@ -435,10 +517,12 @@ class TestEvidenceCoverageTrend:
         assert trend["status"] == "insufficient_data"
 
     def test_evidence_coverage_trend_complete(self):
-        index = {"runs": [
-            {"run_id": "RUN-001", "enriched": True},
-            {"run_id": "RUN-002", "enriched": True},
-        ]}
+        index = {
+            "runs": [
+                {"run_id": "RUN-001", "enriched": True},
+                {"run_id": "RUN-002", "enriched": True},
+            ]
+        }
         prev = {
             "evidence_type_counts": {"large_file_detected": 3, EVIDENCE_SOURCE_FILE_SKIPPED: 1},
             "limitation_evidence_count": 2,
@@ -462,16 +546,28 @@ class TestEvidenceCoverageTrend:
         assert trend["broken_reference_count_delta"] == -1
 
     def test_limitation_evidence_trend(self):
-        index = {"runs": [
-            {"run_id": "RUN-001", "enriched": True},
-            {"run_id": "RUN-002", "enriched": True},
-        ]}
-        prev = {"limitation_evidence_count": 2, "findings_with_evidence_pct": 70.0,
-                "orphan_evidence_count": 0, "orphan_finding_count": 0, "broken_reference_count": 0,
-                "evidence_type_counts": {}}
-        latest = {"limitation_evidence_count": 5, "findings_with_evidence_pct": 75.0,
-                  "orphan_evidence_count": 0, "orphan_finding_count": 0, "broken_reference_count": 0,
-                  "evidence_type_counts": {}}
+        index = {
+            "runs": [
+                {"run_id": "RUN-001", "enriched": True},
+                {"run_id": "RUN-002", "enriched": True},
+            ]
+        }
+        prev = {
+            "limitation_evidence_count": 2,
+            "findings_with_evidence_pct": 70.0,
+            "orphan_evidence_count": 0,
+            "orphan_finding_count": 0,
+            "broken_reference_count": 0,
+            "evidence_type_counts": {},
+        }
+        latest = {
+            "limitation_evidence_count": 5,
+            "findings_with_evidence_pct": 75.0,
+            "orphan_evidence_count": 0,
+            "orphan_finding_count": 0,
+            "broken_reference_count": 0,
+            "evidence_type_counts": {},
+        }
         trend = compute_evidence_coverage_trend(index, latest, prev)
         assert trend["limitation_evidence_count_delta"] == 3
 
@@ -483,7 +579,9 @@ class TestWorkPackageReadinessTrend:
     def test_wp_trend_insufficient_data(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10, "work_package_count": 3},
         )
         index = build_run_history_index(workspace)
@@ -491,13 +589,18 @@ class TestWorkPackageReadinessTrend:
         assert trend["status"] == "insufficient_data"
 
     def test_wp_trend_complete(self):
-        index = {"runs": [
-            {"run_id": "RUN-001", "enriched": True, "work_package_count": 5},
-            {"run_id": "RUN-002", "enriched": True, "work_package_count": 4},
-        ]}
+        index = {
+            "runs": [
+                {"run_id": "RUN-001", "enriched": True, "work_package_count": 5},
+                {"run_id": "RUN-002", "enriched": True, "work_package_count": 4},
+            ]
+        }
         prev = {"grouping_ratio": 2.0, "work_packages_with_linked_findings_pct": 80.0}
-        latest = {"grouping_ratio": 2.5, "work_packages_with_linked_findings_pct": 100.0,
-                  "work_packages_with_verification_steps_pct": 75.0}
+        latest = {
+            "grouping_ratio": 2.5,
+            "work_packages_with_linked_findings_pct": 100.0,
+            "work_packages_with_verification_steps_pct": 75.0,
+        }
         trend = compute_work_package_readiness_trend(index, latest, prev)
         assert trend["status"] == "complete"
         assert trend["work_package_count_delta"] == -1
@@ -511,7 +614,9 @@ class TestRunHistorySummary:
     def test_summary_first_run_insufficient_data(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         summary = build_run_history_summary(workspace)
@@ -525,10 +630,19 @@ class TestRunHistorySummary:
             {"run_id": "RUN-001", "enriched": True, "finding_count": 10},
             {"run_id": "RUN-002", "enriched": True, "finding_count": 10},
         ]
-        prev = {"broken_reference_count": 0, "total_risk_score": 50, "findings_with_evidence_pct": 80.0}
-        latest = {"broken_reference_count": 3, "total_risk_score": 40, "findings_with_evidence_pct": 90.0}
+        prev = {
+            "broken_reference_count": 0,
+            "total_risk_score": 50,
+            "findings_with_evidence_pct": 80.0,
+        }
+        latest = {
+            "broken_reference_count": 3,
+            "total_risk_score": 40,
+            "findings_with_evidence_pct": 90.0,
+        }
 
         from pharabius.core.run_history import _compute_overall_trajectory
+
         result = _compute_overall_trajectory(runs, latest, prev, {})
         assert result == "worsening"
 
@@ -537,33 +651,49 @@ class TestRunHistorySummary:
             {"run_id": "RUN-001", "enriched": True, "finding_count": 10},
             {"run_id": "RUN-002", "enriched": True, "finding_count": 8},
         ]
-        prev = {"broken_reference_count": 0, "total_risk_score": 50, "findings_with_evidence_pct": 80.0}
-        latest = {"broken_reference_count": 0, "total_risk_score": 30, "findings_with_evidence_pct": 85.0}
+        prev = {
+            "broken_reference_count": 0,
+            "total_risk_score": 50,
+            "findings_with_evidence_pct": 80.0,
+        }
+        latest = {
+            "broken_reference_count": 0,
+            "total_risk_score": 30,
+            "findings_with_evidence_pct": 85.0,
+        }
 
         from pharabius.core.run_history import _compute_overall_trajectory
+
         result = _compute_overall_trajectory(runs, latest, prev, {})
         assert result == "improving"
 
     def test_summary_marks_partial_historical_data(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         # Second run with snapshot
         _write_run_metadata(
-            workspace / "runs", "RUN-002", "2026-05-30T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-002",
+            "2026-05-30T12:00:00+00:00",
             {"finding_count": 8},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-002",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 8},
-            "total_risk_score": 50,
-            "traceability_grade": "usable",
-            "claim_count": 5,
-            "limitation_evidence_count": 2,
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-002",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 8},
+                "total_risk_score": 50,
+                "traceability_grade": "usable",
+                "claim_count": 5,
+                "limitation_evidence_count": 2,
+            },
+        )
 
         summary = build_run_history_summary(workspace)
         assert summary["confidence"] == "partial"
@@ -585,7 +715,9 @@ class TestRunHistorySummary:
     def test_summary_json_and_md_written(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         summary = build_run_history_summary(workspace)
@@ -600,15 +732,20 @@ class TestRunHistorySummary:
     def test_markdown_contains_required_sections(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
-        _write_snapshot(workspace / "runs", {
-            "run_id": "RUN-001",
-            "schema_version": "1.0",
-            "findings_by_category": {"TD-CODE": 10},
-            "total_risk_score": 50,
-        })
+        _write_snapshot(
+            workspace / "runs",
+            {
+                "run_id": "RUN-001",
+                "schema_version": "1.0",
+                "findings_by_category": {"TD-CODE": 10},
+                "total_risk_score": 50,
+            },
+        )
 
         summary = build_run_history_summary(workspace)
         md = render_run_history_summary_markdown(summary)
@@ -633,7 +770,9 @@ class TestTraceabilityTrend:
     def test_traceability_trend_in_summary(self, tmp_path):
         workspace = _make_workspace_with_findings(tmp_path)
         _write_run_metadata(
-            workspace / "runs", "RUN-001", "2026-05-29T12:00:00+00:00",
+            workspace / "runs",
+            "RUN-001",
+            "2026-05-29T12:00:00+00:00",
             {"finding_count": 10},
         )
         # Write traceability trend

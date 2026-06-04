@@ -183,19 +183,16 @@ def compute_traceability_quality(
 
     # Claims linked to at least one finding
     claims_with_findings = sum(1 for c in claims if c.linked_findings)
-    claims_with_findings_pct = (
-        round(claims_with_findings / len(claims) * 100, 1) if claims else 0.0
-    )
+    claims_with_findings_pct = round(claims_with_findings / len(claims) * 100, 1) if claims else 0.0
 
     # Claims linked to at least one work package
     claims_with_wp = sum(1 for c in claims if c.linked_work_packages)
-    claims_with_wp_pct = (
-        round(claims_with_wp / len(claims) * 100, 1) if claims else 0.0
-    )
+    claims_with_wp_pct = round(claims_with_wp / len(claims) * 100, 1) if claims else 0.0
 
     # Work packages linked to at least one finding
     wp_with_findings = sum(
-        1 for wp in work_packages
+        1
+        for wp in work_packages
         if wp.get("linked_debt_items") and len(wp["linked_debt_items"]) > 0
     )
     wp_with_findings_pct = (
@@ -205,7 +202,7 @@ def compute_traceability_quality(
     # Orphan evidence: not referenced by any finding
     referenced_evidence: set[str] = set()
     for f in findings:
-        for eid in (f.get("evidence_ids") or []):
+        for eid in f.get("evidence_ids") or []:
             referenced_evidence.add(str(eid))
     orphan_evidence_count = len(evidence_ids - referenced_evidence)
 
@@ -222,26 +219,18 @@ def compute_traceability_quality(
         for fid in c.linked_findings:
             if fid not in finding_ids:
                 broken_count += 1
-        for wp_id in (c.linked_work_packages or []):
+        for wp_id in c.linked_work_packages or []:
             if wp_id not in wp_ids:
                 broken_count += 1
     for wp in work_packages:
-        for debt_id in (wp.get("linked_debt_items") or []):
+        for debt_id in wp.get("linked_debt_items") or []:
             if str(debt_id) not in finding_ids:
                 broken_count += 1
 
     # Grade
-    if (
-        findings_with_evidence_pct >= 95
-        and claims_with_wp_pct >= 80
-        and broken_count == 0
-    ):
+    if findings_with_evidence_pct >= 95 and claims_with_wp_pct >= 80 and broken_count == 0:
         grade = "complete"
-    elif (
-        findings_with_evidence_pct >= 80
-        and claims_with_findings_pct >= 70
-        and broken_count == 0
-    ):
+    elif findings_with_evidence_pct >= 80 and claims_with_findings_pct >= 70 and broken_count == 0:
         grade = "usable"
     elif findings_with_evidence_pct >= 50:
         grade = "partial"
@@ -272,7 +261,9 @@ def render_traceability_quality_markdown(quality: dict[str, object]) -> str:
 
     lines.append("## Grade")
     lines.append("")
-    lines.append(f"**{quality['traceability_grade'].toString().upper() if hasattr(quality['traceability_grade'], 'toString') else str(quality['traceability_grade']).upper()}**")
+    lines.append(
+        f"**{quality['traceability_grade'].toString().upper() if hasattr(quality['traceability_grade'], 'toString') else str(quality['traceability_grade']).upper()}**"
+    )
     lines.append("")
 
     lines.append("## Metrics")
@@ -299,9 +290,7 @@ def render_traceability_quality_markdown(quality: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
-def write_traceability_quality(
-    traceability_dir: Path, quality: dict[str, object]
-) -> list[Path]:
+def write_traceability_quality(traceability_dir: Path, quality: dict[str, object]) -> list[Path]:
     """Write traceability quality JSON and Markdown."""
     import json
 

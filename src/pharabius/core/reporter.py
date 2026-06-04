@@ -726,12 +726,12 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
             ]
         )
         for a in advisories:
-            lines.append(
-                f"| {a.category} | {a.title[:80]} | {a.severity} | {a.risk_score} |"
-            )
+            lines.append(f"| {a.category} | {a.title[:80]} | {a.severity} | {a.risk_score} |")
 
     # Runtime reproducibility section (v3.9.0)
-    runtime_evidence = [e for e in ctx.evidence_store.evidence if e.type == "runtime_version_signal"]
+    runtime_evidence = [
+        e for e in ctx.evidence_store.evidence if e.type == "runtime_version_signal"
+    ]
     if runtime_evidence:
         runtime_by_signal: dict[str, list] = {}
         for re_ev in runtime_evidence:
@@ -879,21 +879,24 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
 
     Builds from GovernedSignal instances, not raw evidence heuristics.
     """
-    from pharabius.core.constants import EVIDENCE_RUNTIME_VERSION_SIGNAL
-    from pharabius.core.constants import RUNTIME_SIGNAL_CONFLICT, RUNTIME_SIGNAL_MISSING
+    from pharabius.core.constants import (
+        EVIDENCE_RUNTIME_VERSION_SIGNAL,
+        RUNTIME_SIGNAL_CONFLICT,
+        RUNTIME_SIGNAL_MISSING,
+    )
     from pharabius.core.signals.adapters import (
+        build_ci_evidence_to_signal,
+        build_missing_ci_to_signal,
+        docs_evidence_to_signal,
+        docs_missing_to_signal,
+        process_missing_artifacts_to_signal,
         runtime_conflict_to_signal_from_evidence,
         runtime_missing_pin_to_signal_from_evidence,
-        docs_missing_to_signal,
-        docs_evidence_to_signal,
-        build_missing_ci_to_signal,
-        build_ci_evidence_to_signal,
-        process_missing_artifacts_to_signal,
-        scan_test_missing_to_signal,
-        scan_test_risk_sensitive_without_tests_to_signal,
+        scan_test_coverage_evidence_to_signal,
         scan_test_coverage_gap_to_signal,
         scan_test_evidence_to_signal,
-        scan_test_coverage_evidence_to_signal,
+        scan_test_missing_to_signal,
+        scan_test_risk_sensitive_without_tests_to_signal,
     )
     from pharabius.core.signals.summary import build_signal_summary
 
@@ -911,17 +914,27 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
         # Informational runtime evidence not needed for report summary
 
     # ── Documentation signals ──
-    docs_evidence = [e for e in ctx.evidence_store.evidence if e.type == "documentation_file_detected"]
+    docs_evidence = [
+        e for e in ctx.evidence_store.evidence if e.type == "documentation_file_detected"
+    ]
     for ev in docs_evidence:
         signals.append(docs_evidence_to_signal(ev))
 
     # Check for documentation advisory in findings
     doc_advisory = next(
-        (f for f in ctx.debt_register.findings if f.category == "TD-DOC" and f.issue_type == "advisory"),
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-DOC" and f.issue_type == "advisory"
+        ),
         None,
     )
     if doc_advisory:
-        signals.append(docs_missing_to_signal(evidence_ids=doc_advisory.evidence_ids[:1] if doc_advisory.evidence_ids else []))
+        signals.append(
+            docs_missing_to_signal(
+                evidence_ids=doc_advisory.evidence_ids[:1] if doc_advisory.evidence_ids else []
+            )
+        )
 
     # ── Build signals ──
     ci_evidence = [e for e in ctx.evidence_store.evidence if e.type == "deployment_file_detected"]
@@ -929,7 +942,11 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
         signals.append(build_ci_evidence_to_signal(ev))
 
     build_advisory = next(
-        (f for f in ctx.debt_register.findings if f.category == "TD-BUILD" and f.issue_type == "advisory"),
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-BUILD" and f.issue_type == "advisory"
+        ),
         None,
     )
     if build_advisory:
@@ -937,16 +954,26 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
 
     # ── Process signals ──
     process_advisory = next(
-        (f for f in ctx.debt_register.findings if f.category == "TD-PROCESS" and f.issue_type == "advisory"),
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-PROCESS" and f.issue_type == "advisory"
+        ),
         None,
     )
     if process_advisory:
         desc = process_advisory.description or ""
-        missing = [t for t in ["CODEOWNERS", "CONTRIBUTING", "PULL_REQUEST_TEMPLATE"] if t.lower() in desc.lower()]
-        signals.append(process_missing_artifacts_to_signal(
-            missing_artifacts=missing or ["unknown"],
-            evidence_ids=process_advisory.evidence_ids,
-        ))
+        missing = [
+            t
+            for t in ["CODEOWNERS", "CONTRIBUTING", "PULL_REQUEST_TEMPLATE"]
+            if t.lower() in desc.lower()
+        ]
+        signals.append(
+            process_missing_artifacts_to_signal(
+                missing_artifacts=missing or ["unknown"],
+                evidence_ids=process_advisory.evidence_ids,
+            )
+        )
 
     # ── Test signals ──
     test_evidence = [e for e in ctx.evidence_store.evidence if e.type == "test_file_detected"]
@@ -959,28 +986,38 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
 
     # Test-related findings from debt register
     test_findings = [
-        f for f in ctx.debt_register.findings
+        f
+        for f in ctx.debt_register.findings
         if f.category == "TD-TEST" and f.issue_type != "advisory"
     ]
     for f in test_findings:
         if "coverage" in (f.title or "").lower():
-            signals.append(scan_test_coverage_gap_to_signal(
-                evidence_ids=f.evidence_ids,
-                low_count=f.evidence_ids.__len__(),
-            ))
+            signals.append(
+                scan_test_coverage_gap_to_signal(
+                    evidence_ids=f.evidence_ids,
+                    low_count=f.evidence_ids.__len__(),
+                )
+            )
         else:
             signals.append(scan_test_missing_to_signal(evidence_ids=f.evidence_ids))
 
     # Risk-sensitive without tests
     risk_sensitive_finding = next(
-        (f for f in ctx.debt_register.findings
-         if f.category == "TD-SEC" and "test" in (f.title or "").lower() and f.issue_type != "advisory"),
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-SEC"
+            and "test" in (f.title or "").lower()
+            and f.issue_type != "advisory"
+        ),
         None,
     )
     if risk_sensitive_finding:
-        signals.append(scan_test_risk_sensitive_without_tests_to_signal(
-            evidence_ids=risk_sensitive_finding.evidence_ids,
-        ))
+        signals.append(
+            scan_test_risk_sensitive_without_tests_to_signal(
+                evidence_ids=risk_sensitive_finding.evidence_ids,
+            )
+        )
 
     if not signals:
         return
@@ -997,95 +1034,111 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
             family_rows[fam] = {"finding": 0, "advisory": 0, "informational": 0, "suppressed": 0}
         family_rows[fam][disp] += 1
 
-    lines.extend([
-        "",
-        "## 6d. Signal Governance Summary",
-        "",
-        "| Family | Findings | Advisories | Informational | Suppressed |",
-        "|---|---:|---:|---:|---:|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 6d. Signal Governance Summary",
+            "",
+            "| Family | Findings | Advisories | Informational | Suppressed |",
+            "|---|---:|---:|---:|---:|",
+        ]
+    )
 
     for fam in sorted(family_rows.keys()):
         r = family_rows[fam]
-        lines.append(f"| {fam.title()} | {r['finding']} | {r['advisory']} | {r['informational']} | {r['suppressed']} |")
+        lines.append(
+            f"| {fam.title()} | {r['finding']} | {r['advisory']} | {r['informational']} | {r['suppressed']} |"
+        )
 
-    lines.extend([
-        "",
-        "> Findings are promoted into the technical debt register and may create work packages.",
-        "> Advisories are reportable but do not create work packages.",
-        "> Informational signals provide context and coverage visibility.",
-        "> Suppressed signals are diagnostics-only and omitted from normal reports unless diagnostics are enabled.",
-        "",
-        "> Category describes the finding taxonomy (e.g., TD-DEP, TD-SEC).",
-        "> Family describes the governance owner (e.g., dependency, security).",
-        "> Category and family are not always identical: TD-COMP → SECURITY, TD-SEC → TEST.",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "> Findings are promoted into the technical debt register and may create work packages.",
+            "> Advisories are reportable but do not create work packages.",
+            "> Informational signals provide context and coverage visibility.",
+            "> Suppressed signals are diagnostics-only and omitted from normal reports unless diagnostics are enabled.",
+            "",
+            "> Category describes the finding taxonomy (e.g., TD-DEP, TD-SEC).",
+            "> Family describes the governance owner (e.g., dependency, security).",
+            "> Category and family are not always identical: TD-COMP → SECURITY, TD-SEC → TEST.",
+            "",
+        ]
+    )
 
     # ── Governance quality metrics (v3.23.0) ──
     from pharabius.core.signals.quality import build_governance_quality_metrics
 
     metrics = build_governance_quality_metrics(signals)
 
-    lines.extend([
-        "",
-        "## 6e. Governance Quality Metrics",
-        "",
-        f"| Metric | Value |",
-        f"|---|---:|",
-        f"| Total governed signals | {metrics.total_signals} |",
-        f"| Finding evidence coverage | {metrics.finding_evidence_coverage:.0%} |",
-        f"| Finding metadata coverage | {metrics.finding_metadata_coverage:.0%} |",
-        f"| Advisory evidence/basis coverage | {metrics.advisory_evidence_coverage:.0%} |",
-        f"| Informational evidence coverage | {metrics.informational_evidence_coverage:.0%} |",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 6e. Governance Quality Metrics",
+            "",
+            f"| Metric | Value |",
+            f"|---|---:|",
+            f"| Total governed signals | {metrics.total_signals} |",
+            f"| Finding evidence coverage | {metrics.finding_evidence_coverage:.0%} |",
+            f"| Finding metadata coverage | {metrics.finding_metadata_coverage:.0%} |",
+            f"| Advisory evidence/basis coverage | {metrics.advisory_evidence_coverage:.0%} |",
+            f"| Informational evidence coverage | {metrics.informational_evidence_coverage:.0%} |",
+            "",
+        ]
+    )
 
     # Disposition breakdown
     if metrics.by_disposition:
-        lines.extend([
-            "| Disposition | Count |",
-            "|---|---:|",
-        ])
+        lines.extend(
+            [
+                "| Disposition | Count |",
+                "|---|---:|",
+            ]
+        )
         for disp, count in sorted(metrics.by_disposition.items()):
             lines.append(f"| {disp.title()} | {count} |")
         lines.append("")
 
     # Confidence breakdown
     if metrics.by_confidence:
-        lines.extend([
-            "| Confidence | Count |",
-            "|---|---:|",
-        ])
+        lines.extend(
+            [
+                "| Confidence | Count |",
+                "|---|---:|",
+            ]
+        )
         for conf, count in sorted(metrics.by_confidence.items()):
             lines.append(f"| {conf} | {count} |")
         lines.append("")
 
     # Diagnostics
     if metrics.diagnostics:
-        lines.extend([
-            "| Code | Severity | Message |",
-            "|---|---|---|",
-        ])
+        lines.extend(
+            [
+                "| Code | Severity | Message |",
+                "|---|---|---|",
+            ]
+        )
         for d in metrics.diagnostics:
             lines.append(f"| {d.code} | {d.severity} | {d.message} |")
         lines.append("")
 
-    lines.extend([
-        "> These metrics are descriptive only.",
-        "> No quality gates are applied.",
-        "> No signal is promoted or demoted by these metrics.",
-        "",
-    ])
+    lines.extend(
+        [
+            "> These metrics are descriptive only.",
+            "> No quality gates are applied.",
+            "> No signal is promoted or demoted by these metrics.",
+            "",
+        ]
+    )
 
     # ── Governance quality trends (v3.24.0) ──
     # Compute trend from run-history if available
     try:
-        from pharabius.core.run_history import build_run_history_index, _load_json
+        from pharabius.core.run_history import _load_json, build_run_history_index
         from pharabius.core.signals.trends import (
             build_governance_trend_summary,
-            format_coverage_delta,
             format_count_delta,
+            format_coverage_delta,
         )
 
         workspace = ctx.repository_root / ".ai-debt"
@@ -1106,28 +1159,32 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
         trend = None
 
     if trend and trend.unavailable_reason is None:
-        lines.extend([
-            "",
-            "## 6f. Governance Quality Trends",
-            "",
-            "These trends compare governance quality metrics across recent runs. They are",
-            "descriptive only; no quality gates, thresholds, or pass/fail rules are applied.",
-            "",
-            "| Metric | Previous | Current | Change |",
-            "|---|---:|---:|---:|",
-            f"| Total governed signals | {trend.signal_count_delta.previous or 0} | {trend.signal_count_delta.current} | {format_count_delta(trend.signal_count_delta)} |",
-            f"| Finding evidence coverage | {(trend.finding_evidence_coverage_delta.previous or 1.0):.0%} | {trend.finding_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.finding_evidence_coverage_delta)} |",
-            f"| Advisory evidence/basis coverage | {(trend.advisory_evidence_coverage_delta.previous or 1.0):.0%} | {trend.advisory_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.advisory_evidence_coverage_delta)} |",
-            f"| Informational evidence coverage | {(trend.informational_evidence_coverage_delta.previous or 1.0):.0%} | {trend.informational_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.informational_evidence_coverage_delta)} |",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## 6f. Governance Quality Trends",
+                "",
+                "These trends compare governance quality metrics across recent runs. They are",
+                "descriptive only; no quality gates, thresholds, or pass/fail rules are applied.",
+                "",
+                "| Metric | Previous | Current | Change |",
+                "|---|---:|---:|---:|",
+                f"| Total governed signals | {trend.signal_count_delta.previous or 0} | {trend.signal_count_delta.current} | {format_count_delta(trend.signal_count_delta)} |",
+                f"| Finding evidence coverage | {(trend.finding_evidence_coverage_delta.previous or 1.0):.0%} | {trend.finding_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.finding_evidence_coverage_delta)} |",
+                f"| Advisory evidence/basis coverage | {(trend.advisory_evidence_coverage_delta.previous or 1.0):.0%} | {trend.advisory_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.advisory_evidence_coverage_delta)} |",
+                f"| Informational evidence coverage | {(trend.informational_evidence_coverage_delta.previous or 1.0):.0%} | {trend.informational_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.informational_evidence_coverage_delta)} |",
+                "",
+            ]
+        )
 
         # Family breakdown if deltas exist
         if trend.by_family_delta:
-            lines.extend([
-                "| Family | Signals (prev) | Signals (curr) | Change |",
-                "|---|---:|---:|---:|",
-            ])
+            lines.extend(
+                [
+                    "| Family | Signals (prev) | Signals (curr) | Change |",
+                    "|---|---:|---:|---:|",
+                ]
+            )
             for fam, delta in sorted(trend.by_family_delta.items()):
                 lines.append(
                     f"| {fam.title()} | {delta.previous or 0} | {delta.current} | {format_count_delta(delta)} |"
@@ -1136,20 +1193,24 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
 
         # Recurring diagnostics
         if trend.recurring_diagnostics:
-            lines.extend([
-                "| Diagnostic | Family | Runs | Latest severity |",
-                "|---|---|---:|---|",
-            ])
+            lines.extend(
+                [
+                    "| Diagnostic | Family | Runs | Latest severity |",
+                    "|---|---|---:|---|",
+                ]
+            )
             for diag in trend.recurring_diagnostics:
                 lines.append(
                     f"| {diag.code} | {diag.family or '-'} | {diag.occurrences} | {diag.latest_severity} |"
                 )
             lines.append("")
     elif trend and trend.unavailable_reason:
-        lines.extend([
-            "",
-            "## 6f. Governance Quality Trends",
-            "",
-            f"{trend.unavailable_reason}",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## 6f. Governance Quality Trends",
+                "",
+                f"{trend.unavailable_reason}",
+                "",
+            ]
+        )

@@ -120,7 +120,11 @@ class TestDotNetAnalyzer:
         (tmp_path / "Api.csproj").write_text("<Project></Project>", encoding="utf-8")
         (tmp_path / "packages.lock.json").write_text("{}", encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
+        dep = [
+            f
+            for f in analyze_evidence(tmp_path).findings
+            if f.category == "TD-DEP" and f.issue_type != "advisory"
+        ]
         assert len(dep) == 0
 
     def test_nested_csproj_root_lockfile_unsatisfied(self, tmp_path: Path) -> None:
@@ -142,7 +146,11 @@ class TestDotNetAnalyzer:
         )
         (tmp_path / "src" / "Api" / "packages.lock.json").write_text("{}", encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
+        dep = [
+            f
+            for f in analyze_evidence(tmp_path).findings
+            if f.category == "TD-DEP" and f.issue_type != "advisory"
+        ]
         assert len(dep) == 0
 
 
@@ -157,7 +165,11 @@ class TestMavenPomClassification:
             encoding="utf-8",
         )
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
+        dep = [
+            f
+            for f in analyze_evidence(tmp_path).findings
+            if f.category == "TD-DEP" and f.issue_type != "advisory"
+        ]
         assert len(dep) == 0
 
     def test_parent_pom_whitespace_tolerant(self, tmp_path: Path) -> None:
@@ -201,7 +213,11 @@ class TestMavenPomClassification:
             encoding="utf-8",
         )
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
+        dep = [
+            f
+            for f in analyze_evidence(tmp_path).findings
+            if f.category == "TD-DEP" and f.issue_type != "advisory"
+        ]
         assert len(dep) == 0
 
     def test_maven_with_reproducibility_no_finding(self, tmp_path: Path) -> None:
@@ -215,7 +231,11 @@ class TestMavenPomClassification:
         )
         (tmp_path / "api-service" / "mvnw").write_text("#!/bin/sh", encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
+        dep = [
+            f
+            for f in analyze_evidence(tmp_path).findings
+            if f.category == "TD-DEP" and f.issue_type != "advisory"
+        ]
         assert len(dep) == 0
 
     def test_multi_module_one_dep_finding(self, tmp_path: Path) -> None:
@@ -275,7 +295,11 @@ class TestTerraformLockfile:
         """.tf files without .terraform.lock.hcl do NOT produce TD-DEP in v0.3.2."""
         (tmp_path / "main.tf").write_text('resource "aws_vpc" "main" {}', encoding="utf-8")
         _full_pipeline(tmp_path)
-        dep = [f for f in analyze_evidence(tmp_path).findings if f.category == "TD-DEP" and f.issue_type != "advisory"]
+        dep = [
+            f
+            for f in analyze_evidence(tmp_path).findings
+            if f.category == "TD-DEP" and f.issue_type != "advisory"
+        ]
         assert len(dep) == 0
 
 

@@ -70,7 +70,9 @@ def _parse_dep_name(dep_str: str) -> str:
 
 
 def _check_node_unpinned_deps(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     """Check package.json for unpinned or broad version ranges."""
     data = read_json(file_path)
@@ -106,7 +108,9 @@ def _check_node_unpinned_deps(
 
 
 def _check_python_unpinned_deps(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     """Check requirements.txt for unpinned version specifiers.
 
@@ -117,24 +121,24 @@ def _check_python_unpinned_deps(
     if not text:
         return
     unpinned: list[dict[str, str]] = []
-    for line in text.split('\n'):
+    for line in text.split("\n"):
         line = line.strip()
-        if not line or line.startswith('#') or line.startswith('-'):
+        if not line or line.startswith("#") or line.startswith("-"):
             continue
         # Remove environment markers
-        if ';' in line:
-            line = line.split(';')[0].strip()
+        if ";" in line:
+            line = line.split(";")[0].strip()
         # Remove extras
-        if '[' in line and ']' in line:
-            base = line.split('[')[0]
-            rest = line.split(']', 1)[1]
+        if "[" in line and "]" in line:
+            base = line.split("[")[0]
+            rest = line.split("]", 1)[1]
             line = base + rest
         # Check pinning
-        if '==' in line or '===' in line or ' @ ' in line:
+        if "==" in line or "===" in line or " @ " in line:
             continue  # Pinned
         # Anything else with a name is unpinned
         name = line
-        for ch in ('>', '<', '~', '=', '!', ' ', '\t'):
+        for ch in (">", "<", "~", "=", "!", " ", "\t"):
             name = name.split(ch)[0]
         name = name.strip()
         if name:
@@ -162,7 +166,9 @@ def _check_python_unpinned_deps(
 
 
 def _parse_pyproject_deps(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     """Parse pyproject.toml for dependency signals."""
 
@@ -205,7 +211,9 @@ def _parse_pyproject_deps(
         for dep_str in project_deps:
             name = _parse_dep_name(dep_str)
             if classify_python_specifier(dep_str, "pep508") != "pinned":
-                unpinned.append({"name": name, "specifier": dep_str, "section": "project.dependencies"})
+                unpinned.append(
+                    {"name": name, "specifier": dep_str, "section": "project.dependencies"}
+                )
 
     # PEP 621 [project].optional-dependencies
     opt_deps = data.get("project", {}).get("optional-dependencies", {})
@@ -215,7 +223,13 @@ def _parse_pyproject_deps(
             for dep_str in deps:
                 name = _parse_dep_name(dep_str)
                 if classify_python_specifier(dep_str, "pep508") != "pinned":
-                    unpinned.append({"name": name, "specifier": dep_str, "section": f"project.optional-dependencies.{group}"})
+                    unpinned.append(
+                        {
+                            "name": name,
+                            "specifier": dep_str,
+                            "section": f"project.optional-dependencies.{group}",
+                        }
+                    )
 
     # Poetry [tool.poetry.dependencies]
     poetry_deps = data.get("tool", {}).get("poetry", {}).get("dependencies", {})
@@ -226,7 +240,9 @@ def _parse_pyproject_deps(
                 continue
             v = version if isinstance(version, str) else version.get("version", "")
             if classify_python_specifier(str(v), "poetry") != "pinned":
-                unpinned.append({"name": name, "specifier": str(version), "section": "tool.poetry.dependencies"})
+                unpinned.append(
+                    {"name": name, "specifier": str(version), "section": "tool.poetry.dependencies"}
+                )
 
     # Poetry [tool.poetry.group.*.dependencies]
     poetry_groups = data.get("tool", {}).get("poetry", {}).get("group", {})
@@ -237,7 +253,13 @@ def _parse_pyproject_deps(
             for name, version in group_deps.items():
                 v = version if isinstance(version, str) else version.get("version", "")
                 if classify_python_specifier(str(v), "poetry") != "pinned":
-                    unpinned.append({"name": name, "specifier": str(version), "section": f"tool.poetry.group.{group_name}.dependencies"})
+                    unpinned.append(
+                        {
+                            "name": name,
+                            "specifier": str(version),
+                            "section": f"tool.poetry.group.{group_name}.dependencies",
+                        }
+                    )
 
     # Poetry [tool.poetry.dev-dependencies] (legacy)
     dev_deps = data.get("tool", {}).get("poetry", {}).get("dev-dependencies", {})
@@ -246,7 +268,13 @@ def _parse_pyproject_deps(
         for name, version in dev_deps.items():
             v = version if isinstance(version, str) else version.get("version", "")
             if classify_python_specifier(str(v), "poetry") != "pinned":
-                unpinned.append({"name": name, "specifier": str(version), "section": "tool.poetry.dev-dependencies"})
+                unpinned.append(
+                    {
+                        "name": name,
+                        "specifier": str(version),
+                        "section": "tool.poetry.dev-dependencies",
+                    }
+                )
 
     if unpinned:
         builder.add(
@@ -272,7 +300,9 @@ def _parse_pyproject_deps(
 
 
 def _parse_pipfile_deps(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     """Parse Pipfile for unpinned dependency signals."""
 
@@ -450,7 +480,11 @@ def _check_pipfile_lockfile(root: Path, builder: EvidenceBuilder) -> None:
 def _check_node_lockfile_conflicts(root: Path, builder: EvidenceBuilder) -> None:
     """Detect when multiple Node.js lockfiles exist for the same ecosystem."""
     NODE_LOCKFILES = [
-        "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lock", "bun.lockb",
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "bun.lock",
+        "bun.lockb",
     ]
     found = [lf for lf in NODE_LOCKFILES if (root / lf).exists()]
     if len(found) > 1:
@@ -472,7 +506,3 @@ def _check_node_lockfile_conflicts(root: Path, builder: EvidenceBuilder) -> None
                 "read_mode": READ_MODE_SKIPPED,
             },
         )
-
-
-
-

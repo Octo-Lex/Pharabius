@@ -34,7 +34,6 @@ from pharabius.core.traceability import (
     load_quality_history,
 )
 
-
 # ---------------------------------------------------------------------------
 # S01: Path normalization
 # ---------------------------------------------------------------------------
@@ -109,9 +108,7 @@ class TestS02Cobertura:
         (tmp_path / "main.py").write_text("print('hello')")
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         cov_findings = [
             f
             for f in register["findings"]
@@ -129,9 +126,7 @@ class TestS02Cobertura:
         (tmp_path / "coverage.xml").write_text(xml)
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         td_test = [
             f
             for f in register["findings"]
@@ -178,7 +173,7 @@ class TestS03JaCoCo:
             '<?xml version="1.0" ?>'
             "<report>"
             '<counter type="LINE" missed="10" covered="90"/>'
-            "<package name=\"com/example\">"
+            '<package name="com/example">'
             '<counter type="LINE" missed="50" covered="50"/>'
             "</package>"
             "</report>"
@@ -195,7 +190,7 @@ class TestS03JaCoCo:
         xml = (
             '<?xml version="1.0" ?>'
             "<report>"
-            "<package name=\"com/example\">"
+            '<package name="com/example">'
             '<counter type="LINE" missed="20" covered="80"/>'
             "</package>"
             "</report>"
@@ -375,9 +370,7 @@ python = "^3.11"
         ]
         assert len(signals) >= 1
 
-    def test_poetry_lock_without_pyproject_emits_signal(
-        self, tmp_path: Path
-    ) -> None:
+    def test_poetry_lock_without_pyproject_emits_signal(self, tmp_path: Path) -> None:
         (tmp_path / "poetry.lock").write_text("# poetry lockfile\n")
         store = scan_repository(tmp_path)
         signals = [
@@ -435,9 +428,7 @@ class TestS06RuntimePinning:
         assert len(signals) >= 1
         assert signals[0].metadata["version"] == "3.11"
 
-    def test_missing_runtime_pin_emits_conservative(
-        self, tmp_path: Path
-    ) -> None:
+    def test_missing_runtime_pin_emits_conservative(self, tmp_path: Path) -> None:
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         store = scan_repository(tmp_path)
         signals = [
@@ -463,13 +454,9 @@ class TestS06RuntimePinning:
         assert "Python" in runtimes
         assert "Node.js" in runtimes
 
-    def test_tool_versions_detects_ruby_java_v380(
-        self, tmp_path: Path
-    ) -> None:
+    def test_tool_versions_detects_ruby_java_v380(self, tmp_path: Path) -> None:
         """v3.8.0: .tool-versions now detects Ruby and Java runtime entries."""
-        (tmp_path / ".tool-versions").write_text(
-            "ruby 3.2.2\njava temurin-17.0.8\n"
-        )
+        (tmp_path / ".tool-versions").write_text("ruby 3.2.2\njava temurin-17.0.8\n")
         store = scan_repository(tmp_path)
         pinned = [
             e
@@ -515,9 +502,7 @@ class TestS07TraceabilityTrend:
         )
         assert trend["trajectory"] == "worsening"
 
-    def test_traceability_history_appends_snapshot(
-        self, tmp_path: Path
-    ) -> None:
+    def test_traceability_history_appends_snapshot(self, tmp_path: Path) -> None:
         from pharabius.core.traceability import append_quality_snapshot
 
         append_quality_snapshot(

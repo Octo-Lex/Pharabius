@@ -2,7 +2,7 @@
 
 Verifies that extracting parser modules did not change any behavior:
 - Coverage parsers produce identical evidence
-- Dependency parsers produce identical evidence  
+- Dependency parsers produce identical evidence
 - Runtime parsers produce identical evidence
 - io_helpers work correctly
 - EvidenceBuilder moved to schemas.evidence
@@ -27,7 +27,6 @@ from pharabius.core.constants import (
 from pharabius.core.io_helpers import read_json, read_text
 from pharabius.schemas.evidence import EvidenceBuilder, EvidenceItem, EvidenceStore
 
-
 # ── S04: Module importability ─────────────────────────────────────────
 
 
@@ -36,11 +35,13 @@ class TestModuleImports:
 
     def test_io_helpers_importable(self):
         from pharabius.core.io_helpers import read_json, read_text
+
         assert callable(read_json)
         assert callable(read_text)
 
     def test_coverage_parsers_importable(self):
         from pharabius.core.coverage_parsers import scan_coverage_artifact
+
         assert callable(scan_coverage_artifact)
 
     def test_dependency_parsers_importable(self):
@@ -48,16 +49,19 @@ class TestModuleImports:
             scan_dependency_manifest,
             scan_repository_dependency_consistency,
         )
+
         assert callable(scan_dependency_manifest)
         assert callable(scan_repository_dependency_consistency)
 
     def test_runtime_parsers_importable(self):
         from pharabius.core.runtime_parsers import detect_runtime_version_pins
+
         assert callable(detect_runtime_version_pins)
 
     def test_evidence_builder_in_schemas(self):
         """EvidenceBuilder should be importable from schemas.evidence."""
         from pharabius.schemas.evidence import EvidenceBuilder
+
         builder = EvidenceBuilder()
         builder.add(
             type_="test",
@@ -276,7 +280,9 @@ class TestDependencyParsers:
         builder = EvidenceBuilder()
         scan_repository_dependency_consistency(tmp_path, builder)
 
-        signals = [e for e in builder.items if "poetry_lockfile_without_manifest" in e.raw_observation]
+        signals = [
+            e for e in builder.items if "poetry_lockfile_without_manifest" in e.raw_observation
+        ]
         assert len(signals) == 1
 
 
@@ -322,7 +328,8 @@ class TestRuntimeParsers:
         detect_runtime_version_pins(tmp_path, builder)
 
         missing = [
-            e for e in builder.items
+            e
+            for e in builder.items
             if "runtime_version_missing" in e.raw_observation and "Python" in e.raw_observation
         ]
         assert len(missing) == 1
@@ -354,8 +361,9 @@ class TestScannerIntegration:
 
     def test_wrapper_read_text_delegates(self):
         """scanner._read_text should delegate to io_helpers.read_text."""
-        from pharabius.core import scanner
         import inspect
+
+        from pharabius.core import scanner
 
         source = inspect.getsource(scanner._read_text)
         assert "read_text" in source
@@ -363,8 +371,9 @@ class TestScannerIntegration:
 
     def test_wrapper_read_json_delegates(self):
         """scanner._read_json should delegate to io_helpers.read_json."""
-        from pharabius.core import scanner
         import inspect
+
+        from pharabius.core import scanner
 
         source = inspect.getsource(scanner._read_json)
         assert "read_json" in source

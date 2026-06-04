@@ -8,17 +8,16 @@ import yaml
 
 from pharabius.core.io_helpers import read_text
 from pharabius.core.runtime.constraints import parse_constraint
+from pharabius.core.runtime.ecosystems import _make_id
 from pharabius.core.runtime.models import (
-    RuntimeSourceGrade,
     Confidence,
     RuntimeConstraint,
     RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
-from pharabius.core.runtime.ecosystems import _make_id
-
 
 _GH_SETUP_ACTIONS: dict[str, tuple[str, str]] = {
     "actions/setup-python": ("python-version", "Python"),
@@ -53,16 +52,18 @@ def _parse_workflow(root: Path, wf_path: Path) -> list[RuntimeEvidence]:
         data = yaml.safe_load(text)
     except yaml.YAMLError:
         # Malformed → unknown evidence
-        return [RuntimeEvidence(
-            runtime_evidence_id=_make_id("unknown", rel_path, "malformed", "unknown"),
-            ecosystem=RuntimeEcosystem.PYTHON,  # placeholder
-            runtime_name="unknown",
-            constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw="malformed"),
-            source_type=RuntimeSourceType.CI,
-            source_path=rel_path,
-            source_grade=RuntimeSourceGrade.CI,
-            confidence=Confidence.LOW,
-        )]
+        return [
+            RuntimeEvidence(
+                runtime_evidence_id=_make_id("unknown", rel_path, "malformed", "unknown"),
+                ecosystem=RuntimeEcosystem.PYTHON,  # placeholder
+                runtime_name="unknown",
+                constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw="malformed"),
+                source_type=RuntimeSourceType.CI,
+                source_path=rel_path,
+                source_grade=RuntimeSourceGrade.CI,
+                confidence=Confidence.LOW,
+            )
+        ]
 
     if not isinstance(data, dict):
         return []
@@ -105,58 +106,75 @@ def _parse_workflow(root: Path, wf_path: Path) -> list[RuntimeEvidence]:
             # Matrix/env expression → unknown
             version_str = str(version_val)
             if "${{" in version_str:
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id(runtime, rel_path, uses_base, "matrix"),
-                    ecosystem=ecosystem,
-                    runtime_name=runtime,
-                    constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw="matrix"),
-                    source_type=RuntimeSourceType.CI,
-                    source_path=rel_path,
-                    source_grade=RuntimeSourceGrade.CI,
-                    source_detail=uses_base,
-                    confidence=Confidence.LOW,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id(runtime, rel_path, uses_base, "matrix"),
+                        ecosystem=ecosystem,
+                        runtime_name=runtime,
+                        constraint=RuntimeConstraint(
+                            kind=RuntimeConstraintKind.UNKNOWN, raw="matrix"
+                        ),
+                        source_type=RuntimeSourceType.CI,
+                        source_path=rel_path,
+                        source_grade=RuntimeSourceGrade.CI,
+                        source_detail=uses_base,
+                        confidence=Confidence.LOW,
+                    )
+                )
                 continue
 
             # List of versions → one per version, all unknown
             if isinstance(version_val, list):
                 for v in version_val:
                     v_str = str(v)
-                    evidence.append(RuntimeEvidence(
-                        runtime_evidence_id=_make_id(runtime, rel_path, f"{uses_base}[{v_str}]", v_str),
-                        ecosystem=ecosystem,
-                        runtime_name=runtime,
-                        constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw=v_str),
-                        source_type=RuntimeSourceType.CI,
-                        source_path=rel_path,
-                        source_grade=RuntimeSourceGrade.CI,
-                        source_detail=uses_base,
-                        confidence=Confidence.LOW,
-                        raw_version=v_str,
-                    ))
+                    evidence.append(
+                        RuntimeEvidence(
+                            runtime_evidence_id=_make_id(
+                                runtime, rel_path, f"{uses_base}[{v_str}]", v_str
+                            ),
+                            ecosystem=ecosystem,
+                            runtime_name=runtime,
+                            constraint=RuntimeConstraint(
+                                kind=RuntimeConstraintKind.UNKNOWN, raw=v_str
+                            ),
+                            source_type=RuntimeSourceType.CI,
+                            source_path=rel_path,
+                            source_grade=RuntimeSourceGrade.CI,
+                            source_detail=uses_base,
+                            confidence=Confidence.LOW,
+                            raw_version=v_str,
+                        )
+                    )
                 continue
 
             # Exact version from CI
             constraint = parse_constraint(runtime, version_str)
-            evidence.append(RuntimeEvidence(
-                runtime_evidence_id=_make_id(runtime, rel_path, uses_base, version_str),
-                ecosystem=ecosystem,
-                runtime_name=runtime,
-                constraint=constraint,
-                source_type=RuntimeSourceType.CI,
-                source_path=rel_path,
-                source_grade=RuntimeSourceGrade.CI,
-                source_detail=uses_base,
-                confidence=Confidence.MEDIUM,
-                raw_version=version_str,
-            ))
+            evidence.append(
+                RuntimeEvidence(
+                    runtime_evidence_id=_make_id(runtime, rel_path, uses_base, version_str),
+                    ecosystem=ecosystem,
+                    runtime_name=runtime,
+                    constraint=constraint,
+                    source_type=RuntimeSourceType.CI,
+                    source_path=rel_path,
+                    source_grade=RuntimeSourceGrade.CI,
+                    source_detail=uses_base,
+                    confidence=Confidence.MEDIUM,
+                    raw_version=version_str,
+                )
+            )
 
     return evidence
 
 
 def _runtime_to_ecosystem(runtime: str) -> RuntimeEcosystem:
-    mapping = {"Python": RuntimeEcosystem.PYTHON, "Node.js": RuntimeEcosystem.NODE,
-               "Ruby": RuntimeEcosystem.RUBY, "Java": RuntimeEcosystem.JAVA,
-               "Go": RuntimeEcosystem.GO, ".NET": RuntimeEcosystem.DOTNET,
-               "PHP": RuntimeEcosystem.PHP}
+    mapping = {
+        "Python": RuntimeEcosystem.PYTHON,
+        "Node.js": RuntimeEcosystem.NODE,
+        "Ruby": RuntimeEcosystem.RUBY,
+        "Java": RuntimeEcosystem.JAVA,
+        "Go": RuntimeEcosystem.GO,
+        ".NET": RuntimeEcosystem.DOTNET,
+        "PHP": RuntimeEcosystem.PHP,
+    }
     return mapping.get(runtime, RuntimeEcosystem.PYTHON)

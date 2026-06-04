@@ -22,7 +22,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from benchmarks.fixture_builder import BenchmarkFixture, build_all_fixtures
 from benchmarks.rubric import (
     QUALITY_TARGETS,
@@ -30,7 +29,6 @@ from benchmarks.rubric import (
     compute_fixture_quality,
     score_finding,
 )
-
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -229,7 +227,7 @@ class TestSeverityCalibration:
             for sev_name, count in dist.items():
                 if count > 0:
                     assert count / total <= 0.9, (
-                        f"{name}: {sev_name} is {count}/{total} = {count/total:.0%} (max 90%)"
+                        f"{name}: {sev_name} is {count}/{total} = {count / total:.0%} (max 90%)"
                     )
 
     def test_confidence_honesty(self, tmp_path):
@@ -243,11 +241,14 @@ class TestSeverityCalibration:
                     ev = [e for e in result["evidence_items"] if e.get("evidence_id") in ev_ids]
                     if ev:
                         has_strong = any(
-                            e.get("metadata", {}).get("observation_strength") in ("direct", "derived")
+                            e.get("metadata", {}).get("observation_strength")
+                            in ("direct", "derived")
                             for e in ev
                         )
                         if not has_strong:
-                            issues.append(f"{f.get('id')}: High confidence but no direct/derived evidence")
+                            issues.append(
+                                f"{f.get('id')}: High confidence but no direct/derived evidence"
+                            )
             # Allow up to 2 honesty issues per fixture
             assert len(issues) <= 2, f"{name}: {len(issues)} confidence issues: {issues[:3]}"
 
@@ -323,7 +324,9 @@ class TestCalibrationSchema:
     """Verify calibration results file schema."""
 
     def test_calibration_results_schema(self):
-        cal_path = Path(__file__).resolve().parent.parent / "benchmarks" / "calibration-results.json"
+        cal_path = (
+            Path(__file__).resolve().parent.parent / "benchmarks" / "calibration-results.json"
+        )
         if not cal_path.exists():
             pytest.skip("calibration-results.json not generated yet")
         data = json.loads(cal_path.read_text(encoding="utf-8"))
@@ -353,11 +356,14 @@ class TestGoldenVolatileFields:
         for golden_file in golden_dir.glob("*.json"):
             data = json.loads(golden_file.read_text(encoding="utf-8"))
             volatile = data.get("volatile_fields_ignored", [])
-            assert "generated_at" in volatile, f"{golden_file.name}: missing generated_at in ignored"
+            assert "generated_at" in volatile, (
+                f"{golden_file.name}: missing generated_at in ignored"
+            )
             assert "run_id" in volatile, f"{golden_file.name}: missing run_id in ignored"
 
     def test_golden_refresh_command_available(self):
         from benchmarks.generate_golden import generate_golden_snapshot
+
         assert callable(generate_golden_snapshot)
 
 
@@ -397,8 +403,7 @@ class TestHistoryLayer:
 
         builder = BenchmarkFixture("trend-test", tmp_path)
         (
-            builder
-            .add_requirements_txt(["flask==3.0.0"])
+            builder.add_requirements_txt(["flask==3.0.0"])
             .add_runtime_pin("python", "3.12.0")
             .add_coverage_json(92.0)
             .add_python_file("src/app.py", "def hello():\n    return 'Hello'\n")
@@ -413,6 +418,7 @@ class TestHistoryLayer:
 
         # Ensure different second-precision timestamp for run_id
         import time
+
         time.sleep(2)
 
         # Run 2
@@ -424,8 +430,12 @@ class TestHistoryLayer:
         )
 
         assert summary["run_count"] == 2, f"Expected 2 runs, got {summary['run_count']}"
-        assert summary["enriched_run_count"] == 2, f"Expected 2 enriched, got {summary['enriched_run_count']}"
-        assert summary["confidence"] == "complete", f"Expected complete, got {summary['confidence']}"
+        assert summary["enriched_run_count"] == 2, (
+            f"Expected 2 enriched, got {summary['enriched_run_count']}"
+        )
+        assert summary["confidence"] == "complete", (
+            f"Expected complete, got {summary['confidence']}"
+        )
         assert summary["overall_trajectory"] != "insufficient_data", (
             f"Expected non-insufficient trajectory, got {summary['overall_trajectory']}"
         )

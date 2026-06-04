@@ -7,7 +7,6 @@ Does NOT know about file formats or parsing.
 from __future__ import annotations
 
 from pharabius.core.runtime.constraints import range_excludes_exact, ranges_are_disjoint
-from pharabius.core.runtime.policy import is_deterministic_project_pin, is_manifest_compatibility_range
 from pharabius.core.runtime.models import (
     RuntimeConflictGroup,
     RuntimeConflictKind,
@@ -15,7 +14,10 @@ from pharabius.core.runtime.models import (
     RuntimeEvidence,
     RuntimeSourceType,
 )
-
+from pharabius.core.runtime.policy import (
+    is_deterministic_project_pin,
+    is_manifest_compatibility_range,
+)
 
 # Conflict kind precedence: source-specific first, generic second
 _CONFLICT_PRECEDENCE = [
@@ -48,7 +50,11 @@ def detect_conflicts(evidence: list[RuntimeEvidence]) -> list[RuntimeConflictGro
 
         # 1. Source-specific conflicts: CI vs pin, Dockerfile vs pin
         for kind in [RuntimeConflictKind.CI_DIFFERS, RuntimeConflictKind.DOCKERFILE_DIFFERS]:
-            source_type = RuntimeSourceType.CI if kind == RuntimeConflictKind.CI_DIFFERS else RuntimeSourceType.CONTAINER
+            source_type = (
+                RuntimeSourceType.CI
+                if kind == RuntimeConflictKind.CI_DIFFERS
+                else RuntimeSourceType.CONTAINER
+            )
             group = _check_source_vs_pin(runtime_name, exacts, source_type, kind)
             if group:
                 conflicts.append(group)
@@ -89,11 +95,16 @@ def _check_source_vs_pin(
 ) -> RuntimeConflictGroup | None:
     """Check CI/Dockerfile exact version against pin-file exact versions."""
     source_evs = [e for e in exacts if e.source_type == source_type]
-    pin_evs = [e for e in exacts if e.source_type in (
-        RuntimeSourceType.VERSION_FILE,
-        RuntimeSourceType.TOOL_VERSIONS,
-        RuntimeSourceType.MANIFEST,
-    )]
+    pin_evs = [
+        e
+        for e in exacts
+        if e.source_type
+        in (
+            RuntimeSourceType.VERSION_FILE,
+            RuntimeSourceType.TOOL_VERSIONS,
+            RuntimeSourceType.MANIFEST,
+        )
+    ]
     if not source_evs or not pin_evs:
         return None
 

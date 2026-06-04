@@ -55,15 +55,12 @@ def classify_evidence(evidence: RuntimeEvidence) -> RuntimeSignalClassification:
 
 def is_deterministic_project_pin(evidence: RuntimeEvidence) -> bool:
     """Is this evidence a deterministic reproducibility pin?"""
-    return (
-        evidence.constraint.kind == RuntimeConstraintKind.EXACT
-        and evidence.source_grade in {
-            RuntimeSourceGrade.LOCKFILE,
-            RuntimeSourceGrade.TOOL_PIN,
-            RuntimeSourceGrade.VERSION_FILE,
-            RuntimeSourceGrade.MANIFEST_PIN,
-        }
-    )
+    return evidence.constraint.kind == RuntimeConstraintKind.EXACT and evidence.source_grade in {
+        RuntimeSourceGrade.LOCKFILE,
+        RuntimeSourceGrade.TOOL_PIN,
+        RuntimeSourceGrade.VERSION_FILE,
+        RuntimeSourceGrade.MANIFEST_PIN,
+    }
 
 
 def is_manifest_compatibility_range(evidence: RuntimeEvidence) -> bool:
@@ -75,9 +72,9 @@ def is_manifest_compatibility_range(evidence: RuntimeEvidence) -> bool:
 
 # Non-pin source details: compatibility baselines, minimum versions, targets
 _NON_PIN_SOURCE_DETAILS: set[str] = {
-    "go-directive",        # go.mod go directive: compatibility baseline
-    "target-framework",    # .csproj TargetFramework: compatibility target
-    "rust-version",        # Cargo.toml rust-version: minimum, not pin
+    "go-directive",  # go.mod go directive: compatibility baseline
+    "target-framework",  # .csproj TargetFramework: compatibility target
+    "rust-version",  # Cargo.toml rust-version: minimum, not pin
 }
 
 

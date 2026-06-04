@@ -223,6 +223,7 @@ from pharabius.core.path_utils import (
     relative_repo_path,
 )
 
+
 # Keep _relative as thin wrapper for backward compatibility with call sites
 def _relative(path: Path, root: Path) -> str:
     return relative_repo_path(path, root)
@@ -552,7 +553,9 @@ def _debt_markers_in_text(text: str) -> dict[str, int]:
 
 
 def _detect_long_python_functions(
-    text: str, relative: str, builder: EvidenceBuilder,
+    text: str,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     """Detect Python functions exceeding LONG_FUNCTION_LINE_THRESHOLD.
 
@@ -561,18 +564,18 @@ def _detect_long_python_functions(
     End detection prefers next nonblank line at same or lesser indent
     for better accuracy than simple next-function-start.
     """
-    lines = text.split('\n')
+    lines = text.split("\n")
     func_starts: list[tuple[int, int, str]] = []  # (line_index, indent, name)
 
     for i, line in enumerate(lines):
         stripped = line.lstrip()
-        if not stripped or stripped.startswith('#'):
+        if not stripped or stripped.startswith("#"):
             continue
         indent = len(line) - len(stripped)
-        if stripped.startswith(('def ', 'async def ')):
+        if stripped.startswith(("def ", "async def ")):
             # Extract function name
-            def_line = stripped.split('(')[0]
-            name = def_line.replace('def ', '').replace('async ', '').strip()
+            def_line = stripped.split("(")[0]
+            name = def_line.replace("def ", "").replace("async ", "").strip()
             func_starts.append((i, indent, name))
 
     for start_idx, (start_line, base_indent, func_name) in enumerate(func_starts):
@@ -582,7 +585,7 @@ def _detect_long_python_functions(
         found_end = False
         for j in range(start_line + 1, len(lines)):
             stripped = lines[j].lstrip()
-            if not stripped or stripped.startswith('#'):
+            if not stripped or stripped.startswith("#"):
                 continue
             current_indent = len(lines[j]) - len(stripped)
             if current_indent <= base_indent:
@@ -597,9 +600,7 @@ def _detect_long_python_functions(
             builder.add(
                 type_=EVIDENCE_LONG_FUNCTION,
                 category="code_structure",
-                summary=(
-                    f"Long function {func_name} spans {func_lines} lines in {relative}"
-                ),
+                summary=(f"Long function {func_name} spans {func_lines} lines in {relative}"),
                 location_file=relative,
                 subject=func_name,
                 raw_observation=f"{func_name}:{func_lines}lines",
@@ -617,32 +618,33 @@ def _detect_long_python_functions(
                     "read_mode": READ_MODE_TEXT,
                 },
             )
+
+
 def _detect_broad_exceptions(
-    text: str, relative: str, builder: EvidenceBuilder,
+    text: str,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     """Detect bare except / catch-all patterns in source code.
 
     Supports Python, JavaScript/TypeScript, and Java patterns.
     """
     BROAD_PATTERNS: list[tuple[str, str]] = [
-        (r'^\s*except\s*:', 'python_bare_except'),
-        (r'^\s*except\s+Exception\s*[:\[]', 'python_exception_catch'),
-        (r'^\s*except\s+BaseException\s*:', 'python_base_exception'),
-        (r'catch\s*\(\s*\w*\s*\)\s*\{', 'js_catch_all'),
-        (r'catch\s*\(\s*Exception\s+\w+\s*\)', 'java_exception_catch'),
-        (r'catch\s*\(\s*Throwable\s+\w+\s*\)', 'java_throwable_catch'),
+        (r"^\s*except\s*:", "python_bare_except"),
+        (r"^\s*except\s+Exception\s*[:\[]", "python_exception_catch"),
+        (r"^\s*except\s+BaseException\s*:", "python_base_exception"),
+        (r"catch\s*\(\s*\w*\s*\)\s*\{", "js_catch_all"),
+        (r"catch\s*\(\s*Exception\s+\w+\s*\)", "java_exception_catch"),
+        (r"catch\s*\(\s*Throwable\s+\w+\s*\)", "java_throwable_catch"),
     ]
-    lines = text.split('\n')
+    lines = text.split("\n")
     for i, line in enumerate(lines):
         for pattern, label in BROAD_PATTERNS:
             if re.search(pattern, line):
                 builder.add(
                     type_=EVIDENCE_BROAD_EXCEPTION,
                     category="code_structure",
-                    summary=(
-                        f"Broad exception handler ({label}) "
-                        f"in {relative} line {i + 1}"
-                    ),
+                    summary=(f"Broad exception handler ({label}) in {relative} line {i + 1}"),
                     location_file=relative,
                     subject=relative,
                     raw_observation=f"{label}:line{i + 1}",
@@ -657,6 +659,8 @@ def _detect_broad_exceptions(
                     },
                 )
                 break  # one detection per line
+
+
 from pharabius.core.coverage_parsers import scan_coverage_artifact
 from pharabius.core.dependency_parsers import (
     scan_dependency_manifest,
@@ -957,8 +961,7 @@ def scan_repository(
                         location_file=relative,
                         subject=relative,
                         raw_observation=", ".join(
-                            f"{marker}:{count}"
-                            for marker, count in sorted(marker_counts.items())
+                            f"{marker}:{count}" for marker, count in sorted(marker_counts.items())
                         ),
                         confidence="High",
                         metadata={
@@ -969,7 +972,7 @@ def scan_repository(
 
             # Large file detection for source files
             if file_path.suffix in SOURCE_EXTENSIONS:
-                line_count = text.count('\n') + 1
+                line_count = text.count("\n") + 1
                 if line_count >= LARGE_FILE_LINE_THRESHOLD:
                     builder.add(
                         type_=EVIDENCE_LARGE_FILE,

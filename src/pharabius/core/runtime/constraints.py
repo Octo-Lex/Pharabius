@@ -38,7 +38,9 @@ def parse_constraint(runtime: str, raw: str) -> RuntimeConstraint:
     # Strip common prefixes
     cleaned = re.sub(
         r"^(python-|ruby-|v|temurin-|adoptopenjdk-|corretto-)",
-        "", raw_stripped, flags=re.IGNORECASE,
+        "",
+        raw_stripped,
+        flags=re.IGNORECASE,
     )
 
     # Extract version number

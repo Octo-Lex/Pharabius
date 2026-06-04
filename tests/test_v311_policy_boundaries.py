@@ -1,4 +1,5 @@
 """v3.11.0 S06 — Policy boundary and v3.10.0 regression tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,12 +7,12 @@ from pathlib import Path
 import pytest
 
 from pharabius.core.runtime.conflict import detect_conflicts
-from pharabius.core.runtime.go import detect_go_sources
-from pharabius.core.runtime.rust import detect_rust_sources
 from pharabius.core.runtime.dotnet import detect_dotnet_sources
+from pharabius.core.runtime.go import detect_go_sources
+from pharabius.core.runtime.models import RuntimeConflictKind
 from pharabius.core.runtime.php import detect_php_sources
 from pharabius.core.runtime.policy import is_runtime_pin
-from pharabius.core.runtime.models import RuntimeConflictKind
+from pharabius.core.runtime.rust import detect_rust_sources
 
 
 class TestPolicyBoundary:
@@ -49,16 +50,22 @@ class TestPolicyBoundary:
         """Toolchain 1.22.4 within go 1.22 baseline → no conflict."""
         (tmp_path / "go.mod").write_text("module ex\ngo 1.22\n\ntoolchain go1.22.4\n")
         conflicts = detect_conflicts(detect_go_sources(tmp_path))
-        pin_conflicts = [c for c in conflicts
-                         if c.conflict_kind == RuntimeConflictKind.PIN_VIOLATES_MANIFEST_RANGE]
+        pin_conflicts = [
+            c
+            for c in conflicts
+            if c.conflict_kind == RuntimeConflictKind.PIN_VIOLATES_MANIFEST_RANGE
+        ]
         assert len(pin_conflicts) == 0
 
     def test_exact_pin_outside_manifest_range_finding(self, tmp_path: Path) -> None:
         """Toolchain 1.20 below go 1.22 baseline → finding."""
         (tmp_path / "go.mod").write_text("module ex\ngo 1.22\n\ntoolchain go1.20.0\n")
         conflicts = detect_conflicts(detect_go_sources(tmp_path))
-        pin_conflicts = [c for c in conflicts
-                         if c.conflict_kind == RuntimeConflictKind.PIN_VIOLATES_MANIFEST_RANGE]
+        pin_conflicts = [
+            c
+            for c in conflicts
+            if c.conflict_kind == RuntimeConflictKind.PIN_VIOLATES_MANIFEST_RANGE
+        ]
         assert len(pin_conflicts) >= 1
 
 

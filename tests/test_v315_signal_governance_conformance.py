@@ -8,25 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from pharabius.core.signals.models import (
-    GovernedSignal,
-    SignalDisposition,
-    SignalFamily,
-    make_signal_id,
-)
-from pharabius.core.signals.policy import (
-    output_behavior,
-    should_create_advisory,
-    should_create_finding,
-    should_create_work_package,
-    is_informational,
-    is_reportable,
-    SignalOutputBehavior,
-)
 from pharabius.core.signals.invariants import (
     ALL_INVARIANTS,
-    SignalInvariant,
-    SignalValidationSeverity,
     INV_001_FINDING_ONLY_CREATES_FINDING,
     INV_002_ADVISORY_NEVER_CREATES_WORK_PACKAGE,
     INV_003_INFORMATIONAL_NON_ACTIONABLE,
@@ -35,16 +18,32 @@ from pharabius.core.signals.invariants import (
     INV_006_PROMOTED_FINDING_HAS_EVIDENCE,
     INV_007_MIGRATED_ANALYZER_USES_POLICY,
     INV_008_SUMMARY_COUNTS_GOVERNED_SIGNALS,
+    SignalInvariant,
+    SignalValidationSeverity,
 )
-from pharabius.core.signals.validation import (
-    validate_governed_signal,
-    diagnose_signal,
-    SignalValidationResult,
-    SignalValidationViolation,
-    SignalDiagnostic,
+from pharabius.core.signals.models import (
+    GovernedSignal,
+    SignalDisposition,
+    SignalFamily,
+    make_signal_id,
+)
+from pharabius.core.signals.policy import (
+    SignalOutputBehavior,
+    is_informational,
+    is_reportable,
+    output_behavior,
+    should_create_advisory,
+    should_create_finding,
+    should_create_work_package,
 )
 from pharabius.core.signals.summary import build_signal_summary
-
+from pharabius.core.signals.validation import (
+    SignalDiagnostic,
+    SignalValidationResult,
+    SignalValidationViolation,
+    diagnose_signal,
+    validate_governed_signal,
+)
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -97,7 +96,11 @@ class TestInvariantRegistry:
             assert inv.description, f"{inv.code} has empty description"
 
     def test_invariant_severity_valid(self) -> None:
-        valid = {SignalValidationSeverity.CRITICAL, SignalValidationSeverity.WARNING, SignalValidationSeverity.INFO}
+        valid = {
+            SignalValidationSeverity.CRITICAL,
+            SignalValidationSeverity.WARNING,
+            SignalValidationSeverity.INFO,
+        }
         for inv in ALL_INVARIANTS:
             assert inv.severity in valid, f"{inv.code} has invalid severity: {inv.severity}"
 
@@ -126,10 +129,18 @@ class TestSignalValidation:
 
     def test_empty_signal_id_violation(self) -> None:
         sig = GovernedSignal(
-            signal_id="", family=SignalFamily.RUNTIME, kind="k",
-            disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -138,10 +149,18 @@ class TestSignalValidation:
 
     def test_malformed_signal_id(self) -> None:
         sig = GovernedSignal(
-            signal_id="NOT-A-SIGNAL-ID", family=SignalFamily.RUNTIME, kind="k",
-            disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="NOT-A-SIGNAL-ID",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -149,10 +168,18 @@ class TestSignalValidation:
 
     def test_empty_kind_violation(self) -> None:
         sig = GovernedSignal(
-            signal_id="SIG-RUNTIME-abc123def456", family=SignalFamily.RUNTIME,
-            kind="", disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="SIG-RUNTIME-abc123def456",
+            family=SignalFamily.RUNTIME,
+            kind="",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -160,10 +187,18 @@ class TestSignalValidation:
 
     def test_empty_category_warning(self) -> None:
         sig = GovernedSignal(
-            signal_id="SIG-RUNTIME-abc123def456", family=SignalFamily.RUNTIME,
-            kind="k", disposition=SignalDisposition.FINDING, category="",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="SIG-RUNTIME-abc123def456",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.FINDING,
+            category="",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -171,10 +206,18 @@ class TestSignalValidation:
 
     def test_empty_title_violation(self) -> None:
         sig = GovernedSignal(
-            signal_id="SIG-RUNTIME-abc123def456", family=SignalFamily.RUNTIME,
-            kind="k", disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="", summary="s", explanation="e",
+            signal_id="SIG-RUNTIME-abc123def456",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -183,10 +226,18 @@ class TestSignalValidation:
 
     def test_finding_without_evidence_violates_inv006(self) -> None:
         sig = GovernedSignal(
-            signal_id="SIG-RUNTIME-abc123def456", family=SignalFamily.RUNTIME,
-            kind="k", disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=[],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="SIG-RUNTIME-abc123def456",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=[],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -195,10 +246,18 @@ class TestSignalValidation:
 
     def test_advisory_without_evidence_or_metadata_warning(self) -> None:
         sig = GovernedSignal(
-            signal_id="SIG-RUNTIME-abc123def456", family=SignalFamily.RUNTIME,
-            kind="k", disposition=SignalDisposition.ADVISORY, category="TD-DEP",
-            severity="Low", confidence="Low", evidence_ids=[],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="SIG-RUNTIME-abc123def456",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.ADVISORY,
+            category="TD-DEP",
+            severity="Low",
+            confidence="Low",
+            evidence_ids=[],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -207,10 +266,18 @@ class TestSignalValidation:
     def test_violations_include_invariant_codes(self) -> None:
         """AC18: Violations include invariant codes."""
         sig = GovernedSignal(
-            signal_id="", family=SignalFamily.RUNTIME, kind="",
-            disposition=SignalDisposition.FINDING, category="",
-            severity="Medium", confidence="High", evidence_ids=[],
-            source_signal_ids=[], title="", summary="s", explanation="e",
+            signal_id="",
+            family=SignalFamily.RUNTIME,
+            kind="",
+            disposition=SignalDisposition.FINDING,
+            category="",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=[],
+            source_signal_ids=[],
+            title="",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         result = validate_governed_signal(sig)
@@ -297,55 +364,91 @@ class TestOutputBehavior:
 _FAMILY_ADAPTER_FACTORIES = {
     "runtime": lambda: [
         _signal(SignalDisposition.FINDING, kind="runtime_conflict", family=SignalFamily.RUNTIME),
-        _signal(SignalDisposition.ADVISORY, kind="runtime_missing_pin", family=SignalFamily.RUNTIME),
-        _signal(SignalDisposition.INFORMATIONAL, kind="runtime_evidence", family=SignalFamily.RUNTIME),
+        _signal(
+            SignalDisposition.ADVISORY, kind="runtime_missing_pin", family=SignalFamily.RUNTIME
+        ),
+        _signal(
+            SignalDisposition.INFORMATIONAL, kind="runtime_evidence", family=SignalFamily.RUNTIME
+        ),
     ],
     "documentation": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("documentation", "missing_documentation", ["ev1"]),
-            family=SignalFamily.DOCUMENTATION, kind="missing_documentation",
-            disposition=SignalDisposition.ADVISORY, category="TD-DOC",
-            severity="Low", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Missing docs", summary="No docs",
-            explanation="Missing docs", metadata={"missing_docs": True},
+            family=SignalFamily.DOCUMENTATION,
+            kind="missing_documentation",
+            disposition=SignalDisposition.ADVISORY,
+            category="TD-DOC",
+            severity="Low",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Missing docs",
+            summary="No docs",
+            explanation="Missing docs",
+            metadata={"missing_docs": True},
         ),
     ],
     "build": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("build", "missing_ci_cd", ["ev1"]),
-            family=SignalFamily.BUILD, kind="missing_ci_cd",
-            disposition=SignalDisposition.ADVISORY, category="TD-BUILD",
-            severity="Low", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Missing CI", summary="No CI",
-            explanation="Missing CI", metadata={"missing_ci": True},
+            family=SignalFamily.BUILD,
+            kind="missing_ci_cd",
+            disposition=SignalDisposition.ADVISORY,
+            category="TD-BUILD",
+            severity="Low",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Missing CI",
+            summary="No CI",
+            explanation="Missing CI",
+            metadata={"missing_ci": True},
         ),
     ],
     "process": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("process", "missing_process_artifacts", ["ev1"]),
-            family=SignalFamily.PROCESS, kind="missing_process_artifacts",
-            disposition=SignalDisposition.ADVISORY, category="TD-PROCESS",
-            severity="Low", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Missing process", summary="No artifacts",
-            explanation="Missing artifacts", metadata={"missing_artifacts": ["CODEOWNERS"]},
+            family=SignalFamily.PROCESS,
+            kind="missing_process_artifacts",
+            disposition=SignalDisposition.ADVISORY,
+            category="TD-PROCESS",
+            severity="Low",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Missing process",
+            summary="No artifacts",
+            explanation="Missing artifacts",
+            metadata={"missing_artifacts": ["CODEOWNERS"]},
         ),
     ],
     "test": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("test", "missing_tests", ["ev1"]),
-            family=SignalFamily.TEST, kind="missing_tests",
-            disposition=SignalDisposition.FINDING, category="TD-TEST",
-            severity="Medium", confidence="Medium", evidence_ids=["ev1"],
-            source_signal_ids=[], title="No tests", summary="No test evidence",
-            explanation="Missing tests", metadata={},
+            family=SignalFamily.TEST,
+            kind="missing_tests",
+            disposition=SignalDisposition.FINDING,
+            category="TD-TEST",
+            severity="Medium",
+            confidence="Medium",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="No tests",
+            summary="No test evidence",
+            explanation="Missing tests",
+            metadata={},
         ),
     ],
     "dependency": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("dependency", "unpinned_dependency", ["ev1"]),
-            family=SignalFamily.DEPENDENCY, kind="unpinned_dependency",
-            disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="Medium", evidence_ids=["ev1"],
+            family=SignalFamily.DEPENDENCY,
+            kind="unpinned_dependency",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="Medium",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Unpinned Node.js dependencies detected (3 unpinned)",
             summary="3 Node.js dependencies use unpinned or broad version ranges.",
@@ -354,9 +457,13 @@ _FAMILY_ADAPTER_FACTORIES = {
         ),
         GovernedSignal(
             signal_id=make_signal_id("dependency", "missing_lockfile", ["ev1"]),
-            family=SignalFamily.DEPENDENCY, kind="missing_lockfile",
-            disposition=SignalDisposition.ADVISORY, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            family=SignalFamily.DEPENDENCY,
+            kind="missing_lockfile",
+            disposition=SignalDisposition.ADVISORY,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Node.js dependency manifest detected without lockfile evidence",
             summary="Missing lockfile evidence for package root.",
@@ -365,9 +472,13 @@ _FAMILY_ADAPTER_FACTORIES = {
         ),
         GovernedSignal(
             signal_id=make_signal_id("dependency", "manifest_detected", ["ev1"]),
-            family=SignalFamily.DEPENDENCY, kind="manifest_detected",
-            disposition=SignalDisposition.INFORMATIONAL, category="TD-DEP",
-            severity="Low", confidence="Medium", evidence_ids=["ev1"],
+            family=SignalFamily.DEPENDENCY,
+            kind="manifest_detected",
+            disposition=SignalDisposition.INFORMATIONAL,
+            category="TD-DEP",
+            severity="Low",
+            confidence="Medium",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Dependency manifest detected: package.json",
             summary="Dependency manifest found at package.json.",
@@ -378,9 +489,13 @@ _FAMILY_ADAPTER_FACTORIES = {
     "security": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("security", "compliance_exposure", ["ev1"]),
-            family=SignalFamily.SECURITY, kind="compliance_exposure",
-            disposition=SignalDisposition.FINDING, category="TD-COMP",
-            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            family=SignalFamily.SECURITY,
+            kind="compliance_exposure",
+            disposition=SignalDisposition.FINDING,
+            category="TD-COMP",
+            severity="Medium",
+            confidence="Low",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Potential compliance exposure detected",
             summary="Compliance-related keywords detected in application code.",
@@ -389,9 +504,13 @@ _FAMILY_ADAPTER_FACTORIES = {
         ),
         GovernedSignal(
             signal_id=make_signal_id("security", "sensitive_path", ["ev1"]),
-            family=SignalFamily.SECURITY, kind="sensitive_path",
-            disposition=SignalDisposition.INFORMATIONAL, category="risk_signal",
-            severity="Low", confidence="Medium", evidence_ids=["ev1"],
+            family=SignalFamily.SECURITY,
+            kind="sensitive_path",
+            disposition=SignalDisposition.INFORMATIONAL,
+            category="risk_signal",
+            severity="Low",
+            confidence="Medium",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Risk-sensitive path detected: src/auth.py",
             summary="Path-based risk signal found at src/auth.py.",
@@ -402,9 +521,13 @@ _FAMILY_ADAPTER_FACTORIES = {
     "architecture": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("architecture", "cycle", ["ev1"]),
-            family=SignalFamily.ARCHITECTURE, kind="cycle",
-            disposition=SignalDisposition.FINDING, category="TD-ARCH",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            family=SignalFamily.ARCHITECTURE,
+            kind="cycle",
+            disposition=SignalDisposition.FINDING,
+            category="TD-ARCH",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Confirmed circular dependency detected between architecture nodes",
             summary="Confirmed circular dependency detected (cycle: ARCH-CYCLE-TEST).",
@@ -413,9 +536,13 @@ _FAMILY_ADAPTER_FACTORIES = {
         ),
         GovernedSignal(
             signal_id=make_signal_id("architecture", "boundary_violation", ["ev1"]),
-            family=SignalFamily.ARCHITECTURE, kind="boundary_violation",
-            disposition=SignalDisposition.FINDING, category="TD-ARCH",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            family=SignalFamily.ARCHITECTURE,
+            kind="boundary_violation",
+            disposition=SignalDisposition.FINDING,
+            category="TD-ARCH",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Architecture boundary policy violation detected",
             summary="Architecture boundary policy violation (violation: ARCH-VIOL-TEST).",
@@ -426,9 +553,13 @@ _FAMILY_ADAPTER_FACTORIES = {
     "configuration": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
-            family=SignalFamily.CONFIGURATION, kind="env_without_example",
-            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            family=SignalFamily.CONFIGURATION,
+            kind="env_without_example",
+            disposition=SignalDisposition.FINDING,
+            category="TD-CONFIG",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Environment configuration detected without example file",
             summary="An environment configuration file was detected, but no .env.example file was found.",
@@ -439,9 +570,13 @@ _FAMILY_ADAPTER_FACTORIES = {
     "observability": lambda: [
         GovernedSignal(
             signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
-            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
-            disposition=SignalDisposition.FINDING, category="TD-OBS",
-            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            family=SignalFamily.OBSERVABILITY,
+            kind="missing_observability",
+            disposition=SignalDisposition.FINDING,
+            category="TD-OBS",
+            severity="Medium",
+            confidence="Low",
+            evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Deployment without observability evidence",
             summary="Deployment/infrastructure files detected but no logging, monitoring, tracing, or alerting keywords found.",
@@ -512,10 +647,17 @@ def _rebuild_signal(sig: GovernedSignal) -> GovernedSignal:
     """Rebuild a signal with same inputs to verify determinism."""
     return GovernedSignal(
         signal_id=make_signal_id(sig.family.value, sig.kind, sig.evidence_ids),
-        family=sig.family, kind=sig.kind, disposition=sig.disposition,
-        category=sig.category, severity=sig.severity, confidence=sig.confidence,
-        evidence_ids=sig.evidence_ids, source_signal_ids=sig.source_signal_ids,
-        title=sig.title, summary=sig.summary, explanation=sig.explanation,
+        family=sig.family,
+        kind=sig.kind,
+        disposition=sig.disposition,
+        category=sig.category,
+        severity=sig.severity,
+        confidence=sig.confidence,
+        evidence_ids=sig.evidence_ids,
+        source_signal_ids=sig.source_signal_ids,
+        title=sig.title,
+        summary=sig.summary,
+        explanation=sig.explanation,
         metadata=sig.metadata,
     )
 
@@ -528,64 +670,84 @@ class TestAnalyzerBoundaries:
 
     def test_runtime_version_signals_uses_policy(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_runtime_version_signals)
         assert "should_create_finding" in source or "should_create_advisory" in source
 
     def test_missing_docs_uses_policy(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_docs)
         assert "should_create_advisory" in source
 
     def test_missing_ci_uses_policy(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_ci)
         assert "should_create_advisory" in source
 
     def test_missing_process_uses_policy(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_process_artifacts)
         assert "should_create_advisory" in source
 
     def test_missing_tests_uses_policy(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_tests)
         assert "should_create_finding" in source
 
     def test_dependency_signals_uses_policy(self) -> None:
         """v3.16.0: _analyze_dependency_signals uses output_behavior."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_dependency_signals)
         assert "output_behavior" in source
 
     def test_missing_lockfile_uses_policy(self) -> None:
         """v3.16.0: _emit_lockfile_finding uses output_behavior."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._emit_lockfile_finding)
         assert "output_behavior" in source
 
     def test_risk_sensitive_uses_policy(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_risk_sensitive_without_tests)
         assert "should_create_finding" in source
 
     def test_coverage_gaps_uses_policy(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_coverage_gaps)
         assert "should_create_finding" in source
 
     def test_no_analyzer_uses_work_package_as_proxy(self) -> None:
         """AC14/INV_007: No migrated analyzer uses should_create_work_package()."""
         import inspect
+
         from pharabius.core import analyzer
+
         targets = [
             analyzer._analyze_missing_docs,
             analyzer._analyze_missing_ci,
@@ -593,13 +755,16 @@ class TestAnalyzerBoundaries:
         ]
         for func in targets:
             source = inspect.getsource(func)
-            assert "should_create_work_package" not in source, \
+            assert "should_create_work_package" not in source, (
                 f"{func.__name__} uses should_create_work_package as proxy"
+            )
 
     def test_dependency_analyzer_uses_output_behavior(self) -> None:
         """v3.16.0/INV_007: Dependency analyzer uses output_behavior, not hardcoded branching."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_dependency_signals)
         assert "output_behavior" in source
         assert "dependency_adapters" in source
@@ -607,14 +772,18 @@ class TestAnalyzerBoundaries:
     def test_dependency_no_work_package_proxy(self) -> None:
         """v3.16.0/INV_007: Dependency analyzer does not use should_create_work_package."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_dependency_signals)
         assert "should_create_work_package" not in source
 
     def test_compliance_uses_output_behavior(self) -> None:
         """v3.17.0/INV_007: Compliance analyzer uses output_behavior."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_compliance_keywords)
         assert "output_behavior" in source
         assert "security_adapters" in source
@@ -622,14 +791,18 @@ class TestAnalyzerBoundaries:
     def test_compliance_no_work_package_proxy(self) -> None:
         """v3.17.0/INV_007: Compliance analyzer does not use should_create_work_package."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_compliance_keywords)
         assert "should_create_work_package" not in source
 
     def test_risk_sensitive_without_tests_not_security_family(self) -> None:
         """v3.17.0: _analyze_risk_sensitive_without_tests stays under TEST family."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_risk_sensitive_without_tests)
         # Must use TEST family adapter, not SECURITY
         assert "scan_test_risk_sensitive_without_tests_to_signal" in source
@@ -638,7 +811,9 @@ class TestAnalyzerBoundaries:
     def test_architecture_uses_output_behavior(self) -> None:
         """v3.18.0/INV_007: Architecture findings use output_behavior."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._add_architecture_findings)
         assert "output_behavior" in source
         assert "architecture_adapters" in source
@@ -646,7 +821,9 @@ class TestAnalyzerBoundaries:
     def test_architecture_uses_spec_kind_not_title(self) -> None:
         """v3.18.0: Architecture routing uses spec.kind, not title text."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._add_architecture_findings)
         assert "spec.kind" in source
         # Title-based routing is forbidden
@@ -656,14 +833,18 @@ class TestAnalyzerBoundaries:
     def test_architecture_no_work_package_proxy(self) -> None:
         """v3.18.0/INV_007: Architecture analyzer does not use should_create_work_package."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._add_architecture_findings)
         assert "should_create_work_package" not in source
 
     def test_configuration_uses_output_behavior(self) -> None:
         """v3.19.0/INV_008: Configuration analyzer uses output_behavior."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_env_without_example)
         assert "output_behavior" in source
         assert "configuration_adapters" in source
@@ -672,11 +853,18 @@ class TestAnalyzerBoundaries:
         """v3.19.0: Configuration family is distinct from security."""
         sig = GovernedSignal(
             signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
-            family=SignalFamily.CONFIGURATION, kind="env_without_example",
-            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Config", summary="Config",
-            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+            family=SignalFamily.CONFIGURATION,
+            kind="env_without_example",
+            disposition=SignalDisposition.FINDING,
+            category="TD-CONFIG",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Config",
+            summary="Config",
+            explanation="Config hygiene",
+            metadata={"spec_kind": "env_without_example"},
         )
         assert sig.family == SignalFamily.CONFIGURATION
         assert sig.family != SignalFamily.SECURITY
@@ -687,11 +875,18 @@ class TestAnalyzerBoundaries:
         """v3.19.0: Configuration family is distinct from build."""
         sig = GovernedSignal(
             signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
-            family=SignalFamily.CONFIGURATION, kind="env_without_example",
-            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Config", summary="Config",
-            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+            family=SignalFamily.CONFIGURATION,
+            kind="env_without_example",
+            disposition=SignalDisposition.FINDING,
+            category="TD-CONFIG",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Config",
+            summary="Config",
+            explanation="Config hygiene",
+            metadata={"spec_kind": "env_without_example"},
         )
         assert sig.family != SignalFamily.BUILD
 
@@ -699,11 +894,18 @@ class TestAnalyzerBoundaries:
         """v3.19.0: Configuration family emits FINDING only."""
         sig = GovernedSignal(
             signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
-            family=SignalFamily.CONFIGURATION, kind="env_without_example",
-            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Config", summary="Config",
-            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+            family=SignalFamily.CONFIGURATION,
+            kind="env_without_example",
+            disposition=SignalDisposition.FINDING,
+            category="TD-CONFIG",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Config",
+            summary="Config",
+            explanation="Config hygiene",
+            metadata={"spec_kind": "env_without_example"},
         )
         assert sig.disposition == SignalDisposition.FINDING
 
@@ -711,11 +913,18 @@ class TestAnalyzerBoundaries:
         """v3.19.0: Signal Governance Summary includes Configuration family."""
         sig = GovernedSignal(
             signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
-            family=SignalFamily.CONFIGURATION, kind="env_without_example",
-            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
-            severity="Medium", confidence="High", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Config", summary="Config",
-            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+            family=SignalFamily.CONFIGURATION,
+            kind="env_without_example",
+            disposition=SignalDisposition.FINDING,
+            category="TD-CONFIG",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Config",
+            summary="Config",
+            explanation="Config hygiene",
+            metadata={"spec_kind": "env_without_example"},
         )
         summary = build_signal_summary([sig])
         assert "configuration" in summary.by_family
@@ -724,7 +933,9 @@ class TestAnalyzerBoundaries:
     def test_observability_uses_output_behavior(self) -> None:
         """v3.20.0/INV_009: Observability analyzer uses output_behavior."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_observability)
         assert "output_behavior" in source
         assert "observability_adapters" in source
@@ -733,11 +944,18 @@ class TestAnalyzerBoundaries:
         """v3.20.0: Observability family is distinct from build."""
         sig = GovernedSignal(
             signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
-            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
-            disposition=SignalDisposition.FINDING, category="TD-OBS",
-            severity="Medium", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Obs", summary="Obs",
-            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+            family=SignalFamily.OBSERVABILITY,
+            kind="missing_observability",
+            disposition=SignalDisposition.FINDING,
+            category="TD-OBS",
+            severity="Medium",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Obs",
+            summary="Obs",
+            explanation="Missing obs",
+            metadata={"spec_kind": "missing_observability"},
         )
         assert sig.family == SignalFamily.OBSERVABILITY
         assert sig.family != SignalFamily.BUILD
@@ -747,11 +965,18 @@ class TestAnalyzerBoundaries:
         """v3.20.0: Observability family is distinct from configuration."""
         sig = GovernedSignal(
             signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
-            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
-            disposition=SignalDisposition.FINDING, category="TD-OBS",
-            severity="Medium", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Obs", summary="Obs",
-            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+            family=SignalFamily.OBSERVABILITY,
+            kind="missing_observability",
+            disposition=SignalDisposition.FINDING,
+            category="TD-OBS",
+            severity="Medium",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Obs",
+            summary="Obs",
+            explanation="Missing obs",
+            metadata={"spec_kind": "missing_observability"},
         )
         assert sig.family != SignalFamily.CONFIGURATION
 
@@ -759,11 +984,18 @@ class TestAnalyzerBoundaries:
         """v3.20.0: Observability family is distinct from security."""
         sig = GovernedSignal(
             signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
-            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
-            disposition=SignalDisposition.FINDING, category="TD-OBS",
-            severity="Medium", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Obs", summary="Obs",
-            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+            family=SignalFamily.OBSERVABILITY,
+            kind="missing_observability",
+            disposition=SignalDisposition.FINDING,
+            category="TD-OBS",
+            severity="Medium",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Obs",
+            summary="Obs",
+            explanation="Missing obs",
+            metadata={"spec_kind": "missing_observability"},
         )
         assert sig.family != SignalFamily.SECURITY
 
@@ -771,11 +1003,18 @@ class TestAnalyzerBoundaries:
         """v3.20.0: Observability family emits FINDING only."""
         sig = GovernedSignal(
             signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
-            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
-            disposition=SignalDisposition.FINDING, category="TD-OBS",
-            severity="Medium", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Obs", summary="Obs",
-            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+            family=SignalFamily.OBSERVABILITY,
+            kind="missing_observability",
+            disposition=SignalDisposition.FINDING,
+            category="TD-OBS",
+            severity="Medium",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Obs",
+            summary="Obs",
+            explanation="Missing obs",
+            metadata={"spec_kind": "missing_observability"},
         )
         assert sig.disposition == SignalDisposition.FINDING
 
@@ -783,11 +1022,18 @@ class TestAnalyzerBoundaries:
         """v3.20.0: Signal Governance Summary includes Observability family."""
         sig = GovernedSignal(
             signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
-            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
-            disposition=SignalDisposition.FINDING, category="TD-OBS",
-            severity="Medium", confidence="Low", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Obs", summary="Obs",
-            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+            family=SignalFamily.OBSERVABILITY,
+            kind="missing_observability",
+            disposition=SignalDisposition.FINDING,
+            category="TD-OBS",
+            severity="Medium",
+            confidence="Low",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Obs",
+            summary="Obs",
+            explanation="Missing obs",
+            metadata={"spec_kind": "missing_observability"},
         )
         summary = build_signal_summary([sig])
         assert "observability" in summary.by_family
@@ -802,7 +1048,9 @@ class TestAnalyzerBoundaries:
     def test_no_work_package_proxy_observability(self) -> None:
         """v3.20.0: Observability analyzer does not use should_create_work_package."""
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_observability)
         assert "should_create_work_package" not in source
 
@@ -837,11 +1085,18 @@ class TestSummaryConsistency:
         signals = [
             GovernedSignal(
                 signal_id=make_signal_id("dependency", "unpinned_dependency", ["ev1"]),
-                family=SignalFamily.DEPENDENCY, kind="unpinned_dependency",
-                disposition=SignalDisposition.FINDING, category="TD-DEP",
-                severity="Medium", confidence="Medium", evidence_ids=["ev1"],
-                source_signal_ids=[], title="Unpinned deps", summary="Unpinned",
-                explanation="Unpinned", metadata={"ecosystem": "Node.js"},
+                family=SignalFamily.DEPENDENCY,
+                kind="unpinned_dependency",
+                disposition=SignalDisposition.FINDING,
+                category="TD-DEP",
+                severity="Medium",
+                confidence="Medium",
+                evidence_ids=["ev1"],
+                source_signal_ids=[],
+                title="Unpinned deps",
+                summary="Unpinned",
+                explanation="Unpinned",
+                metadata={"ecosystem": "Node.js"},
             ),
             _signal(SignalDisposition.ADVISORY, family=SignalFamily.RUNTIME),
         ]
@@ -855,19 +1110,33 @@ class TestSummaryConsistency:
         signals = [
             GovernedSignal(
                 signal_id=make_signal_id("dependency", "missing_lockfile", ["ev1"]),
-                family=SignalFamily.DEPENDENCY, kind="missing_lockfile",
-                disposition=SignalDisposition.ADVISORY, category="TD-DEP",
-                severity="Medium", confidence="High", evidence_ids=["ev1"],
-                source_signal_ids=[], title="Missing lockfile", summary="No lock",
-                explanation="No lockfile", metadata={"ecosystem": "Node.js"},
+                family=SignalFamily.DEPENDENCY,
+                kind="missing_lockfile",
+                disposition=SignalDisposition.ADVISORY,
+                category="TD-DEP",
+                severity="Medium",
+                confidence="High",
+                evidence_ids=["ev1"],
+                source_signal_ids=[],
+                title="Missing lockfile",
+                summary="No lock",
+                explanation="No lockfile",
+                metadata={"ecosystem": "Node.js"},
             ),
             GovernedSignal(
                 signal_id=make_signal_id("runtime", "missing_runtime_pin", ["ev2"]),
-                family=SignalFamily.RUNTIME, kind="missing_runtime_pin",
-                disposition=SignalDisposition.ADVISORY, category="TD-DEP",
-                severity="Low", confidence="Low", evidence_ids=["ev2"],
-                source_signal_ids=[], title="Missing pin", summary="No pin",
-                explanation="No runtime pin", metadata={"runtime_name": "node"},
+                family=SignalFamily.RUNTIME,
+                kind="missing_runtime_pin",
+                disposition=SignalDisposition.ADVISORY,
+                category="TD-DEP",
+                severity="Low",
+                confidence="Low",
+                evidence_ids=["ev2"],
+                source_signal_ids=[],
+                title="Missing pin",
+                summary="No pin",
+                explanation="No runtime pin",
+                metadata={"runtime_name": "node"},
             ),
         ]
         summary = build_signal_summary(signals)
@@ -881,11 +1150,18 @@ class TestSummaryConsistency:
         signals = [
             GovernedSignal(
                 signal_id=make_signal_id("security", "compliance_exposure", ["ev1"]),
-                family=SignalFamily.SECURITY, kind="compliance_exposure",
-                disposition=SignalDisposition.FINDING, category="TD-COMP",
-                severity="Medium", confidence="Low", evidence_ids=["ev1"],
-                source_signal_ids=[], title="Compliance exposure", summary="Compliance",
-                explanation="Exposure", metadata={"keywords": ["hipaa"]},
+                family=SignalFamily.SECURITY,
+                kind="compliance_exposure",
+                disposition=SignalDisposition.FINDING,
+                category="TD-COMP",
+                severity="Medium",
+                confidence="Low",
+                evidence_ids=["ev1"],
+                source_signal_ids=[],
+                title="Compliance exposure",
+                summary="Compliance",
+                explanation="Exposure",
+                metadata={"keywords": ["hipaa"]},
             ),
             _signal(SignalDisposition.ADVISORY, family=SignalFamily.RUNTIME),
         ]
@@ -899,19 +1175,33 @@ class TestSummaryConsistency:
         signals = [
             GovernedSignal(
                 signal_id=make_signal_id("security", "compliance_exposure", ["ev1"]),
-                family=SignalFamily.SECURITY, kind="compliance_exposure",
-                disposition=SignalDisposition.FINDING, category="TD-COMP",
-                severity="Medium", confidence="Low", evidence_ids=["ev1"],
-                source_signal_ids=[], title="Compliance", summary="Compliance",
-                explanation="Exposure", metadata={},
+                family=SignalFamily.SECURITY,
+                kind="compliance_exposure",
+                disposition=SignalDisposition.FINDING,
+                category="TD-COMP",
+                severity="Medium",
+                confidence="Low",
+                evidence_ids=["ev1"],
+                source_signal_ids=[],
+                title="Compliance",
+                summary="Compliance",
+                explanation="Exposure",
+                metadata={},
             ),
             GovernedSignal(
                 signal_id=make_signal_id("test", "risk_sensitive_without_tests", ["ev2"]),
-                family=SignalFamily.TEST, kind="risk_sensitive_without_tests",
-                disposition=SignalDisposition.FINDING, category="TD-SEC",
-                severity="High", confidence="Medium", evidence_ids=["ev2"],
-                source_signal_ids=[], title="Risk-sensitive without tests", summary="No tests",
-                explanation="Missing tests", metadata={"risk_sensitive": True},
+                family=SignalFamily.TEST,
+                kind="risk_sensitive_without_tests",
+                disposition=SignalDisposition.FINDING,
+                category="TD-SEC",
+                severity="High",
+                confidence="Medium",
+                evidence_ids=["ev2"],
+                source_signal_ids=[],
+                title="Risk-sensitive without tests",
+                summary="No tests",
+                explanation="Missing tests",
+                metadata={"risk_sensitive": True},
             ),
         ]
         summary = build_signal_summary(signals)
@@ -924,11 +1214,18 @@ class TestSummaryConsistency:
         signals = [
             GovernedSignal(
                 signal_id=make_signal_id("architecture", "cycle", ["ev1"]),
-                family=SignalFamily.ARCHITECTURE, kind="cycle",
-                disposition=SignalDisposition.FINDING, category="TD-ARCH",
-                severity="Medium", confidence="High", evidence_ids=["ev1"],
-                source_signal_ids=[], title="Cycle", summary="Circular dep",
-                explanation="Coupling", metadata={"spec_kind": "cycle"},
+                family=SignalFamily.ARCHITECTURE,
+                kind="cycle",
+                disposition=SignalDisposition.FINDING,
+                category="TD-ARCH",
+                severity="Medium",
+                confidence="High",
+                evidence_ids=["ev1"],
+                source_signal_ids=[],
+                title="Cycle",
+                summary="Circular dep",
+                explanation="Coupling",
+                metadata={"spec_kind": "cycle"},
             ),
             _signal(SignalDisposition.ADVISORY, family=SignalFamily.RUNTIME),
         ]
@@ -938,9 +1235,7 @@ class TestSummaryConsistency:
         assert summary.by_family["runtime"] == 1
 
     def test_all_finding_disposition_count(self) -> None:
-        signals = [
-            _signal(SignalDisposition.FINDING, f"f{i}") for i in range(5)
-        ]
+        signals = [_signal(SignalDisposition.FINDING, f"f{i}") for i in range(5)]
         summary = build_signal_summary(signals)
         assert summary.by_disposition["finding"] == 5
         assert summary.total == 5
@@ -973,6 +1268,7 @@ class TestSummaryConsistency:
 
     def test_signal_summary_to_dict_roundtrip(self) -> None:
         from pharabius.core.signals.summary import signal_summary_to_dict
+
         signals = [_signal(SignalDisposition.FINDING, "f1")]
         summary = build_signal_summary(signals)
         d = signal_summary_to_dict(summary)
@@ -994,10 +1290,18 @@ class TestDiagnostics:
 
     def test_finding_no_evidence_inv006(self) -> None:
         sig = GovernedSignal(
-            signal_id="SIG-RUNTIME-abc123def456", family=SignalFamily.RUNTIME,
-            kind="k", disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=[],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="SIG-RUNTIME-abc123def456",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=[],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         diags = diagnose_signal(sig)
@@ -1005,10 +1309,18 @@ class TestDiagnostics:
 
     def test_diagnostics_return_frozen_dataclasses(self) -> None:
         sig = GovernedSignal(
-            signal_id="", family=SignalFamily.RUNTIME, kind="",
-            disposition=SignalDisposition.FINDING, category="",
-            severity="Medium", confidence="High", evidence_ids=[],
-            source_signal_ids=[], title="", summary="s", explanation="e",
+            signal_id="",
+            family=SignalFamily.RUNTIME,
+            kind="",
+            disposition=SignalDisposition.FINDING,
+            category="",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=[],
+            source_signal_ids=[],
+            title="",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         diags = diagnose_signal(sig)
@@ -1018,10 +1330,18 @@ class TestDiagnostics:
 
     def test_diagnostics_include_family_and_disposition(self) -> None:
         sig = GovernedSignal(
-            signal_id="SIG-RUNTIME-abc123def456", family=SignalFamily.RUNTIME,
-            kind="k", disposition=SignalDisposition.FINDING, category="TD-DEP",
-            severity="Medium", confidence="High", evidence_ids=[],
-            source_signal_ids=[], title="t", summary="s", explanation="e",
+            signal_id="SIG-RUNTIME-abc123def456",
+            family=SignalFamily.RUNTIME,
+            kind="k",
+            disposition=SignalDisposition.FINDING,
+            category="TD-DEP",
+            severity="Medium",
+            confidence="High",
+            evidence_ids=[],
+            source_signal_ids=[],
+            title="t",
+            summary="s",
+            explanation="e",
             metadata={},
         )
         diags = diagnose_signal(sig)
@@ -1034,12 +1354,21 @@ class TestDiagnostics:
         # An ADVISORY with TD-SEC category should NOT produce INV_001 diagnostic
         sig = GovernedSignal(
             signal_id=make_signal_id("test", "risk_sensitive", ["ev1"]),
-            family=SignalFamily.TEST, kind="risk_sensitive_without_tests",
-            disposition=SignalDisposition.FINDING, category="TD-SEC",
-            severity="High", confidence="Medium", evidence_ids=["ev1"],
-            source_signal_ids=[], title="Risk sensitive", summary="No tests",
-            explanation="Missing tests", metadata={"risk_sensitive": True},
+            family=SignalFamily.TEST,
+            kind="risk_sensitive_without_tests",
+            disposition=SignalDisposition.FINDING,
+            category="TD-SEC",
+            severity="High",
+            confidence="Medium",
+            evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Risk sensitive",
+            summary="No tests",
+            explanation="Missing tests",
+            metadata={"risk_sensitive": True},
         )
         diags = diagnose_signal(sig)
         inv001_diags = [d for d in diags if d.invariant_code == "INV_001"]
-        assert inv001_diags == [], "INV_001 should not fire for legitimate FINDING with TD-SEC category"
+        assert inv001_diags == [], (
+            "INV_001 should not fire for legitimate FINDING with TD-SEC category"
+        )

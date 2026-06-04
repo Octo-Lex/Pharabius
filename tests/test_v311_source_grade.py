@@ -1,4 +1,5 @@
 """v3.11.0 S01 — RuntimeSourceGrade and helper predicate tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -40,12 +41,14 @@ class TestSourceGradeClassification:
 
     def test_python_version_file_is_version_file(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.ecosystems import detect_python_sources
+
         (tmp_path / ".python-version").write_text("3.11\n")
         ev = detect_python_sources(tmp_path)
         assert all(e.source_grade == RuntimeSourceGrade.VERSION_FILE for e in ev)
 
     def test_go_directive_is_manifest_range(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.go import detect_go_sources
+
         (tmp_path / "go.mod").write_text("module ex\ngo 1.22\n")
         ev = detect_go_sources(tmp_path)
         go_ev = [e for e in ev if e.source_detail == "go-directive"]
@@ -54,6 +57,7 @@ class TestSourceGradeClassification:
 
     def test_go_toolchain_is_manifest_pin(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.go import detect_go_sources
+
         (tmp_path / "go.mod").write_text("module ex\ngo 1.22\n\ntoolchain go1.22.4\n")
         ev = detect_go_sources(tmp_path)
         tc_ev = [e for e in ev if e.source_detail == "toolchain"]
@@ -62,6 +66,7 @@ class TestSourceGradeClassification:
 
     def test_rust_toolchain_is_lockfile(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.rust import detect_rust_sources
+
         (tmp_path / "rust-toolchain").write_text("1.76.0\n")
         ev = detect_rust_sources(tmp_path)
         assert len(ev) == 1
@@ -69,6 +74,7 @@ class TestSourceGradeClassification:
 
     def test_rust_cargo_rust_version_is_manifest_range(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.rust import detect_rust_sources
+
         (tmp_path / "Cargo.toml").write_text('[package]\nrust-version = "1.76"\n')
         ev = detect_rust_sources(tmp_path)
         assert len(ev) == 1
@@ -76,6 +82,7 @@ class TestSourceGradeClassification:
 
     def test_dotnet_global_json_is_manifest_pin(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.dotnet import detect_dotnet_sources
+
         (tmp_path / "global.json").write_text('{"sdk": {"version": "8.0.100"}}\n')
         ev = detect_dotnet_sources(tmp_path)
         assert len(ev) == 1
@@ -83,6 +90,7 @@ class TestSourceGradeClassification:
 
     def test_dotnet_csproj_is_manifest_range(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.dotnet import detect_dotnet_sources
+
         (tmp_path / "App.csproj").write_text(
             "<Project><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>"
         )
@@ -92,6 +100,7 @@ class TestSourceGradeClassification:
 
     def test_php_composer_is_manifest_pin(self, tmp_path: Path) -> None:
         from pharabius.core.runtime.php import detect_php_sources
+
         (tmp_path / "composer.json").write_text('{"require": {"php": "8.2.12"}}\n')
         ev = detect_php_sources(tmp_path)
         assert len(ev) == 1

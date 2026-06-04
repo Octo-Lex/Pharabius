@@ -37,7 +37,9 @@ class BenchmarkFixture:
     def add_js_file(self, rel_path: str, content: str) -> BenchmarkFixture:
         return self.add_file(rel_path, content)
 
-    def add_pyproject(self, name: str = "example", deps: list[str] | None = None) -> BenchmarkFixture:
+    def add_pyproject(
+        self, name: str = "example", deps: list[str] | None = None
+    ) -> BenchmarkFixture:
         lines = ["[project]", f"name = '{name}'", "version = '1.0.0'", ""]
         if deps:
             lines.append("dependencies = [")
@@ -73,7 +75,9 @@ class BenchmarkFixture:
 
     def add_istanbul_coverage(self, metrics: dict[str, float]) -> BenchmarkFixture:
         total = {k: {"pct": v} for k, v in metrics.items()}
-        return self.add_file("coverage/coverage-summary.json", json.dumps({"total": total}, indent=2))
+        return self.add_file(
+            "coverage/coverage-summary.json", json.dumps({"total": total}, indent=2)
+        )
 
     def add_lcov(self, lf: int, lh: int) -> BenchmarkFixture:
         return self.add_file("coverage/lcov.info", f"LF:{lf}\nLH:{lh}\n")
@@ -81,7 +85,9 @@ class BenchmarkFixture:
     def add_jacoco_xml(self, counters: list[dict[str, Any]]) -> BenchmarkFixture:
         lines = ['<?xml version="1.0" ?>', "<report>"]
         for c in counters:
-            lines.append(f'  <counter type="{c["type"]}" missed="{c["missed"]}" covered="{c["covered"]}" />')
+            lines.append(
+                f'  <counter type="{c["type"]}" missed="{c["missed"]}" covered="{c["covered"]}" />'
+            )
         lines.append("</report>")
         return self.add_file("target/site/jacoco/jacoco.xml", "\n".join(lines))
 
@@ -122,15 +128,19 @@ class BenchmarkFixture:
         return self.add_file(".java-version", version + "\n")
 
     def add_pom_xml(self, java_version: int | None = None) -> BenchmarkFixture:
-        lines = ['<project>']
+        lines = ["<project>"]
         if java_version:
-            lines.append(f'<properties><maven.compiler.release>{java_version}</maven.compiler.release></properties>')
-        lines.append('</project>')
+            lines.append(
+                f"<properties><maven.compiler.release>{java_version}</maven.compiler.release></properties>"
+            )
+        lines.append("</project>")
         return self.add_file("pom.xml", "\n".join(lines))
 
     def add_gradle_build(self, java_version: int | None = None) -> BenchmarkFixture:
         if java_version:
-            return self.add_file("build.gradle", f"sourceCompatibility = JavaVersion.VERSION_{java_version}\n")
+            return self.add_file(
+                "build.gradle", f"sourceCompatibility = JavaVersion.VERSION_{java_version}\n"
+            )
         return self.add_file("build.gradle", "plugins { id 'java' }\n")
 
     def add_dockerfile(self, base_image: str) -> BenchmarkFixture:
@@ -143,7 +153,7 @@ class BenchmarkFixture:
         return self.add_file("runtime.txt", f"python-{version}\n")
 
     def add_pyproject_toml(self, requires_python: str | None = None) -> BenchmarkFixture:
-        lines = ['[project]', 'name = "example"', 'version = "1.0.0"']
+        lines = ["[project]", 'name = "example"', 'version = "1.0.0"']
         if requires_python:
             lines.append(f'requires-python = "{requires_python}"')
         return self.add_file("pyproject.toml", "\n".join(lines) + "\n")
@@ -199,7 +209,9 @@ def build_all_fixtures(benchmarks_dir: Path) -> dict[str, Path]:
             deps={"express": "*"},
             dev_deps={"jest": "^29.0.0", "typescript": "^5.0.0"},
         )
-        .add_istanbul_coverage({"lines": 55.0, "statements": 50.0, "functions": 70.0, "branches": 40.0})
+        .add_istanbul_coverage(
+            {"lines": 55.0, "statements": 50.0, "functions": 70.0, "branches": 40.0}
+        )
         .add_js_file("src/app.ts", "export function main(): void { console.log('hello'); }\n")
         .add_js_file(
             "src/utils.ts",

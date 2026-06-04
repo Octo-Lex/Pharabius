@@ -35,17 +35,19 @@ def detect_python_sources(root: Path) -> list[RuntimeEvidence]:
             version = text.strip().split("\n")[0].strip()
             if version:
                 constraint = parse_constraint("Python", version)
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Python", ".python-version", None, version),
-                    ecosystem=RuntimeEcosystem.PYTHON,
-                    runtime_name="Python",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.VERSION_FILE,
-                    source_path=".python-version",
-                    source_grade=RuntimeSourceGrade.VERSION_FILE,
-                    confidence=Confidence.HIGH,
-                    raw_version=version,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id("Python", ".python-version", None, version),
+                        ecosystem=RuntimeEcosystem.PYTHON,
+                        runtime_name="Python",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.VERSION_FILE,
+                        source_path=".python-version",
+                        source_grade=RuntimeSourceGrade.VERSION_FILE,
+                        confidence=Confidence.HIGH,
+                        raw_version=version,
+                    )
+                )
 
     # runtime.txt (Heroku)
     fpath = root / "runtime.txt"
@@ -56,17 +58,19 @@ def detect_python_sources(root: Path) -> list[RuntimeEvidence]:
             if version:
                 version_clean = re.sub(r"^python-", "", version, flags=re.IGNORECASE)
                 constraint = parse_constraint("Python", version_clean)
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Python", "runtime.txt", None, version_clean),
-                    ecosystem=RuntimeEcosystem.PYTHON,
-                    runtime_name="Python",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.VERSION_FILE,
-                    source_path="runtime.txt",
-                    source_grade=RuntimeSourceGrade.VERSION_FILE,
-                    confidence=Confidence.HIGH,
-                    raw_version=version_clean,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id("Python", "runtime.txt", None, version_clean),
+                        ecosystem=RuntimeEcosystem.PYTHON,
+                        runtime_name="Python",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.VERSION_FILE,
+                        source_path="runtime.txt",
+                        source_grade=RuntimeSourceGrade.VERSION_FILE,
+                        confidence=Confidence.HIGH,
+                        raw_version=version_clean,
+                    )
+                )
 
     # pyproject.toml requires-python
     fpath = root / "pyproject.toml"
@@ -77,18 +81,22 @@ def detect_python_sources(root: Path) -> list[RuntimeEvidence]:
             if m:
                 version_spec = m.group(1)
                 constraint = parse_constraint("Python", version_spec)
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Python", "pyproject.toml", "requires-python", version_spec),
-                    ecosystem=RuntimeEcosystem.PYTHON,
-                    runtime_name="Python",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.MANIFEST,
-                    source_path="pyproject.toml",
-                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
-                    source_detail="requires-python",
-                    confidence=Confidence.HIGH,
-                    raw_version=version_spec,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id(
+                            "Python", "pyproject.toml", "requires-python", version_spec
+                        ),
+                        ecosystem=RuntimeEcosystem.PYTHON,
+                        runtime_name="Python",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.MANIFEST,
+                        source_path="pyproject.toml",
+                        source_grade=RuntimeSourceGrade.MANIFEST_PIN,
+                        source_detail="requires-python",
+                        confidence=Confidence.HIGH,
+                        raw_version=version_spec,
+                    )
+                )
 
     return evidence
 
@@ -105,17 +113,19 @@ def detect_node_sources(root: Path) -> list[RuntimeEvidence]:
                 version = text.strip().split("\n")[0].strip()
                 if version:
                     constraint = parse_constraint("Node.js", version)
-                    evidence.append(RuntimeEvidence(
-                        runtime_evidence_id=_make_id("Node.js", filename, None, version),
-                        ecosystem=RuntimeEcosystem.NODE,
-                        runtime_name="Node.js",
-                        constraint=constraint,
-                        source_type=RuntimeSourceType.VERSION_FILE,
-                        source_path=filename,
-                        source_grade=RuntimeSourceGrade.VERSION_FILE,
-                        confidence=Confidence.HIGH,
-                        raw_version=version,
-                    ))
+                    evidence.append(
+                        RuntimeEvidence(
+                            runtime_evidence_id=_make_id("Node.js", filename, None, version),
+                            ecosystem=RuntimeEcosystem.NODE,
+                            runtime_name="Node.js",
+                            constraint=constraint,
+                            source_type=RuntimeSourceType.VERSION_FILE,
+                            source_path=filename,
+                            source_grade=RuntimeSourceGrade.VERSION_FILE,
+                            confidence=Confidence.HIGH,
+                            raw_version=version,
+                        )
+                    )
 
     # package.json engines.node
     pkg_json = root / "package.json"
@@ -125,18 +135,22 @@ def detect_node_sources(root: Path) -> list[RuntimeEvidence]:
         node_engine = engines.get("node")
         if node_engine:
             constraint = parse_constraint("Node.js", node_engine)
-            evidence.append(RuntimeEvidence(
-                runtime_evidence_id=_make_id("Node.js", "package.json", "engines.node", node_engine),
-                ecosystem=RuntimeEcosystem.NODE,
-                runtime_name="Node.js",
-                constraint=constraint,
-                source_type=RuntimeSourceType.MANIFEST,
-                source_path="package.json",
-                source_grade=RuntimeSourceGrade.MANIFEST_PIN,
-                source_detail="engines.node",
-                confidence=Confidence.HIGH,
-                raw_version=node_engine,
-            ))
+            evidence.append(
+                RuntimeEvidence(
+                    runtime_evidence_id=_make_id(
+                        "Node.js", "package.json", "engines.node", node_engine
+                    ),
+                    ecosystem=RuntimeEcosystem.NODE,
+                    runtime_name="Node.js",
+                    constraint=constraint,
+                    source_type=RuntimeSourceType.MANIFEST,
+                    source_path="package.json",
+                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
+                    source_detail="engines.node",
+                    confidence=Confidence.HIGH,
+                    raw_version=node_engine,
+                )
+            )
 
     return evidence
 
@@ -153,17 +167,19 @@ def detect_ruby_sources(root: Path) -> list[RuntimeEvidence]:
             version = text.strip().split("\n")[0].strip()
             if version:
                 constraint = parse_constraint("Ruby", version)
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Ruby", ".ruby-version", None, version),
-                    ecosystem=RuntimeEcosystem.RUBY,
-                    runtime_name="Ruby",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.VERSION_FILE,
-                    source_path=".ruby-version",
-                    source_grade=RuntimeSourceGrade.VERSION_FILE,
-                    confidence=Confidence.HIGH,
-                    raw_version=version,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id("Ruby", ".ruby-version", None, version),
+                        ecosystem=RuntimeEcosystem.RUBY,
+                        runtime_name="Ruby",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.VERSION_FILE,
+                        source_path=".ruby-version",
+                        source_grade=RuntimeSourceGrade.VERSION_FILE,
+                        confidence=Confidence.HIGH,
+                        raw_version=version,
+                    )
+                )
 
     # Gemfile ruby declaration
     fpath = root / "Gemfile"
@@ -174,18 +190,20 @@ def detect_ruby_sources(root: Path) -> list[RuntimeEvidence]:
             if m:
                 version = m.group(1)
                 constraint = parse_constraint("Ruby", version)
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Ruby", "Gemfile", "ruby", version),
-                    ecosystem=RuntimeEcosystem.RUBY,
-                    runtime_name="Ruby",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.MANIFEST,
-                    source_path="Gemfile",
-                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
-                    source_detail="ruby",
-                    confidence=Confidence.HIGH,
-                    raw_version=version,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id("Ruby", "Gemfile", "ruby", version),
+                        ecosystem=RuntimeEcosystem.RUBY,
+                        runtime_name="Ruby",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.MANIFEST,
+                        source_path="Gemfile",
+                        source_grade=RuntimeSourceGrade.MANIFEST_PIN,
+                        source_detail="ruby",
+                        confidence=Confidence.HIGH,
+                        raw_version=version,
+                    )
+                )
 
     return evidence
 
@@ -202,40 +220,45 @@ def detect_java_sources(root: Path) -> list[RuntimeEvidence]:
             version = text.strip().split("\n")[0].strip()
             if version:
                 constraint = parse_constraint("Java", version)
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Java", ".java-version", None, version),
-                    ecosystem=RuntimeEcosystem.JAVA,
-                    runtime_name="Java",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.VERSION_FILE,
-                    source_path=".java-version",
-                    source_grade=RuntimeSourceGrade.VERSION_FILE,
-                    confidence=Confidence.HIGH,
-                    raw_version=version,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id("Java", ".java-version", None, version),
+                        ecosystem=RuntimeEcosystem.JAVA,
+                        runtime_name="Java",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.VERSION_FILE,
+                        source_path=".java-version",
+                        source_grade=RuntimeSourceGrade.VERSION_FILE,
+                        confidence=Confidence.HIGH,
+                        raw_version=version,
+                    )
+                )
 
     # pom.xml maven.compiler.release/source
     fpath = root / "pom.xml"
     if fpath.exists():
         text = read_text(fpath)
         if text:
-            m = (re.search(r"<maven\.compiler\.release>\s*(\d+)\s*</maven\.compiler\.release>", text)
-                 or re.search(r"<maven\.compiler\.source>\s*(\d+)\s*</maven\.compiler\.source>", text))
+            m = re.search(
+                r"<maven\.compiler\.release>\s*(\d+)\s*</maven\.compiler\.release>", text
+            ) or re.search(r"<maven\.compiler\.source>\s*(\d+)\s*</maven\.compiler\.source>", text)
             if m:
                 version = m.group(1)
                 constraint = parse_constraint("Java", version)
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Java", "pom.xml", "maven.compiler", version),
-                    ecosystem=RuntimeEcosystem.JAVA,
-                    runtime_name="Java",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.MANIFEST,
-                    source_path="pom.xml",
-                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
-                    source_detail="maven.compiler",
-                    confidence=Confidence.HIGH,
-                    raw_version=version,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id("Java", "pom.xml", "maven.compiler", version),
+                        ecosystem=RuntimeEcosystem.JAVA,
+                        runtime_name="Java",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.MANIFEST,
+                        source_path="pom.xml",
+                        source_grade=RuntimeSourceGrade.MANIFEST_PIN,
+                        source_detail="maven.compiler",
+                        confidence=Confidence.HIGH,
+                        raw_version=version,
+                    )
+                )
 
     # build.gradle / build.gradle.kts
     for gradle_file in ("build.gradle", "build.gradle.kts"):
@@ -243,22 +266,27 @@ def detect_java_sources(root: Path) -> list[RuntimeEvidence]:
         if fpath.exists():
             text = read_text(fpath)
             if text:
-                m = (re.search(r"languageVersion\s*=\s*JavaLanguageVersion\.of\((\d+)\)", text)
-                     or re.search(r"sourceCompatibility\s*=\s*JavaVersion\.VERSION_(\d+)", text))
+                m = re.search(
+                    r"languageVersion\s*=\s*JavaLanguageVersion\.of\((\d+)\)", text
+                ) or re.search(r"sourceCompatibility\s*=\s*JavaVersion\.VERSION_(\d+)", text)
                 if m:
                     version = m.group(1)
                     constraint = parse_constraint("Java", version)
-                    evidence.append(RuntimeEvidence(
-                        runtime_evidence_id=_make_id("Java", gradle_file, "java-version", version),
-                        ecosystem=RuntimeEcosystem.JAVA,
-                        runtime_name="Java",
-                        constraint=constraint,
-                        source_type=RuntimeSourceType.MANIFEST,
-                        source_path=gradle_file,
-                        source_grade=RuntimeSourceGrade.VERSION_FILE,
-                        confidence=Confidence.HIGH,
-                        raw_version=version,
-                    ))
+                    evidence.append(
+                        RuntimeEvidence(
+                            runtime_evidence_id=_make_id(
+                                "Java", gradle_file, "java-version", version
+                            ),
+                            ecosystem=RuntimeEcosystem.JAVA,
+                            runtime_name="Java",
+                            constraint=constraint,
+                            source_type=RuntimeSourceType.MANIFEST,
+                            source_path=gradle_file,
+                            source_grade=RuntimeSourceGrade.VERSION_FILE,
+                            confidence=Confidence.HIGH,
+                            raw_version=version,
+                        )
+                    )
                 break
 
     return evidence

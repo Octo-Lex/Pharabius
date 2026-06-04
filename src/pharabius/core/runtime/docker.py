@@ -7,17 +7,16 @@ from pathlib import Path
 
 from pharabius.core.io_helpers import read_text
 from pharabius.core.runtime.constraints import parse_constraint
+from pharabius.core.runtime.ecosystems import _make_id
 from pharabius.core.runtime.models import (
-    RuntimeSourceGrade,
     Confidence,
     RuntimeConstraint,
     RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
-from pharabius.core.runtime.ecosystems import _make_id
-
 
 _FROM_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"FROM\s+python:(\d+(?:\.\d+)?)"), "Python"),
@@ -29,7 +28,10 @@ _FROM_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"FROM\s+gradle:\S*?[\-_]jdk(\d+)"), "Java"),
     (re.compile(r"FROM\s+golang:(\d+(?:\.\d+)?)"), "Go"),
     (re.compile(r"FROM\s+rust:(\d+(?:\.\d+)?)"), "Rust"),
-    (re.compile(r"FROM\s+mcr\.microsoft\.com/dotnet/(?:sdk|aspnet|runtime):(\d+(?:\.\d+)?)"), ".NET"),
+    (
+        re.compile(r"FROM\s+mcr\.microsoft\.com/dotnet/(?:sdk|aspnet|runtime):(\d+(?:\.\d+)?)"),
+        ".NET",
+    ),
     (re.compile(r"FROM\s+php:(\d+(?:\.\d+)?)"), "PHP"),
 ]
 
@@ -74,16 +76,22 @@ def detect_dockerfile_sources(root: Path) -> list[RuntimeEvidence]:
             if "${" in line:
                 for name_pat, runtime in _RUNTIME_NAME_PATTERNS:
                     if name_pat.search(line):
-                        evidence.append(RuntimeEvidence(
-                            runtime_evidence_id=_make_id(runtime, rel_path, "FROM-ARG", "unknown"),
-                            ecosystem=_runtime_to_ecosystem(runtime),
-                            runtime_name=runtime,
-                            constraint=RuntimeConstraint(kind=RuntimeConstraintKind.UNKNOWN, raw="ARG"),
-                            source_type=RuntimeSourceType.CONTAINER,
-                            source_path=rel_path,
-                            source_grade=RuntimeSourceGrade.CONTAINER,
-                            confidence=Confidence.LOW,
-                        ))
+                        evidence.append(
+                            RuntimeEvidence(
+                                runtime_evidence_id=_make_id(
+                                    runtime, rel_path, "FROM-ARG", "unknown"
+                                ),
+                                ecosystem=_runtime_to_ecosystem(runtime),
+                                runtime_name=runtime,
+                                constraint=RuntimeConstraint(
+                                    kind=RuntimeConstraintKind.UNKNOWN, raw="ARG"
+                                ),
+                                source_type=RuntimeSourceType.CONTAINER,
+                                source_path=rel_path,
+                                source_grade=RuntimeSourceGrade.CONTAINER,
+                                confidence=Confidence.LOW,
+                            )
+                        )
                 continue
 
             # Specific version FROM
@@ -92,25 +100,34 @@ def detect_dockerfile_sources(root: Path) -> list[RuntimeEvidence]:
                 if m:
                     version = m.group(1)
                     constraint = parse_constraint(runtime, version)
-                    evidence.append(RuntimeEvidence(
-                        runtime_evidence_id=_make_id(runtime, rel_path, "FROM", version),
-                        ecosystem=_runtime_to_ecosystem(runtime),
-                        runtime_name=runtime,
-                        constraint=constraint,
-                        source_type=RuntimeSourceType.CONTAINER,
-                        source_path=rel_path,
-                        source_grade=RuntimeSourceGrade.CONTAINER,
-                        confidence=Confidence.MEDIUM,
-                        raw_version=version,
-                    ))
+                    evidence.append(
+                        RuntimeEvidence(
+                            runtime_evidence_id=_make_id(runtime, rel_path, "FROM", version),
+                            ecosystem=_runtime_to_ecosystem(runtime),
+                            runtime_name=runtime,
+                            constraint=constraint,
+                            source_type=RuntimeSourceType.CONTAINER,
+                            source_path=rel_path,
+                            source_grade=RuntimeSourceGrade.CONTAINER,
+                            confidence=Confidence.MEDIUM,
+                            raw_version=version,
+                        )
+                    )
 
     return evidence
 
 
 def _runtime_to_ecosystem(runtime: str):
     from pharabius.core.runtime.models import RuntimeEcosystem
-    mapping = {"Python": RuntimeEcosystem.PYTHON, "Node.js": RuntimeEcosystem.NODE,
-               "Ruby": RuntimeEcosystem.RUBY, "Java": RuntimeEcosystem.JAVA,
-               "Go": RuntimeEcosystem.GO, "Rust": RuntimeEcosystem.RUST,
-               ".NET": RuntimeEcosystem.DOTNET, "PHP": RuntimeEcosystem.PHP}
+
+    mapping = {
+        "Python": RuntimeEcosystem.PYTHON,
+        "Node.js": RuntimeEcosystem.NODE,
+        "Ruby": RuntimeEcosystem.RUBY,
+        "Java": RuntimeEcosystem.JAVA,
+        "Go": RuntimeEcosystem.GO,
+        "Rust": RuntimeEcosystem.RUST,
+        ".NET": RuntimeEcosystem.DOTNET,
+        "PHP": RuntimeEcosystem.PHP,
+    }
     return mapping.get(runtime, RuntimeEcosystem.PYTHON)

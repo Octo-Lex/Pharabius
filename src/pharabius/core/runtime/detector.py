@@ -30,6 +30,7 @@ from pharabius.core.constants import (
 )
 from pharabius.core.runtime.conflict import detect_conflicts
 from pharabius.core.runtime.docker import detect_dockerfile_sources
+from pharabius.core.runtime.dotnet import detect_dotnet_sources
 from pharabius.core.runtime.ecosystems import (
     detect_java_sources,
     detect_node_sources,
@@ -45,13 +46,11 @@ from pharabius.core.runtime.models import (
     RuntimeEvidence,
     RuntimeSourceType,
 )
-from pharabius.core.runtime.policy import is_runtime_pin
 from pharabius.core.runtime.php import detect_php_sources
+from pharabius.core.runtime.policy import is_runtime_pin
 from pharabius.core.runtime.rust import detect_rust_sources
-from pharabius.core.runtime.dotnet import detect_dotnet_sources
 from pharabius.core.runtime.tool_versions import detect_tool_versions_sources
 from pharabius.schemas.evidence import EvidenceBuilder
-
 
 # ── Missing-pin triggers ─────────────────────────────────────────────
 
@@ -114,7 +113,11 @@ def _emit_evidence(evidence: list[RuntimeEvidence], builder: EvidenceBuilder) ->
             continue
 
         obs_strength = _confidence_to_observation(ev.confidence)
-        completeness = COMPLETENESS_COMPLETE if ev.constraint.kind == RuntimeConstraintKind.EXACT else COMPLETENESS_PARTIAL
+        completeness = (
+            COMPLETENESS_COMPLETE
+            if ev.constraint.kind == RuntimeConstraintKind.EXACT
+            else COMPLETENESS_PARTIAL
+        )
         parser = _source_type_to_parser(ev.source_type)
         read_mode = _source_type_to_read_mode(ev.source_type)
 
@@ -227,7 +230,9 @@ def _emit_missing_pins(
 # ── Helpers ──────────────────────────────────────────────────────────
 
 
-def _constraint_to_signal(kind: RuntimeConstraintKind, source_type: RuntimeSourceType) -> str | None:
+def _constraint_to_signal(
+    kind: RuntimeConstraintKind, source_type: RuntimeSourceType
+) -> str | None:
     """Map constraint kind + source type to signal constant."""
     if kind == RuntimeConstraintKind.EXACT:
         if source_type == RuntimeSourceType.CONTAINER:
@@ -243,15 +248,20 @@ def _constraint_to_signal(kind: RuntimeConstraintKind, source_type: RuntimeSourc
 
 
 def _confidence_to_observation(confidence: Confidence) -> str:
-    mapping = {Confidence.HIGH: OBSERVATION_STRENGTH_DIRECT,
-               Confidence.MEDIUM: OBSERVATION_STRENGTH_HEURISTIC,
-               Confidence.LOW: OBSERVATION_STRENGTH_LIMITATION}
+    mapping = {
+        Confidence.HIGH: OBSERVATION_STRENGTH_DIRECT,
+        Confidence.MEDIUM: OBSERVATION_STRENGTH_HEURISTIC,
+        Confidence.LOW: OBSERVATION_STRENGTH_LIMITATION,
+    }
     return mapping.get(confidence, OBSERVATION_STRENGTH_HEURISTIC)
 
 
 def _source_type_to_parser(source_type: RuntimeSourceType) -> str:
-    if source_type in (RuntimeSourceType.VERSION_FILE, RuntimeSourceType.TOOL_VERSIONS,
-                       RuntimeSourceType.CONTAINER):
+    if source_type in (
+        RuntimeSourceType.VERSION_FILE,
+        RuntimeSourceType.TOOL_VERSIONS,
+        RuntimeSourceType.CONTAINER,
+    ):
         return PARSER_FILESYSTEM
     if source_type == RuntimeSourceType.CI:
         return PARSER_FILESYSTEM

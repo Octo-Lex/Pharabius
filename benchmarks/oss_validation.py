@@ -15,10 +15,10 @@ from typing import Any
 
 import yaml
 
-
 # ---------------------------------------------------------------------------
 # Manifest loading
 # ---------------------------------------------------------------------------
+
 
 def load_oss_manifest(benchmarks_root: Path) -> dict[str, Any]:
     """Load the OSS repos manifest (repos.yaml)."""
@@ -30,6 +30,7 @@ def load_oss_manifest(benchmarks_root: Path) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Safe tar extraction
 # ---------------------------------------------------------------------------
+
 
 def safe_extract_tar(tar: tarfile.TarFile, target: Path) -> None:
     """Extract tar archive safely.
@@ -69,8 +70,7 @@ def unpack_oss_snapshot(
         actual = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
         if actual != verify_sha256:
             raise ValueError(
-                f"SHA-256 mismatch for {snapshot_path.name}: "
-                f"expected {verify_sha256}, got {actual}"
+                f"SHA-256 mismatch for {snapshot_path.name}: expected {verify_sha256}, got {actual}"
             )
 
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -91,6 +91,7 @@ def unpack_oss_snapshot(
 # Pipeline execution + metric collection
 # ---------------------------------------------------------------------------
 
+
 def run_oss_validation(repo_path: Path) -> dict[str, Any]:
     """Run execute_run() against an unpacked OSS snapshot and collect metrics.
 
@@ -106,7 +107,9 @@ def run_oss_validation(repo_path: Path) -> dict[str, Any]:
 
     # Load debt register
     register_path = workspace / "debt-register.json"
-    register = json.loads(register_path.read_text(encoding="utf-8")) if register_path.exists() else {}
+    register = (
+        json.loads(register_path.read_text(encoding="utf-8")) if register_path.exists() else {}
+    )
 
     findings = register.get("findings", [])
     summary = register.get("summary", {})
@@ -138,7 +141,9 @@ def run_oss_validation(repo_path: Path) -> dict[str, Any]:
 
     # Evidence count
     evidence_path = workspace / "evidence.json"
-    evidence = json.loads(evidence_path.read_text(encoding="utf-8")) if evidence_path.exists() else {}
+    evidence = (
+        json.loads(evidence_path.read_text(encoding="utf-8")) if evidence_path.exists() else {}
+    )
     evidence_items = evidence.get("evidence", [])
     evidence_count = len(evidence_items) if isinstance(evidence_items, list) else 0
 
@@ -173,6 +178,7 @@ def run_oss_validation(repo_path: Path) -> dict[str, Any]:
 # Golden validation
 # ---------------------------------------------------------------------------
 
+
 def validate_against_oss_golden(
     result: dict[str, Any],
     golden: dict[str, Any],
@@ -187,45 +193,34 @@ def validate_against_oss_golden(
     # Finding count bound
     max_findings = golden.get("expected_findings_max", 100)
     if result["finding_count"] > max_findings:
-        failures.append(
-            f"finding_count={result['finding_count']} exceeds max={max_findings}"
-        )
+        failures.append(f"finding_count={result['finding_count']} exceeds max={max_findings}")
 
     # Technical debt bound
     max_td = golden.get("expected_technical_debt_max", 50)
     if result["technical_debt_count"] > max_td:
         failures.append(
-            f"technical_debt_count={result['technical_debt_count']} "
-            f"exceeds max={max_td}"
+            f"technical_debt_count={result['technical_debt_count']} exceeds max={max_td}"
         )
 
     # Severity bounds
     max_critical = golden.get("expected_critical_max", 0)
     if result["critical"] > max_critical:
-        failures.append(
-            f"critical={result['critical']} exceeds max={max_critical}"
-        )
+        failures.append(f"critical={result['critical']} exceeds max={max_critical}")
 
     max_high = golden.get("expected_high_max", 5)
     if result["high"] > max_high:
-        failures.append(
-            f"high={result['high']} exceeds max={max_high}"
-        )
+        failures.append(f"high={result['high']} exceeds max={max_high}")
 
     # Allowed categories
     allowed = golden.get("expected_categories_allowed")
     if allowed:
         unexpected = set(result["categories"]) - set(allowed)
         if unexpected:
-            failures.append(
-                f"unexpected categories: {sorted(unexpected)}"
-            )
+            failures.append(f"unexpected categories: {sorted(unexpected)}")
 
     # Output size
     max_mb = golden.get("expected_output_size_mb_max", 50)
     if result["output_size_mb"] > max_mb:
-        failures.append(
-            f"output_size_mb={result['output_size_mb']} exceeds max={max_mb}"
-        )
+        failures.append(f"output_size_mb={result['output_size_mb']} exceeds max={max_mb}")
 
     return failures

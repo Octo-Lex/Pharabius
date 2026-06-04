@@ -3,6 +3,7 @@
 Validates expected behavior for each ecosystem across 5 fixture types:
 clean_pinned, missing_pin, conflict_ci, conflict_docker, unknown_dynamic.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,12 +25,19 @@ def _fixture_path(ecosystem: str, fixture: str) -> Path:
 def _scan(path: Path) -> tuple[list, list]:
     """Scan fixture and return (conflicts, all_evidence)."""
     from pharabius.core.runtime.detector import (
-        detect_python_sources, detect_node_sources, detect_ruby_sources,
-        detect_java_sources, detect_go_sources, detect_rust_sources,
-        detect_dotnet_sources, detect_php_sources,
-        detect_tool_versions_sources, detect_dockerfile_sources,
         detect_ci_sources,
+        detect_dockerfile_sources,
+        detect_dotnet_sources,
+        detect_go_sources,
+        detect_java_sources,
+        detect_node_sources,
+        detect_php_sources,
+        detect_python_sources,
+        detect_ruby_sources,
+        detect_rust_sources,
+        detect_tool_versions_sources,
     )
+
     all_ev = []
     all_ev.extend(detect_python_sources(path))
     all_ev.extend(detect_node_sources(path))

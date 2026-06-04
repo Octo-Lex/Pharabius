@@ -27,7 +27,9 @@ from pharabius.schemas.evidence import EvidenceBuilder
 
 
 def _parse_istanbul_coverage(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     data = read_json(file_path)
     total = data.get("total", {})
@@ -58,7 +60,9 @@ def _parse_istanbul_coverage(
 
 
 def _parse_python_coverage(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     data = read_json(file_path)
     totals = data.get("totals", {})
@@ -111,7 +115,9 @@ def _parse_python_coverage(
 
 
 def _parse_lcov_coverage(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     text = read_text(file_path)
     if not text:
@@ -120,24 +126,24 @@ def _parse_lcov_coverage(
     lh = 0
     fnf = 0
     fnh = 0
-    for line in text.split('\n'):
+    for line in text.split("\n"):
         line = line.strip()
-        if line.startswith('LF:'):
+        if line.startswith("LF:"):
             try:
                 lf += int(line[3:])
             except ValueError:
                 pass
-        elif line.startswith('LH:'):
+        elif line.startswith("LH:"):
             try:
                 lh += int(line[3:])
             except ValueError:
                 pass
-        elif line.startswith('FNF:'):
+        elif line.startswith("FNF:"):
             try:
                 fnf += int(line[4:])
             except ValueError:
                 pass
-        elif line.startswith('FNH:'):
+        elif line.startswith("FNH:"):
             try:
                 fnh += int(line[4:])
             except ValueError:
@@ -189,7 +195,9 @@ def _parse_lcov_coverage(
 
 
 def _parse_cobertura_coverage(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     import xml.etree.ElementTree as ET
 
@@ -252,7 +260,9 @@ def _parse_cobertura_coverage(
 
 
 def _parse_jacoco_coverage(
-    file_path: Path, relative: str, builder: EvidenceBuilder,
+    file_path: Path,
+    relative: str,
+    builder: EvidenceBuilder,
 ) -> None:
     import xml.etree.ElementTree as ET
 

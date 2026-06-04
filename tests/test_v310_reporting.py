@@ -3,6 +3,7 @@
 Verifies that new ecosystems (Go, Rust, .NET, PHP) appear correctly
 in runtime evidence summaries and reports.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,12 +12,12 @@ import pytest
 
 from pharabius.core.runtime.conflict import detect_conflicts
 from pharabius.core.runtime.detector import (
-    detect_go_sources,
-    detect_rust_sources,
-    detect_dotnet_sources,
-    detect_php_sources,
-    detect_dockerfile_sources,
     detect_ci_sources,
+    detect_dockerfile_sources,
+    detect_dotnet_sources,
+    detect_go_sources,
+    detect_php_sources,
+    detect_rust_sources,
 )
 
 

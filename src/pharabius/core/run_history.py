@@ -53,10 +53,7 @@ def _is_run_metadata_file(path: Path) -> bool:
 
 def _is_history_snapshot_file(path: Path) -> bool:
     """True for enriched per-run history snapshots."""
-    return (
-        path.name.startswith("RUN-")
-        and path.name.endswith("-history-snapshot.json")
-    )
+    return path.name.startswith("RUN-") and path.name.endswith("-history-snapshot.json")
 
 
 # ── JSON helpers ──────────────────────────────────────────────────────
@@ -104,7 +101,11 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
     findings: list[dict[str, Any]] = register.get("findings", [])
     evidence_items: list[dict[str, Any]] = evidence.get("evidence", [])
     claims_list: list[dict[str, Any]] = claims_data.get("claims", [])
-    wp_files = list((workspace / "work-packages").glob("WP-*.md")) if (workspace / "work-packages").exists() else []
+    wp_files = (
+        list((workspace / "work-packages").glob("WP-*.md"))
+        if (workspace / "work-packages").exists()
+        else []
+    )
 
     # Findings by category
     findings_by_category: dict[str, int] = {}
@@ -151,7 +152,11 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
     obs_strength_counts: dict[str, int] = {}
     for e in evidence_items:
         meta = e.get("metadata", {})
-        strength = str(meta.get("observation_strength", "unknown")) if isinstance(meta, dict) else "unknown"
+        strength = (
+            str(meta.get("observation_strength", "unknown"))
+            if isinstance(meta, dict)
+            else "unknown"
+        )
         obs_strength_counts[strength] = obs_strength_counts.get(strength, 0) + 1
 
     # Source file skipped by reason
@@ -189,19 +194,25 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
             wp_with_verification += 1
         # Count linked items heuristically from markdown
         for line in text.split("\n"):
-            if line.strip().startswith("- ") and any(fid.startswith("TD-") or fid.startswith("SEC-") for fid in [line]):
+            if line.strip().startswith("- ") and any(
+                fid.startswith("TD-") or fid.startswith("SEC-") for fid in [line]
+            ):
                 total_linked_items += 1
 
     wp_with_findings_pct = round(wp_with_findings / wp_count * 100, 1) if wp_count > 0 else 0.0
-    wp_with_verification_pct = round(wp_with_verification / wp_count * 100, 1) if wp_count > 0 else 0.0
+    wp_with_verification_pct = (
+        round(wp_with_verification / wp_count * 100, 1) if wp_count > 0 else 0.0
+    )
     grouping_ratio = round(total_linked_items / wp_count, 1) if wp_count > 0 else 0.0
 
     # Owner areas
-    owner_areas: list[str] = sorted(set(
-        str(f.get("suggested_owner_area", ""))
-        for f in findings
-        if f.get("suggested_owner_area")
-    ))
+    owner_areas: list[str] = sorted(
+        set(
+            str(f.get("suggested_owner_area", ""))
+            for f in findings
+            if f.get("suggested_owner_area")
+        )
+    )
 
     return {
         "schema_version": "1.0",
@@ -228,16 +239,21 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
         "traceability_grade": trace_grade,
         "owner_areas": owner_areas,
         # Advisory classification (v3.7.0)
-        "technical_debt_count": sum(1 for f in findings if f.get("issue_type", "technical_debt") != "advisory"),
+        "technical_debt_count": sum(
+            1 for f in findings if f.get("issue_type", "technical_debt") != "advisory"
+        ),
         "advisory_count": sum(1 for f in findings if f.get("issue_type") == "advisory"),
         "advisories_by_category": {
             cat: cnt
             for cat, cnt in findings_by_category.items()
             if cat in {"TD-BUILD", "TD-DOC", "TD-PROCESS"}
-            or (cat == "TD-DEP" and any(
-                f.get("category") == "TD-DEP" and f.get("issue_type") == "advisory"
-                for f in findings
-            ))
+            or (
+                cat == "TD-DEP"
+                and any(
+                    f.get("category") == "TD-DEP" and f.get("issue_type") == "advisory"
+                    for f in findings
+                )
+            )
         },
         # Runtime evidence summary (v3.9.0)
         "runtime_evidence_summary": _build_runtime_summary(evidence_items, findings),
@@ -250,9 +266,9 @@ def _build_runtime_summary(evidence_items: list[dict], findings: list[dict]) -> 
     """Build runtime evidence summary from enriched snapshot data."""
     from pharabius.core.constants import (
         EVIDENCE_RUNTIME_VERSION_SIGNAL,
-        RUNTIME_SIGNAL_PINNED,
         RUNTIME_SIGNAL_CONFLICT,
         RUNTIME_SIGNAL_MISSING,
+        RUNTIME_SIGNAL_PINNED,
     )
 
     runtime_ev = [e for e in evidence_items if e.get("type") == EVIDENCE_RUNTIME_VERSION_SIGNAL]
@@ -279,13 +295,12 @@ def _build_runtime_summary(evidence_items: list[dict], findings: list[dict]) -> 
             missing.add(rt)
 
     runtime_conflicts = sum(
-        1 for f in findings
-        if "runtime version declarations conflict" in f.get("title", "")
+        1 for f in findings if "runtime version declarations conflict" in f.get("title", "")
     )
     runtime_advisories = sum(
-        1 for f in findings
-        if f.get("issue_type") == "advisory"
-        and "runtime" in f.get("title", "").lower()
+        1
+        for f in findings
+        if f.get("issue_type") == "advisory" and "runtime" in f.get("title", "").lower()
     )
     runtime_findings = runtime_conflicts  # Conflicts are the only runtime findings
 
@@ -311,25 +326,27 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
         RUNTIME_SIGNAL_CONFLICT,
         RUNTIME_SIGNAL_MISSING,
     )
+    from pharabius.core.signals.adapters import (
+        build_missing_ci_to_signal,
+        docs_missing_to_signal,
+        process_missing_artifacts_to_signal,
+        scan_test_missing_to_signal,
+        scan_test_risk_sensitive_without_tests_to_signal,
+    )
     from pharabius.core.signals.models import (
         GovernedSignal,
         SignalDisposition,
         SignalFamily,
         make_signal_id,
     )
-    from pharabius.core.signals.adapters import (
-        docs_missing_to_signal,
-        build_missing_ci_to_signal,
-        process_missing_artifacts_to_signal,
-        scan_test_missing_to_signal,
-        scan_test_risk_sensitive_without_tests_to_signal,
-    )
     from pharabius.core.signals.summary import build_signal_summary, signal_summary_to_dict
 
     signals = []
 
     # ── Runtime signals ──
-    runtime_evidence = [ev for ev in evidence_items if str(ev.get("type", "")) == EVIDENCE_RUNTIME_VERSION_SIGNAL]
+    runtime_evidence = [
+        ev for ev in evidence_items if str(ev.get("type", "")) == EVIDENCE_RUNTIME_VERSION_SIGNAL
+    ]
     runtime_conflict_items = []
     runtime_missing_items = []
     runtime_info_items = []
@@ -350,64 +367,80 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
         meta = ev.get("metadata", {}) or {}
         runtime = meta.get("runtime", "unknown")
         conflict_kind = meta.get("conflict_reason", "unknown")
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("runtime", conflict_kind, [ev_id]),
-            family=SignalFamily.RUNTIME,
-            kind=conflict_kind,
-            disposition=SignalDisposition.FINDING,
-            category="TD-DEP",
-            severity="Medium",
-            confidence="High",
-            evidence_ids=[ev_id],
-            source_signal_ids=[],
-            title=f"{runtime} runtime version declarations conflict",
-            summary=f"Multiple {runtime} runtime version declarations disagree.",
-            explanation=ev.get("summary", ""),
-            metadata={"runtime_name": runtime, "conflict_kind": conflict_kind},
-        ))
+        signals.append(
+            GovernedSignal(
+                signal_id=make_signal_id("runtime", conflict_kind, [ev_id]),
+                family=SignalFamily.RUNTIME,
+                kind=conflict_kind,
+                disposition=SignalDisposition.FINDING,
+                category="TD-DEP",
+                severity="Medium",
+                confidence="High",
+                evidence_ids=[ev_id],
+                source_signal_ids=[],
+                title=f"{runtime} runtime version declarations conflict",
+                summary=f"Multiple {runtime} runtime version declarations disagree.",
+                explanation=ev.get("summary", ""),
+                metadata={"runtime_name": runtime, "conflict_kind": conflict_kind},
+            )
+        )
     if runtime_missing_items:
         ev_ids = [ev.get("evidence_id", "unknown") for ev in runtime_missing_items]
-        runtimes = list({ev.get("metadata", {}).get("runtime", "unknown") for ev in runtime_missing_items})
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("runtime", "missing_runtime_pin", runtimes),
-            family=SignalFamily.RUNTIME,
-            kind="missing_runtime_pin",
-            disposition=SignalDisposition.ADVISORY,
-            category="TD-DEP",
-            severity="Low",
-            confidence="Low",
-            evidence_ids=ev_ids,
-            source_signal_ids=[],
-            title=f"Missing runtime version pins for: {', '.join(runtimes)}",
-            summary=f"Dependency manifests exist for {', '.join(runtimes)} but no runtime version pinning file detected.",
-            explanation=f"{', '.join(runtimes)} manifests detected but no reproducibility pin found.",
-            metadata={"runtimes": runtimes},
-        ))
+        runtimes = list(
+            {ev.get("metadata", {}).get("runtime", "unknown") for ev in runtime_missing_items}
+        )
+        signals.append(
+            GovernedSignal(
+                signal_id=make_signal_id("runtime", "missing_runtime_pin", runtimes),
+                family=SignalFamily.RUNTIME,
+                kind="missing_runtime_pin",
+                disposition=SignalDisposition.ADVISORY,
+                category="TD-DEP",
+                severity="Low",
+                confidence="Low",
+                evidence_ids=ev_ids,
+                source_signal_ids=[],
+                title=f"Missing runtime version pins for: {', '.join(runtimes)}",
+                summary=f"Dependency manifests exist for {', '.join(runtimes)} but no runtime version pinning file detected.",
+                explanation=f"{', '.join(runtimes)} manifests detected but no reproducibility pin found.",
+                metadata={"runtimes": runtimes},
+            )
+        )
 
     # ── Documentation signals ──
-    docs_evidence = [ev for ev in evidence_items if str(ev.get("type", "")) == "documentation_file_detected"]
+    docs_evidence = [
+        ev for ev in evidence_items if str(ev.get("type", "")) == "documentation_file_detected"
+    ]
     for ev in docs_evidence:
         ev_id = ev.get("evidence_id", "unknown")
-        file_path = ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("documentation", "documentation_evidence", [ev_id]),
-            family=SignalFamily.DOCUMENTATION,
-            kind="documentation_evidence",
-            disposition=SignalDisposition.INFORMATIONAL,
-            category="TD-DOC",
-            severity="Low",
-            confidence="Medium",
-            evidence_ids=[ev_id],
-            source_signal_ids=[],
-            title=f"Documentation file detected: {file_path}",
-            summary=f"Documentation evidence found at {file_path}.",
-            explanation="Detected documentation file provides coverage context.",
-            metadata={"source_file": file_path},
-        ))
+        file_path = (
+            ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
+        )
+        signals.append(
+            GovernedSignal(
+                signal_id=make_signal_id("documentation", "documentation_evidence", [ev_id]),
+                family=SignalFamily.DOCUMENTATION,
+                kind="documentation_evidence",
+                disposition=SignalDisposition.INFORMATIONAL,
+                category="TD-DOC",
+                severity="Low",
+                confidence="Medium",
+                evidence_ids=[ev_id],
+                source_signal_ids=[],
+                title=f"Documentation file detected: {file_path}",
+                summary=f"Documentation evidence found at {file_path}.",
+                explanation="Detected documentation file provides coverage context.",
+                metadata={"source_file": file_path},
+            )
+        )
 
     # Documentation advisories come from debt register
     doc_advisory = next(
-        (f for f in findings if f.get("category") == "TD-DOC" and f.get("issue_type") == "advisory"),
+        (
+            f
+            for f in findings
+            if f.get("category") == "TD-DOC" and f.get("issue_type") == "advisory"
+        ),
         None,
     )
     if doc_advisory:
@@ -417,25 +450,33 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
     # ── Build signals ──
     for ev in [e for e in evidence_items if str(e.get("type", "")) == "deployment_file_detected"]:
         ev_id = ev.get("evidence_id", "unknown")
-        file_path = ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("build", "ci_evidence", [ev_id]),
-            family=SignalFamily.BUILD,
-            kind="ci_evidence",
-            disposition=SignalDisposition.INFORMATIONAL,
-            category="TD-BUILD",
-            severity="Low",
-            confidence="Medium",
-            evidence_ids=[ev_id],
-            source_signal_ids=[],
-            title=f"CI/CD evidence detected: {file_path}",
-            summary=f"CI/CD evidence found at {file_path}.",
-            explanation="Detected CI/CD file provides coverage context.",
-            metadata={"source_file": file_path},
-        ))
+        file_path = (
+            ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
+        )
+        signals.append(
+            GovernedSignal(
+                signal_id=make_signal_id("build", "ci_evidence", [ev_id]),
+                family=SignalFamily.BUILD,
+                kind="ci_evidence",
+                disposition=SignalDisposition.INFORMATIONAL,
+                category="TD-BUILD",
+                severity="Low",
+                confidence="Medium",
+                evidence_ids=[ev_id],
+                source_signal_ids=[],
+                title=f"CI/CD evidence detected: {file_path}",
+                summary=f"CI/CD evidence found at {file_path}.",
+                explanation="Detected CI/CD file provides coverage context.",
+                metadata={"source_file": file_path},
+            )
+        )
 
     build_advisory = next(
-        (f for f in findings if f.get("category") == "TD-BUILD" and f.get("issue_type") == "advisory"),
+        (
+            f
+            for f in findings
+            if f.get("category") == "TD-BUILD" and f.get("issue_type") == "advisory"
+        ),
         None,
     )
     if build_advisory:
@@ -444,7 +485,11 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
 
     # ── Process signals ──
     process_advisory = next(
-        (f for f in findings if f.get("category") == "TD-PROCESS" and f.get("issue_type") == "advisory"),
+        (
+            f
+            for f in findings
+            if f.get("category") == "TD-PROCESS" and f.get("issue_type") == "advisory"
+        ),
         None,
     )
     if process_advisory:
@@ -454,52 +499,60 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
         for token in ["CODEOWNERS", "CONTRIBUTING", "PULL_REQUEST_TEMPLATE"]:
             if token.lower() in desc.lower():
                 missing.append(token)
-        signals.append(process_missing_artifacts_to_signal(
-            missing_artifacts=missing or ["unknown"],
-            evidence_ids=ev_ids,
-        ))
+        signals.append(
+            process_missing_artifacts_to_signal(
+                missing_artifacts=missing or ["unknown"],
+                evidence_ids=ev_ids,
+            )
+        )
 
     # ── Test signals ──
     test_evidence = [ev for ev in evidence_items if str(ev.get("type", "")) == "test_file_detected"]
     for ev in test_evidence:
         ev_id = ev.get("evidence_id", "unknown")
-        file_path = ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("test", "test_evidence", [ev_id]),
-            family=SignalFamily.TEST,
-            kind="test_evidence",
-            disposition=SignalDisposition.INFORMATIONAL,
-            category="TD-TEST",
-            severity="Low",
-            confidence="Medium",
-            evidence_ids=[ev_id],
-            source_signal_ids=[],
-            title=f"Test file detected: {file_path}",
-            summary=f"Test evidence found at {file_path}.",
-            explanation="Detected test file provides coverage context.",
-            metadata={"source_file": file_path},
-        ))
+        file_path = (
+            ev.get("location", {}).get("file", "") if isinstance(ev.get("location"), dict) else ""
+        )
+        signals.append(
+            GovernedSignal(
+                signal_id=make_signal_id("test", "test_evidence", [ev_id]),
+                family=SignalFamily.TEST,
+                kind="test_evidence",
+                disposition=SignalDisposition.INFORMATIONAL,
+                category="TD-TEST",
+                severity="Low",
+                confidence="Medium",
+                evidence_ids=[ev_id],
+                source_signal_ids=[],
+                title=f"Test file detected: {file_path}",
+                summary=f"Test evidence found at {file_path}.",
+                explanation="Detected test file provides coverage context.",
+                metadata={"source_file": file_path},
+            )
+        )
 
     # Coverage evidence
     coverage_types = {"coverage_report_detected", "coverage_metric_detected"}
     for ev in [e for e in evidence_items if str(e.get("type", "")) in coverage_types]:
         ev_id = ev.get("evidence_id", "unknown")
         ev_type = str(ev.get("type", ""))
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("test", "coverage_evidence", [ev_id]),
-            family=SignalFamily.TEST,
-            kind="coverage_evidence",
-            disposition=SignalDisposition.INFORMATIONAL,
-            category="TD-TEST",
-            severity="Low",
-            confidence="Medium",
-            evidence_ids=[ev_id],
-            source_signal_ids=[],
-            title=f"Coverage evidence detected: {ev_type}",
-            summary=f"Coverage evidence found: {ev_type}.",
-            explanation="Detected coverage report/metric provides test coverage context.",
-            metadata={"evidence_type": ev_type},
-        ))
+        signals.append(
+            GovernedSignal(
+                signal_id=make_signal_id("test", "coverage_evidence", [ev_id]),
+                family=SignalFamily.TEST,
+                kind="coverage_evidence",
+                disposition=SignalDisposition.INFORMATIONAL,
+                category="TD-TEST",
+                severity="Low",
+                confidence="Medium",
+                evidence_ids=[ev_id],
+                source_signal_ids=[],
+                title=f"Coverage evidence detected: {ev_type}",
+                summary=f"Coverage evidence found: {ev_type}.",
+                explanation="Detected coverage report/metric provides test coverage context.",
+                metadata={"evidence_type": ev_type},
+            )
+        )
 
     # Test-related findings from debt register
     for f in findings:
@@ -555,11 +608,13 @@ def build_run_history_index(workspace: Path) -> dict[str, Any]:
     for mf in metadata_files:
         data = _load_json(mf)
         if not data:
-            warnings.append({
-                "code": "malformed_run_metadata",
-                "path": f".ai-debt/runs/{mf.name}",
-                "message": "Skipped malformed run metadata.",
-            })
+            warnings.append(
+                {
+                    "code": "malformed_run_metadata",
+                    "path": f".ai-debt/runs/{mf.name}",
+                    "message": "Skipped malformed run metadata.",
+                }
+            )
             continue
 
         run_id = str(data.get("run_id", mf.stem))
@@ -591,7 +646,9 @@ def build_run_history_index(workspace: Path) -> dict[str, Any]:
             entry["claim_count"] = snapshot.get("claim_count", 0)
             entry["limitation_evidence_count"] = snapshot.get("limitation_evidence_count", 0)
             # Advisory classification (v3.7.0)
-            entry["technical_debt_count"] = snapshot.get("technical_debt_count", entry["finding_count"])
+            entry["technical_debt_count"] = snapshot.get(
+                "technical_debt_count", entry["finding_count"]
+            )
             entry["advisory_count"] = snapshot.get("advisory_count", 0)
             entry["advisories_by_category"] = snapshot.get("advisories_by_category", {})
 
@@ -635,11 +692,13 @@ def compute_finding_trend(index: dict[str, Any]) -> dict[str, Any]:
             "added_categories": [],
             "removed_categories": [],
             "trajectory": "insufficient_data",
-            "warnings": [{
-                "code": "partial_historical_data",
-                "path": "",
-                "message": f"Insufficient data: {len(runs)} run(s). At least 2 runs required.",
-            }],
+            "warnings": [
+                {
+                    "code": "partial_historical_data",
+                    "path": "",
+                    "message": f"Insufficient data: {len(runs)} run(s). At least 2 runs required.",
+                }
+            ],
         }
 
     latest = runs[-1]
@@ -652,7 +711,9 @@ def compute_finding_trend(index: dict[str, Any]) -> dict[str, Any]:
     both_enriched = bool(latest.get("enriched")) and bool(previous.get("enriched"))
 
     if not both_enriched:
-        trajectory = "improving" if total_delta < 0 else ("worsening" if total_delta > 0 else "stable")
+        trajectory = (
+            "improving" if total_delta < 0 else ("worsening" if total_delta > 0 else "stable")
+        )
         return {
             "status": "partial",
             "latest_run_id": latest.get("run_id"),
@@ -662,11 +723,13 @@ def compute_finding_trend(index: dict[str, Any]) -> dict[str, Any]:
             "added_categories": [],
             "removed_categories": [],
             "trajectory": trajectory,
-            "warnings": [{
-                "code": "partial_historical_data",
-                "path": "",
-                "message": "Previous run lacks enriched category snapshot. Category breakdown unavailable.",
-            }],
+            "warnings": [
+                {
+                    "code": "partial_historical_data",
+                    "path": "",
+                    "message": "Previous run lacks enriched category snapshot. Category breakdown unavailable.",
+                }
+            ],
         }
 
     # Both enriched — full category comparison
@@ -704,15 +767,17 @@ def compute_finding_trend(index: dict[str, Any]) -> dict[str, Any]:
 
     # Classification boundary warning (v3.7.0)
     if "technical_debt_count" not in previous and "technical_debt_count" in latest:
-        warnings.append({
-            "code": "classification_boundary",
-            "path": "",
-            "message": (
-                "v3.7.0 reclassified selected structural hygiene signals as advisories. "
-                "Apparent finding-count improvement may reflect classification changes, "
-                "not repository remediation."
-            ),
-        })
+        warnings.append(
+            {
+                "code": "classification_boundary",
+                "path": "",
+                "message": (
+                    "v3.7.0 reclassified selected structural hygiene signals as advisories. "
+                    "Apparent finding-count improvement may reflect classification changes, "
+                    "not repository remediation."
+                ),
+            }
+        )
 
     return {
         "status": "complete",
@@ -743,11 +808,13 @@ def compute_risk_trend(index: dict[str, Any]) -> dict[str, Any]:
             "max_risk_delta": None,
             "by_category": None,
             "trajectory": "insufficient_data",
-            "warnings": [{
-                "code": "partial_historical_data",
-                "path": "",
-                "message": f"Insufficient data: {len(runs)} run(s).",
-            }],
+            "warnings": [
+                {
+                    "code": "partial_historical_data",
+                    "path": "",
+                    "message": f"Insufficient data: {len(runs)} run(s).",
+                }
+            ],
         }
 
     latest = runs[-1]
@@ -762,7 +829,13 @@ def compute_risk_trend(index: dict[str, Any]) -> dict[str, Any]:
             "max_risk_delta": None,
             "by_category": None,
             "trajectory": "insufficient_data",
-            "warnings": [{"code": "missing_enriched_snapshot", "path": "", "message": "Latest run lacks enriched snapshot."}],
+            "warnings": [
+                {
+                    "code": "missing_enriched_snapshot",
+                    "path": "",
+                    "message": "Latest run lacks enriched snapshot.",
+                }
+            ],
         }
 
     # Load snapshot for detailed risk data
@@ -778,17 +851,23 @@ def compute_risk_trend(index: dict[str, Any]) -> dict[str, Any]:
             "max_risk_delta": None,
             "by_category": None,
             "trajectory": "insufficient_data",
-            "warnings": [{
-                "code": "partial_historical_data",
-                "path": "",
-                "message": "Previous run lacks enriched snapshot. Risk comparison unavailable.",
-            }],
+            "warnings": [
+                {
+                    "code": "partial_historical_data",
+                    "path": "",
+                    "message": "Previous run lacks enriched snapshot. Risk comparison unavailable.",
+                }
+            ],
         }
 
     prev_risk = int(previous.get("total_risk_score", 0))
     total_risk_delta = latest_risk - prev_risk
 
-    trajectory = "improving" if total_risk_delta < -5 else ("worsening" if total_risk_delta > 5 else "stable")
+    trajectory = (
+        "improving"
+        if total_risk_delta < -5
+        else ("worsening" if total_risk_delta > 5 else "stable")
+    )
 
     return {
         "status": "complete",
@@ -817,18 +896,26 @@ def compute_evidence_coverage_trend(
         return {
             "status": "insufficient_data",
             "trajectory": "insufficient_data",
-            "warnings": [{
-                "code": "partial_historical_data",
-                "path": "",
-                "message": f"Insufficient data: {len(runs)} run(s).",
-            }],
+            "warnings": [
+                {
+                    "code": "partial_historical_data",
+                    "path": "",
+                    "message": f"Insufficient data: {len(runs)} run(s).",
+                }
+            ],
         }
 
     if not latest_snapshot:
         return {
             "status": "insufficient_data",
             "trajectory": "insufficient_data",
-            "warnings": [{"code": "missing_enriched_snapshot", "path": "", "message": "Latest snapshot unavailable."}],
+            "warnings": [
+                {
+                    "code": "missing_enriched_snapshot",
+                    "path": "",
+                    "message": "Latest snapshot unavailable.",
+                }
+            ],
         }
 
     result: dict[str, Any] = {
@@ -849,30 +936,28 @@ def compute_evidence_coverage_trend(
         result["evidence_type_count_deltas"] = deltas
 
         # Key metrics
-        result["limitation_evidence_count_delta"] = (
-            int(latest_snapshot.get("limitation_evidence_count", 0))
-            - int(previous_snapshot.get("limitation_evidence_count", 0))
-        )
-        result["source_file_skipped_count_delta"] = (
-            int(latest_snapshot.get("evidence_type_counts", {}).get(EVIDENCE_SOURCE_FILE_SKIPPED, 0))
-            - int(previous_snapshot.get("evidence_type_counts", {}).get(EVIDENCE_SOURCE_FILE_SKIPPED, 0))
+        result["limitation_evidence_count_delta"] = int(
+            latest_snapshot.get("limitation_evidence_count", 0)
+        ) - int(previous_snapshot.get("limitation_evidence_count", 0))
+        result["source_file_skipped_count_delta"] = int(
+            latest_snapshot.get("evidence_type_counts", {}).get(EVIDENCE_SOURCE_FILE_SKIPPED, 0)
+        ) - int(
+            previous_snapshot.get("evidence_type_counts", {}).get(EVIDENCE_SOURCE_FILE_SKIPPED, 0)
         )
         result["findings_with_evidence_pct_delta"] = round(
             float(latest_snapshot.get("findings_with_evidence_pct", 0))
-            - float(previous_snapshot.get("findings_with_evidence_pct", 0)), 1
+            - float(previous_snapshot.get("findings_with_evidence_pct", 0)),
+            1,
         )
-        result["orphan_evidence_count_delta"] = (
-            int(latest_snapshot.get("orphan_evidence_count", 0))
-            - int(previous_snapshot.get("orphan_evidence_count", 0))
-        )
-        result["orphan_finding_count_delta"] = (
-            int(latest_snapshot.get("orphan_finding_count", 0))
-            - int(previous_snapshot.get("orphan_finding_count", 0))
-        )
-        result["broken_reference_count_delta"] = (
-            int(latest_snapshot.get("broken_reference_count", 0))
-            - int(previous_snapshot.get("broken_reference_count", 0))
-        )
+        result["orphan_evidence_count_delta"] = int(
+            latest_snapshot.get("orphan_evidence_count", 0)
+        ) - int(previous_snapshot.get("orphan_evidence_count", 0))
+        result["orphan_finding_count_delta"] = int(
+            latest_snapshot.get("orphan_finding_count", 0)
+        ) - int(previous_snapshot.get("orphan_finding_count", 0))
+        result["broken_reference_count_delta"] = int(
+            latest_snapshot.get("broken_reference_count", 0)
+        ) - int(previous_snapshot.get("broken_reference_count", 0))
 
         # Trajectory
         broken_delta = result["broken_reference_count_delta"]
@@ -884,11 +969,13 @@ def compute_evidence_coverage_trend(
         else:
             result["trajectory"] = "stable"
     else:
-        result["warnings"].append({
-            "code": "partial_historical_data",
-            "path": "",
-            "message": "Previous run lacks enriched snapshot. Evidence deltas unavailable.",
-        })
+        result["warnings"].append(
+            {
+                "code": "partial_historical_data",
+                "path": "",
+                "message": "Previous run lacks enriched snapshot. Evidence deltas unavailable.",
+            }
+        )
         result["trajectory"] = "insufficient_data"
 
     return result
@@ -910,11 +997,13 @@ def compute_work_package_readiness_trend(
         return {
             "status": "insufficient_data",
             "trajectory": "insufficient_data",
-            "warnings": [{
-                "code": "partial_historical_data",
-                "path": "",
-                "message": f"Insufficient data: {len(runs)} run(s).",
-            }],
+            "warnings": [
+                {
+                    "code": "partial_historical_data",
+                    "path": "",
+                    "message": f"Insufficient data: {len(runs)} run(s).",
+                }
+            ],
         }
 
     latest = runs[-1]
@@ -931,13 +1020,19 @@ def compute_work_package_readiness_trend(
 
     if latest_snapshot:
         result["grouping_ratio_latest"] = latest_snapshot.get("grouping_ratio", 0)
-        result["work_packages_with_linked_findings_pct_latest"] = latest_snapshot.get("work_packages_with_linked_findings_pct", 0)
-        result["work_packages_with_verification_steps_pct_latest"] = latest_snapshot.get("work_packages_with_verification_steps_pct", 0)
+        result["work_packages_with_linked_findings_pct_latest"] = latest_snapshot.get(
+            "work_packages_with_linked_findings_pct", 0
+        )
+        result["work_packages_with_verification_steps_pct_latest"] = latest_snapshot.get(
+            "work_packages_with_verification_steps_pct", 0
+        )
 
     if previous_snapshot:
         result["status"] = "complete"
         result["grouping_ratio_previous"] = previous_snapshot.get("grouping_ratio", 0)
-        result["work_packages_with_linked_findings_pct_previous"] = previous_snapshot.get("work_packages_with_linked_findings_pct", 0)
+        result["work_packages_with_linked_findings_pct_previous"] = previous_snapshot.get(
+            "work_packages_with_linked_findings_pct", 0
+        )
 
         # Trajectory based on grouping ratio and linked-finding %
         prev_linked = float(previous_snapshot.get("work_packages_with_linked_findings_pct", 0))
@@ -950,11 +1045,13 @@ def compute_work_package_readiness_trend(
             result["trajectory"] = "stable"
     else:
         result["trajectory"] = "insufficient_data"
-        result["warnings"].append({
-            "code": "partial_historical_data",
-            "path": "",
-            "message": "Previous run lacks enriched snapshot. WP readiness comparison unavailable.",
-        })
+        result["warnings"].append(
+            {
+                "code": "partial_historical_data",
+                "path": "",
+                "message": "Previous run lacks enriched snapshot. WP readiness comparison unavailable.",
+            }
+        )
 
     return result
 
@@ -1059,13 +1156,11 @@ def _compute_overall_trajectory(
         return "stable"
 
     # Full enriched comparison
-    broken_delta = (
-        int(latest_snapshot.get("broken_reference_count", 0))
-        - int(previous_snapshot.get("broken_reference_count", 0))
+    broken_delta = int(latest_snapshot.get("broken_reference_count", 0)) - int(
+        previous_snapshot.get("broken_reference_count", 0)
     )
-    risk_delta = (
-        int(latest_snapshot.get("total_risk_score", 0))
-        - int(previous_snapshot.get("total_risk_score", 0))
+    risk_delta = int(latest_snapshot.get("total_risk_score", 0)) - int(
+        previous_snapshot.get("total_risk_score", 0)
     )
     ev_pct_latest = float(latest_snapshot.get("findings_with_evidence_pct", 0))
     ev_pct_prev = float(previous_snapshot.get("findings_with_evidence_pct", 0))
@@ -1114,7 +1209,9 @@ def render_run_history_summary_markdown(summary: dict[str, Any]) -> str:
     confidence = summary.get("confidence", "insufficient")
     trajectory = summary.get("overall_trajectory", "unknown")
 
-    lines.append(f"> Generated from {run_count} run(s) ({enriched_count} enriched). Confidence: **{confidence}**.")
+    lines.append(
+        f"> Generated from {run_count} run(s) ({enriched_count} enriched). Confidence: **{confidence}**."
+    )
     lines.append("")
 
     # Overall trajectory
@@ -1150,7 +1247,9 @@ def render_run_history_summary_markdown(summary: dict[str, Any]) -> str:
     if et.get("status") != "insufficient_data":
         limitation_delta = et.get("limitation_evidence_count_delta", 0)
         if limitation_delta and limitation_delta > 0:
-            lines.append(f"> ⚠ Limitation evidence changed by {limitation_delta:+d}. This may indicate improved scanner honesty (detecting more constraints) rather than worsening repository health. Correlate with coverage metric trends before drawing conclusions.")
+            lines.append(
+                f"> ⚠ Limitation evidence changed by {limitation_delta:+d}. This may indicate improved scanner honesty (detecting more constraints) rather than worsening repository health. Correlate with coverage metric trends before drawing conclusions."
+            )
             lines.append("")
 
     # Work-package readiness trend

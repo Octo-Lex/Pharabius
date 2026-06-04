@@ -45,15 +45,15 @@ def generate_calibration() -> dict:
     """Generate calibration results from all fixtures."""
     import tempfile
 
-    from pharabius.core.run_metadata import execute_run
     from pharabius.core.constants import (
-        LARGE_FILE_LINE_THRESHOLD,
-        LONG_FUNCTION_LINE_THRESHOLD,
         BROAD_EXCEPTION_PER_FILE_THRESHOLD,
-        MIN_DEBT_MARKER_OCCURRENCES,
         COVERAGE_LOW_THRESHOLD_PCT,
         DEFAULT_MAX_FILE_SIZE_KB,
+        LARGE_FILE_LINE_THRESHOLD,
+        LONG_FUNCTION_LINE_THRESHOLD,
+        MIN_DEBT_MARKER_OCCURRENCES,
     )
+    from pharabius.core.run_metadata import execute_run
 
     thresholds = {
         "LARGE_FILE_LINE_THRESHOLD": LARGE_FILE_LINE_THRESHOLD,
@@ -100,13 +100,15 @@ def generate_calibration() -> dict:
 
     # Threshold entries (default: observe/document/keep)
     for tname, tval in thresholds.items():
-        threshold_entries.append({
-            "name": tname,
-            "original": tval,
-            "calibrated": tval,
-            "decision": "keep",
-            "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures.",
-        })
+        threshold_entries.append(
+            {
+                "name": tname,
+                "original": tval,
+                "calibrated": tval,
+                "decision": "keep",
+                "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures.",
+            }
+        )
 
     return {
         "schema_version": "1.0",

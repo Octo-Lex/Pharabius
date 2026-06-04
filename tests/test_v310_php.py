@@ -1,12 +1,13 @@
 """v3.10.0 S03 — PHP runtime evidence tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 
-from pharabius.core.runtime.php import detect_php_sources
 from pharabius.core.runtime.models import RuntimeConstraintKind, RuntimeEcosystem
+from pharabius.core.runtime.php import detect_php_sources
 
 
 class TestPhpSources:

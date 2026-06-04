@@ -217,7 +217,11 @@ def execute_run(repository_root: Path) -> RunMetadata:
     write_traceability_quality(traceability_dir, quality)
 
     # Append snapshot to history and compute trend (v3.3.0)
-    run_id = metadata.get("run_id", "unknown") if (metadata := _load_json(workspace / "run-metadata.json")) else "unknown"
+    run_id = (
+        metadata.get("run_id", "unknown")
+        if (metadata := _load_json(workspace / "run-metadata.json"))
+        else "unknown"
+    )
     append_quality_snapshot(traceability_dir, run_id, quality)
     history = load_quality_history(traceability_dir)
     trend = compute_traceability_quality_trend(history)

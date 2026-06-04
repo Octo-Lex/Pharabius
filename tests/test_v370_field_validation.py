@@ -25,7 +25,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from benchmarks.fixture_builder import BenchmarkFixture
 from benchmarks.oss_validation import (
     load_oss_manifest,
@@ -33,8 +32,8 @@ from benchmarks.oss_validation import (
     unpack_oss_snapshot,
     validate_against_oss_golden,
 )
-from pharabius.core.run_metadata import execute_run
 
+from pharabius.core.run_metadata import execute_run
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -66,8 +65,7 @@ def _build_poor_hygiene(tmp_path: Path) -> Path:
     """Build a poor-hygiene fixture with unpinned deps."""
     builder = BenchmarkFixture("poor", tmp_path)
     (
-        builder.add_requirements_txt(["flask", "requests"])
-        .add_package_json(
+        builder.add_requirements_txt(["flask", "requests"]).add_package_json(
             {"name": "test", "version": "1.0.0", "dependencies": {"express": "*"}}
         )
     )
@@ -175,9 +173,7 @@ class TestAdvisoryClassification:
             if f["category"] == "TD-DEP" and "lockfile" in f.get("title", "").lower()
         ]
         for f in lockfile_findings:
-            assert f["issue_type"] == "advisory", (
-                f"Lockfile finding {f['id']} should be advisory"
-            )
+            assert f["issue_type"] == "advisory", f"Lockfile finding {f['id']} should be advisory"
 
     def test_unpinned_deps_remain_finding(self, tmp_path):
         """TD-DEP unpinned dependency findings remain technical_debt."""
@@ -248,9 +244,7 @@ class TestAdvisoryExclusion:
         wp_files = list(wp_dir.glob("WP-*.md"))
         # Only technical_debt findings should generate WPs
         # clean-baseline has 1 debt finding (TD-TEST), so max 1 WP
-        assert len(wp_files) <= 1, (
-            f"Expected ≤1 WP from clean-baseline, got {len(wp_files)}"
-        )
+        assert len(wp_files) <= 1, f"Expected ≤1 WP from clean-baseline, got {len(wp_files)}"
 
     def test_advisories_do_not_generate_claims(self, tmp_path):
         repo = _build_clean(tmp_path)
@@ -259,9 +253,7 @@ class TestAdvisoryExclusion:
         claims = json.loads(claims_path.read_text(encoding="utf-8"))
         # Only technical_debt findings should generate claims
         claim_count = len(claims.get("claims", []))
-        assert claim_count <= 2, (
-            f"Expected ≤2 claims from clean-baseline, got {claim_count}"
-        )
+        assert claim_count <= 2, f"Expected ≤2 claims from clean-baseline, got {claim_count}"
 
     def test_advisory_report_section_present(self, tmp_path):
         repo = _build_clean(tmp_path)
@@ -282,7 +274,9 @@ class TestCountSeparation:
         summary = reg["summary"]
         assert "technical_debt_count" in summary
         assert "advisory_count" in summary
-        assert summary["technical_debt_count"] + summary["advisory_count"] == summary["total_findings"]
+        assert (
+            summary["technical_debt_count"] + summary["advisory_count"] == summary["total_findings"]
+        )
 
     def test_run_history_snapshot_counts_advisories_separately(self, tmp_path):
         repo = _build_clean(tmp_path)
@@ -301,6 +295,7 @@ class TestCountSeparation:
         execute_run(repo)
 
         import time
+
         time.sleep(2)
 
         # Degrade: remove coverage to add a debt finding
@@ -330,9 +325,7 @@ class TestLargeSyntheticRepo:
         """Generate a 500-file synthetic repo and verify structure."""
         repo = tmp_path / "large-synthetic"
         repo.mkdir(parents=True)
-        (repo / "pyproject.toml").write_text(
-            "[project]\nname = 'large-test'\nversion = '1.0.0'\n"
-        )
+        (repo / "pyproject.toml").write_text("[project]\nname = 'large-test'\nversion = '1.0.0'\n")
         src = repo / "src" / "pkg"
         src.mkdir(parents=True)
         for i in range(500):
@@ -346,9 +339,7 @@ class TestLargeSyntheticRepo:
         """Full pipeline on 500-file repo should complete without crash."""
         repo = tmp_path / "large-synthetic"
         repo.mkdir(parents=True)
-        (repo / "pyproject.toml").write_text(
-            "[project]\nname = 'large-test'\nversion = '1.0.0'\n"
-        )
+        (repo / "pyproject.toml").write_text("[project]\nname = 'large-test'\nversion = '1.0.0'\n")
         src = repo / "src" / "pkg"
         src.mkdir(parents=True)
         for i in range(500):

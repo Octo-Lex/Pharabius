@@ -20,8 +20,8 @@ import json
 from pathlib import Path
 
 import pytest
-
 from benchmarks.fixture_builder import BenchmarkFixture
+
 from pharabius.core.constants import (
     EVIDENCE_RUNTIME_VERSION_SIGNAL,
     RUNTIME_SIGNAL_CONFLICT,
@@ -34,7 +34,6 @@ from pharabius.core.constants import (
 from pharabius.core.run_metadata import execute_run
 from pharabius.core.runtime_parsers import detect_runtime_version_pins
 from pharabius.schemas.evidence import EvidenceBuilder
-
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -133,9 +132,7 @@ class TestRubyRuntime:
         assert any(i.metadata["version"] == "3.3.0" for i in ruby_pins)
 
     def test_gemfile_ruby_version_detected(self, tmp_path):
-        (tmp_path / "Gemfile").write_text(
-            'source "https://rubygems.org"\nruby "3.3.0"\n'
-        )
+        (tmp_path / "Gemfile").write_text('source "https://rubygems.org"\nruby "3.3.0"\n')
 
         items = _detect(tmp_path)
         pinned = _signals(items, RUNTIME_SIGNAL_PINNED)
@@ -143,9 +140,7 @@ class TestRubyRuntime:
         assert len(ruby_pins) >= 1
 
     def test_gemfile_broad_range_is_range_constraint(self, tmp_path):
-        (tmp_path / "Gemfile").write_text(
-            'source "https://rubygems.org"\nruby "~> 3.2"\n'
-        )
+        (tmp_path / "Gemfile").write_text('source "https://rubygems.org"\nruby "~> 3.2"\n')
 
         items = _detect(tmp_path)
         pinned = _signals(items, RUNTIME_SIGNAL_PINNED)
@@ -182,9 +177,7 @@ class TestJavaRuntime:
         assert java_pins[0].metadata["source_file"] == "pom.xml"
 
     def test_gradle_java_version_detected(self, tmp_path):
-        (tmp_path / "build.gradle").write_text(
-            "sourceCompatibility = JavaVersion.VERSION_17\n"
-        )
+        (tmp_path / "build.gradle").write_text("sourceCompatibility = JavaVersion.VERSION_17\n")
 
         items = _detect(tmp_path)
         pinned = _signals(items, RUNTIME_SIGNAL_PINNED)
@@ -208,8 +201,7 @@ class TestDockerfileRuntime:
 
     def test_multistage_dockerfile_runtime_detected(self, tmp_path):
         (tmp_path / "Dockerfile").write_text(
-            "FROM node:20 AS build\nRUN npm build\n"
-            "FROM python:3.12 AS runtime\nCOPY . .\n"
+            "FROM node:20 AS build\nRUN npm build\nFROM python:3.12 AS runtime\nCOPY . .\n"
         )
 
         items = _detect(tmp_path)
@@ -240,7 +232,7 @@ class TestGitHubActionsRuntime:
             "name: CI\non: [push]\njobs:\n  test:\n"
             "    runs-on: ubuntu-latest\n    steps:\n"
             "      - uses: actions/checkout@v4\n"
-            '      - uses: actions/setup-python@v5\n'
+            "      - uses: actions/setup-python@v5\n"
             "        with:\n"
             '          python-version: "3.12"\n'
         )
@@ -277,7 +269,7 @@ class TestGitHubActionsRuntime:
             "name: CI\non: [push]\njobs:\n  test:\n"
             "    runs-on: ubuntu-latest\n    steps:\n"
             "      - uses: actions/checkout@v4\n"
-            '      - uses: actions/setup-python@v5\n'
+            "      - uses: actions/setup-python@v5\n"
             "        with:\n"
             '          python-version: "3.10"\n'
         )
@@ -304,17 +296,18 @@ class TestRuntimeAnalyzerBehavior:
     def test_runtime_conflict_generates_finding(self, tmp_path):
         """Runtime conflict → technical_debt finding."""
         builder = BenchmarkFixture("rt-conflict", tmp_path)
-        (builder
-         .add_file(".python-version", "3.11\n")
-         .add_file(".tool-versions", "python 3.12\n")
-         .add_file("pyproject.toml", "[project]\nname='x'\n"))
+        (
+            builder.add_file(".python-version", "3.11\n")
+            .add_file(".tool-versions", "python 3.12\n")
+            .add_file("pyproject.toml", "[project]\nname='x'\n")
+        )
         builder.build()
         reg = _run_pipeline(tmp_path / "rt-conflict")
 
         conflict_findings = [
-            f for f in reg["findings"]
-            if f["category"] == "TD-DEP"
-            and "conflict" in f.get("title", "").lower()
+            f
+            for f in reg["findings"]
+            if f["category"] == "TD-DEP" and "conflict" in f.get("title", "").lower()
         ]
         assert len(conflict_findings) >= 1
         assert conflict_findings[0]["issue_type"] == "technical_debt"
@@ -322,16 +315,14 @@ class TestRuntimeAnalyzerBehavior:
     def test_missing_runtime_pin_is_advisory(self, tmp_path):
         """Missing runtime pin → advisory, not technical_debt finding."""
         builder = BenchmarkFixture("rt-missing", tmp_path)
-        (builder
-         .add_pyproject(name="test")
-         .add_python_file("src/app.py", "x = 1\n"))
+        (builder.add_pyproject(name="test").add_python_file("src/app.py", "x = 1\n"))
         builder.build()
         reg = _run_pipeline(tmp_path / "rt-missing")
 
         missing_findings = [
-            f for f in reg["findings"]
-            if f["category"] == "TD-DEP"
-            and "missing runtime" in f.get("title", "").lower()
+            f
+            for f in reg["findings"]
+            if f["category"] == "TD-DEP" and "missing runtime" in f.get("title", "").lower()
         ]
         assert len(missing_findings) >= 1
         for f in missing_findings:
@@ -339,9 +330,7 @@ class TestRuntimeAnalyzerBehavior:
 
     def test_runtime_advisories_do_not_generate_work_packages(self, tmp_path):
         builder = BenchmarkFixture("rt-missing", tmp_path)
-        (builder
-         .add_pyproject(name="test")
-         .add_python_file("src/app.py", "x = 1\n"))
+        (builder.add_pyproject(name="test").add_python_file("src/app.py", "x = 1\n"))
         builder.build()
         execute_run(tmp_path / "rt-missing")
 
@@ -354,9 +343,7 @@ class TestRuntimeAnalyzerBehavior:
 
     def test_runtime_advisories_do_not_generate_claims(self, tmp_path):
         builder = BenchmarkFixture("rt-missing", tmp_path)
-        (builder
-         .add_pyproject(name="test")
-         .add_python_file("src/app.py", "x = 1\n"))
+        (builder.add_pyproject(name="test").add_python_file("src/app.py", "x = 1\n"))
         builder.build()
         execute_run(tmp_path / "rt-missing")
 
@@ -373,11 +360,12 @@ class TestRegression:
     def test_clean_baseline_remains_quiet(self, tmp_path):
         """Clean-baseline should not have runtime-related findings."""
         builder = BenchmarkFixture("clean", tmp_path)
-        (builder
-         .add_requirements_txt(["flask==3.0.0", "requests==2.31.0"])
-         .add_runtime_pin("python", "3.12.0")
-         .add_coverage_json(92.0)
-         .add_python_file("src/app.py", "def hello():\n    return 1\n"))
+        (
+            builder.add_requirements_txt(["flask==3.0.0", "requests==2.31.0"])
+            .add_runtime_pin("python", "3.12.0")
+            .add_coverage_json(92.0)
+            .add_python_file("src/app.py", "def hello():\n    return 1\n")
+        )
         builder.build()
         reg = _run_pipeline(tmp_path / "clean")
 
@@ -385,10 +373,7 @@ class TestRegression:
         assert summary["high"] == 0
         assert summary["critical"] == 0
         # No conflict findings
-        conflict_findings = [
-            f for f in reg["findings"]
-            if "conflict" in f.get("title", "").lower()
-        ]
+        conflict_findings = [f for f in reg["findings"] if "conflict" in f.get("title", "").lower()]
         assert len(conflict_findings) == 0
 
     def test_runtime_conflict_evidence_metadata_shape(self, tmp_path):
@@ -413,20 +398,14 @@ class TestRegression:
             assert "normalized" in s
         assert meta["conflict_reason"] == "exact_vs_exact_disagreement"
 
-    def test_runtime_missing_pin_advisory_counted_separately_in_run_history(
-        self, tmp_path
-    ):
+    def test_runtime_missing_pin_advisory_counted_separately_in_run_history(self, tmp_path):
         """Missing-pin advisory should be in advisory_count, not technical_debt_count."""
         builder = BenchmarkFixture("rt-adv", tmp_path)
-        (builder
-         .add_pyproject(name="test")
-         .add_python_file("src/app.py", "x = 1\n"))
+        (builder.add_pyproject(name="test").add_python_file("src/app.py", "x = 1\n"))
         builder.build()
         execute_run(tmp_path / "rt-adv")
 
-        snaps = list(
-            (tmp_path / "rt-adv" / ".ai-debt" / "runs").glob("*-history-snapshot.json")
-        )
+        snaps = list((tmp_path / "rt-adv" / ".ai-debt" / "runs").glob("*-history-snapshot.json"))
         assert len(snaps) >= 1
         snap = json.loads(snaps[0].read_text(encoding="utf-8"))
         assert snap["advisory_count"] >= 1

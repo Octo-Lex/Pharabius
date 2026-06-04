@@ -4,6 +4,7 @@ Validates that is_runtime_pin() correctly distinguishes reproducibility pins
 from compatibility baselines, and that UNKNOWN evidence coexists with
 missing-pin advisories.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -60,8 +61,11 @@ class TestIsRuntimePin:
         assert is_runtime_pin(ev) is True
 
     def test_exact_manifest_is_pin(self) -> None:
-        ev = _evidence(source_type=RuntimeSourceType.MANIFEST, source_path="pyproject.toml",
-                       source_detail="requires-python")
+        ev = _evidence(
+            source_type=RuntimeSourceType.MANIFEST,
+            source_path="pyproject.toml",
+            source_detail="requires-python",
+        )
         assert is_runtime_pin(ev) is True
 
     def test_range_is_not_pin(self) -> None:
@@ -74,20 +78,24 @@ class TestIsRuntimePin:
 
     def test_go_directive_is_not_pin(self) -> None:
         ev = _evidence(
-            runtime_name="Go", ecosystem=RuntimeEcosystem.PYTHON,  # placeholder
-            source_path="go.mod", source_detail="go-directive",
+            runtime_name="Go",
+            ecosystem=RuntimeEcosystem.PYTHON,  # placeholder
+            source_path="go.mod",
+            source_detail="go-directive",
         )
         assert is_runtime_pin(ev) is False
 
     def test_target_framework_is_not_pin(self) -> None:
         ev = _evidence(
-            source_path="App.csproj", source_detail="target-framework",
+            source_path="App.csproj",
+            source_detail="target-framework",
         )
         assert is_runtime_pin(ev) is False
 
     def test_rust_version_field_is_not_pin(self) -> None:
         ev = _evidence(
-            source_path="Cargo.toml", source_detail="rust-version",
+            source_path="Cargo.toml",
+            source_detail="rust-version",
         )
         assert is_runtime_pin(ev) is False
 
@@ -106,7 +114,9 @@ class TestUnknownMissingPinSemantics:
     def test_unknown_evidence_detected_but_not_pinned(self) -> None:
         """Rust project with only 'stable' → detected but not pinned."""
         ev = _evidence(
-            runtime_name="Rust", kind=RuntimeConstraintKind.UNKNOWN, value="stable",
+            runtime_name="Rust",
+            kind=RuntimeConstraintKind.UNKNOWN,
+            value="stable",
             source_path="rust-toolchain.toml",
         )
         assert is_runtime_pin(ev) is False

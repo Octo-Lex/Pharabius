@@ -1,12 +1,13 @@
 """v3.10.0 S04 — Rust runtime evidence tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 
-from pharabius.core.runtime.rust import detect_rust_sources
 from pharabius.core.runtime.models import RuntimeConstraintKind, RuntimeEcosystem
+from pharabius.core.runtime.rust import detect_rust_sources
 
 
 class TestRustSources:

@@ -17,7 +17,6 @@ from pharabius.core.run_metadata import execute_run
 from pharabius.core.scanner import _debt_markers_in_text, scan_repository
 from pharabius.schemas.finding import DebtFinding
 
-
 # ---------------------------------------------------------------------------
 # S01: Config/governance preservation
 # ---------------------------------------------------------------------------
@@ -28,9 +27,7 @@ class TestS01ConfigPreservation:
 
     def _make_repo(self, tmp_path: Path) -> None:
         (tmp_path / "main.py").write_text("print('hello')\n", encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
 
     def test_config_survives_second_run(self, tmp_path: Path) -> None:
         self._make_repo(tmp_path)
@@ -63,24 +60,17 @@ class TestS02TDCodeGeneration:
 
     def _make_repo_with_file(self, tmp_path: Path, filename: str, content: str) -> None:
         (tmp_path / filename).write_text(content, encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
 
     def test_large_file_produces_td_code(self, tmp_path: Path) -> None:
         big = tmp_path / "big.py"
         big.write_text("\n".join([f"# line {i}" for i in range(1200)]), encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         td_code = [f for f in register["findings"] if f["category"] == "TD-CODE"]
         assert any(
-            "large" in f["title"].lower() or "file" in f["title"].lower()
-            for f in td_code
+            "large" in f["title"].lower() or "file" in f["title"].lower() for f in td_code
         ), "Large file should produce TD-CODE finding"
 
     def test_debt_markers_produce_td_code(self, tmp_path: Path) -> None:
@@ -88,33 +78,24 @@ class TestS02TDCodeGeneration:
         lines = [f"# TODO: fix thing {i}" for i in range(10)]
         lines.extend([f"# FIXME: broken {i}" for i in range(5)])
         src.write_text("\n".join(lines), encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         td_code = [f for f in register["findings"] if f["category"] == "TD-CODE"]
         assert any(
-            "marker" in f["title"].lower() or "debt" in f["title"].lower()
-            for f in td_code
+            "marker" in f["title"].lower() or "debt" in f["title"].lower() for f in td_code
         ), "Debt markers should produce TD-CODE finding"
 
     def test_repeated_todo_counted_as_multiple(self) -> None:
         """5 TODOs must count as 5 occurrences, not 1 unique marker."""
-        counts = _debt_markers_in_text(
-            "# TODO: a\n# TODO: b\n# TODO: c\n# TODO: d\n# TODO: e\n"
-        )
+        counts = _debt_markers_in_text("# TODO: a\n# TODO: b\n# TODO: c\n# TODO: d\n# TODO: e\n")
         assert counts.get("todo") == 5
         assert sum(counts.values()) == 5
 
     def test_scanner_emits_metadata_total_count(self, tmp_path: Path) -> None:
         """Evidence must carry total_count in metadata."""
         src = tmp_path / "markers.py"
-        src.write_text(
-            "\n".join([f"# TODO: fix {i}" for i in range(10)]), encoding="utf-8"
-        )
+        src.write_text("\n".join([f"# TODO: fix {i}" for i in range(10)]), encoding="utf-8")
         store = scan_repository(tmp_path)
         markers = [e for e in store.evidence if e.type == "debt_marker_detected"]
         assert len(markers) >= 1
@@ -132,18 +113,32 @@ class TestS03Deduplication:
     def test_duplicate_findings_merge(self) -> None:
         """Two findings with same category+title+locations collapse to one."""
         f1 = DebtFinding(
-            id="F-001", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="Medium", risk_score=15,
-            evidence_ids=["E-001"], locations=["pkg/"],
-            technical_impact="Reproducibility risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            id="F-001",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="Medium",
+            risk_score=15,
+            evidence_ids=["E-001"],
+            locations=["pkg/"],
+            technical_impact="Reproducibility risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         f2 = DebtFinding(
-            id="F-002", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="Medium", risk_score=15,
-            evidence_ids=["E-002"], locations=["pkg/"],
-            technical_impact="Reproducibility risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            id="F-002",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="Medium",
+            risk_score=15,
+            evidence_ids=["E-002"],
+            locations=["pkg/"],
+            technical_impact="Reproducibility risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         result = _deduplicate_findings([f1, f2])
         assert len(result) == 1
@@ -152,18 +147,32 @@ class TestS03Deduplication:
     def test_higher_severity_higher_score_not_downgraded(self) -> None:
         """Higher severity + higher risk_score: base should be the higher one."""
         f_low = DebtFinding(
-            id="F-001", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="Low", risk_score=5,
-            evidence_ids=["E-001"], locations=["pkg/"],
-            technical_impact="Low risk", business_impact="Low",
-            priority="Low", recommended_action="Add lockfile",
+            id="F-001",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="Low",
+            risk_score=5,
+            evidence_ids=["E-001"],
+            locations=["pkg/"],
+            technical_impact="Low risk",
+            business_impact="Low",
+            priority="Low",
+            recommended_action="Add lockfile",
         )
         f_high = DebtFinding(
-            id="F-002", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="High", risk_score=25,
-            evidence_ids=["E-002"], locations=["pkg/"],
-            technical_impact="High risk", business_impact="High",
-            priority="High", recommended_action="Add lockfile",
+            id="F-002",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="High",
+            risk_score=25,
+            evidence_ids=["E-002"],
+            locations=["pkg/"],
+            technical_impact="High risk",
+            business_impact="High",
+            priority="High",
+            recommended_action="Add lockfile",
         )
         result = _deduplicate_findings([f_low, f_high])
         assert len(result) == 1
@@ -174,18 +183,32 @@ class TestS03Deduplication:
         """Critical severity + risk_score=10 must NOT be downgraded
         when merged with Medium severity + risk_score=30."""
         f_critical = DebtFinding(
-            id="F-001", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="Critical", risk_score=10,
-            evidence_ids=["E-001"], locations=["pkg/"],
-            technical_impact="Critical risk", business_impact="Critical",
-            priority="Critical", recommended_action="Add lockfile",
+            id="F-001",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="Critical",
+            risk_score=10,
+            evidence_ids=["E-001"],
+            locations=["pkg/"],
+            technical_impact="Critical risk",
+            business_impact="Critical",
+            priority="Critical",
+            recommended_action="Add lockfile",
         )
         f_medium = DebtFinding(
-            id="F-002", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="Medium", risk_score=30,
-            evidence_ids=["E-002"], locations=["pkg/"],
-            technical_impact="Medium risk", business_impact="Medium",
-            priority="Medium", recommended_action="Add lockfile",
+            id="F-002",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="Medium",
+            risk_score=30,
+            evidence_ids=["E-002"],
+            locations=["pkg/"],
+            technical_impact="Medium risk",
+            business_impact="Medium",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         result = _deduplicate_findings([f_critical, f_medium])
         assert len(result) == 1
@@ -195,18 +218,32 @@ class TestS03Deduplication:
     def test_different_locations_not_over_merged(self) -> None:
         """Different locations = different findings."""
         f1 = DebtFinding(
-            id="F-001", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="Medium", risk_score=15,
-            evidence_ids=["E-001"], locations=["pkg-a/"],
-            technical_impact="Risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            id="F-001",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="Medium",
+            risk_score=15,
+            evidence_ids=["E-001"],
+            locations=["pkg-a/"],
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         f2 = DebtFinding(
-            id="F-002", category="TD-DEP", title="No lockfile",
-            description="No lockfile detected", severity="Medium", risk_score=15,
-            evidence_ids=["E-002"], locations=["pkg-b/"],
-            technical_impact="Risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            id="F-002",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile detected",
+            severity="Medium",
+            risk_score=15,
+            evidence_ids=["E-002"],
+            locations=["pkg-b/"],
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         result = _deduplicate_findings([f1, f2])
         assert len(result) == 2, "Different locations should not merge"
@@ -223,20 +260,34 @@ class TestS04WorkPackageGrouping:
     def test_same_category_owner_and_location_overlap_grouped(self) -> None:
         """Same category, same owner, overlapping locations → one group."""
         a = DebtFinding(
-            id="F-001", category="TD-DEP", title="Dependency manifest risk",
-            description="Risk in manifest", severity="High", risk_score=30,
-            evidence_ids=["E-001"], locations=["package.json"],
+            id="F-001",
+            category="TD-DEP",
+            title="Dependency manifest risk",
+            description="Risk in manifest",
+            severity="High",
+            risk_score=30,
+            evidence_ids=["E-001"],
+            locations=["package.json"],
             suggested_owner_area="Platform",
-            technical_impact="Dependency risk", business_impact="Inferred",
-            priority="High", recommended_action="Review dependencies",
+            technical_impact="Dependency risk",
+            business_impact="Inferred",
+            priority="High",
+            recommended_action="Review dependencies",
         )
         b = DebtFinding(
-            id="F-002", category="TD-DEP", title="Dependency lockfile risk",
-            description="Risk in lockfile", severity="Medium", risk_score=20,
-            evidence_ids=["E-002"], locations=["package.json"],
+            id="F-002",
+            category="TD-DEP",
+            title="Dependency lockfile risk",
+            description="Risk in lockfile",
+            severity="Medium",
+            risk_score=20,
+            evidence_ids=["E-002"],
+            locations=["package.json"],
             suggested_owner_area="Platform",
-            technical_impact="Dependency risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            technical_impact="Dependency risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         groups = _group_findings([a, b])
         assert len(groups) == 1
@@ -245,20 +296,34 @@ class TestS04WorkPackageGrouping:
     def test_same_category_owner_no_overlap_no_relation_not_grouped(self) -> None:
         """Same category + owner but no overlap and no related_findings → separate."""
         a = DebtFinding(
-            id="F-001", category="TD-DEP", title="No lockfile",
-            description="No lockfile", severity="Medium", risk_score=15,
-            evidence_ids=["E-001"], locations=["frontend/package.json"],
+            id="F-001",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile",
+            severity="Medium",
+            risk_score=15,
+            evidence_ids=["E-001"],
+            locations=["frontend/package.json"],
             suggested_owner_area="Platform",
-            technical_impact="Risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         b = DebtFinding(
-            id="F-002", category="TD-DEP", title="No lockfile",
-            description="No lockfile", severity="Medium", risk_score=15,
-            evidence_ids=["E-002"], locations=["backend/pyproject.toml"],
+            id="F-002",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile",
+            severity="Medium",
+            risk_score=15,
+            evidence_ids=["E-002"],
+            locations=["backend/pyproject.toml"],
             suggested_owner_area="Platform",
-            technical_impact="Risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         groups = _group_findings([a, b])
         assert len(groups) == 2, "No overlap and no explicit relation → separate"
@@ -266,21 +331,35 @@ class TestS04WorkPackageGrouping:
     def test_explicit_related_findings_triggers_grouping(self) -> None:
         """No location overlap, but A lists B in related_findings → grouped."""
         a = DebtFinding(
-            id="F-001", category="TD-DEP", title="No lockfile",
-            description="No lockfile", severity="High", risk_score=25,
-            evidence_ids=["E-001"], locations=["frontend/package.json"],
+            id="F-001",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile",
+            severity="High",
+            risk_score=25,
+            evidence_ids=["E-001"],
+            locations=["frontend/package.json"],
             suggested_owner_area="Platform",
             related_findings=["F-002"],
-            technical_impact="Risk", business_impact="Inferred",
-            priority="High", recommended_action="Add lockfile",
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="High",
+            recommended_action="Add lockfile",
         )
         b = DebtFinding(
-            id="F-002", category="TD-DEP", title="No lockfile",
-            description="No lockfile", severity="Medium", risk_score=15,
-            evidence_ids=["E-002"], locations=["backend/pyproject.toml"],
+            id="F-002",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile",
+            severity="Medium",
+            risk_score=15,
+            evidence_ids=["E-002"],
+            locations=["backend/pyproject.toml"],
             suggested_owner_area="Platform",
-            technical_impact="Risk", business_impact="Inferred",
-            priority="Medium", recommended_action="Add lockfile",
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="Medium",
+            recommended_action="Add lockfile",
         )
         groups = _group_findings([a, b])
         assert len(groups) == 1, "Explicit related_findings link must trigger grouping"
@@ -288,20 +367,34 @@ class TestS04WorkPackageGrouping:
     def test_highest_risk_is_grouped_wp_primary(self) -> None:
         """Pre-sort ensures highest-risk finding becomes group[0] (the primary)."""
         a = DebtFinding(
-            id="F-001", category="TD-DEP", title="Low risk item",
-            description="Low risk", severity="Low", risk_score=5,
-            evidence_ids=["E-001"], locations=["shared/"],
+            id="F-001",
+            category="TD-DEP",
+            title="Low risk item",
+            description="Low risk",
+            severity="Low",
+            risk_score=5,
+            evidence_ids=["E-001"],
+            locations=["shared/"],
             suggested_owner_area="Platform",
-            technical_impact="Low", business_impact="Low",
-            priority="Low", recommended_action="Review",
+            technical_impact="Low",
+            business_impact="Low",
+            priority="Low",
+            recommended_action="Review",
         )
         b = DebtFinding(
-            id="F-002", category="TD-DEP", title="High risk item",
-            description="High risk", severity="High", risk_score=35,
-            evidence_ids=["E-002"], locations=["shared/"],
+            id="F-002",
+            category="TD-DEP",
+            title="High risk item",
+            description="High risk",
+            severity="High",
+            risk_score=35,
+            evidence_ids=["E-002"],
+            locations=["shared/"],
             suggested_owner_area="Platform",
-            technical_impact="High", business_impact="High",
-            priority="High", recommended_action="Review",
+            technical_impact="High",
+            business_impact="High",
+            priority="High",
+            recommended_action="Review",
         )
         groups = _group_findings([a, b])
         assert len(groups) == 1
@@ -310,20 +403,34 @@ class TestS04WorkPackageGrouping:
     def test_unrelated_categories_not_grouped(self) -> None:
         """TD-DEP and TD-TEST findings never group together."""
         a = DebtFinding(
-            id="F-001", category="TD-DEP", title="No lockfile",
-            description="No lockfile", severity="High", risk_score=25,
-            evidence_ids=["E-001"], locations=["shared/"],
+            id="F-001",
+            category="TD-DEP",
+            title="No lockfile",
+            description="No lockfile",
+            severity="High",
+            risk_score=25,
+            evidence_ids=["E-001"],
+            locations=["shared/"],
             suggested_owner_area="Platform",
-            technical_impact="Risk", business_impact="Inferred",
-            priority="High", recommended_action="Add lockfile",
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="High",
+            recommended_action="Add lockfile",
         )
         b = DebtFinding(
-            id="F-002", category="TD-TEST", title="No tests",
-            description="No tests", severity="High", risk_score=25,
-            evidence_ids=["E-002"], locations=["shared/"],
+            id="F-002",
+            category="TD-TEST",
+            title="No tests",
+            description="No tests",
+            severity="High",
+            risk_score=25,
+            evidence_ids=["E-002"],
+            locations=["shared/"],
             suggested_owner_area="Platform",
-            technical_impact="Risk", business_impact="Inferred",
-            priority="High", recommended_action="Add tests",
+            technical_impact="Risk",
+            business_impact="Inferred",
+            priority="High",
+            recommended_action="Add tests",
         )
         groups = _group_findings([a, b])
         assert len(groups) == 2, "Different categories must never group"
@@ -438,18 +545,14 @@ class TestS06ClaimsTraceability:
     def test_execute_run_generates_claims(self, tmp_path: Path) -> None:
         """Claims must be wired into execute_run."""
         (tmp_path / "main.py").write_text("print('hello')\n", encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
         execute_run(tmp_path)
         assert (tmp_path / ".ai-debt" / "claims" / "operational-claims.json").exists()
 
     def test_execute_run_generates_traceability_matrices(self, tmp_path: Path) -> None:
         """Traceability matrices must be wired into execute_run."""
         (tmp_path / "main.py").write_text("print('hello')\n", encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
         execute_run(tmp_path)
         trace_dir = tmp_path / ".ai-debt" / "traceability"
         assert (trace_dir / "evidence-finding-matrix.md").exists()
@@ -459,9 +562,7 @@ class TestS06ClaimsTraceability:
     def test_claims_artifact_uses_correct_wp_links(self, tmp_path: Path) -> None:
         """Claims JSON (the sole v3.1.0 traceability target) must use correct WP links."""
         (tmp_path / "main.py").write_text("print('hello')\n", encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
         execute_run(tmp_path)
         claims_data = json.loads(
             (tmp_path / ".ai-debt" / "claims" / "operational-claims.json").read_text()
@@ -484,9 +585,7 @@ class TestS07EndToEndValidity:
 
     def test_full_run_produces_valid_package(self, tmp_path: Path) -> None:
         (tmp_path / "main.py").write_text("print('hello')\n", encoding="utf-8")
-        (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname = 'example'\n", encoding="utf-8"
-        )
+        (tmp_path / "pyproject.toml").write_text("[project]\nname = 'example'\n", encoding="utf-8")
         execute_run(tmp_path)
 
         workspace = tmp_path / ".ai-debt"

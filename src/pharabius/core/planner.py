@@ -275,12 +275,8 @@ def _group_findings(findings: list[DebtFinding]) -> list[list[DebtFinding]]:
 def _make_grouped_work_package(index: int, group: list[DebtFinding]) -> WorkPackage:
     """Create a work package from grouped findings."""
     primary = group[0]  # Pre-sorted: highest risk_score first
-    all_evidence = list(dict.fromkeys(
-        eid for f in group for eid in f.evidence_ids
-    ))
-    all_locations = list(dict.fromkeys(
-        loc for f in group for loc in (f.locations or [])
-    ))
+    all_evidence = list(dict.fromkeys(eid for f in group for eid in f.evidence_ids))
+    all_locations = list(dict.fromkeys(loc for f in group for loc in (f.locations or [])))
 
     return WorkPackage(
         id=f"WP-{index:03d}",
@@ -997,7 +993,9 @@ def write_plan(
             if finding is not None:
                 if primary_finding is None:
                     primary_finding = finding
-                all_wp_evidence.extend(eid for eid in finding.evidence_ids if eid not in all_wp_evidence)
+                all_wp_evidence.extend(
+                    eid for eid in finding.evidence_ids if eid not in all_wp_evidence
+                )
 
         # Fall back to first linked finding if none found by ID
         if primary_finding is None:

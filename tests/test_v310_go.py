@@ -1,4 +1,5 @@
 """v3.10.0 S01 — Go runtime evidence tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,7 +24,9 @@ class TestGoSources:
         assert go_ev[0].source_path == "go.mod"
 
     def test_go_mod_toolchain_directive(self, tmp_path: Path) -> None:
-        (tmp_path / "go.mod").write_text("module example.com/m\n\ngo 1.22.0\n\ntoolchain go1.22.4\n")
+        (tmp_path / "go.mod").write_text(
+            "module example.com/m\n\ngo 1.22.0\n\ntoolchain go1.22.4\n"
+        )
         evidence = detect_go_sources(tmp_path)
         tc_ev = [e for e in evidence if e.source_detail == "toolchain"]
         assert len(tc_ev) == 1
@@ -36,7 +39,9 @@ class TestGoSources:
         assert go_ev[0].constraint.kind == RuntimeConstraintKind.RANGE
 
     def test_toolchain_is_exact(self, tmp_path: Path) -> None:
-        (tmp_path / "go.mod").write_text("module example.com/m\n\ngo 1.22.0\n\ntoolchain go1.22.4\n")
+        (tmp_path / "go.mod").write_text(
+            "module example.com/m\n\ngo 1.22.0\n\ntoolchain go1.22.4\n"
+        )
         evidence = detect_go_sources(tmp_path)
         tc_ev = [e for e in evidence if e.source_detail == "toolchain"]
         assert tc_ev[0].constraint.kind == RuntimeConstraintKind.EXACT

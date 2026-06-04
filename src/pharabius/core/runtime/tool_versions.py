@@ -6,15 +6,14 @@ from pathlib import Path
 
 from pharabius.core.io_helpers import read_text
 from pharabius.core.runtime.constraints import parse_constraint
+from pharabius.core.runtime.ecosystems import _make_id
 from pharabius.core.runtime.models import (
-    RuntimeSourceGrade,
     Confidence,
     RuntimeEcosystem,
     RuntimeEvidence,
+    RuntimeSourceGrade,
     RuntimeSourceType,
 )
-from pharabius.core.runtime.ecosystems import _make_id
-
 
 _TOOL_VERSIONS_RUNTIME_MAP: dict[str, tuple[str, RuntimeEcosystem]] = {
     "python": ("Python", RuntimeEcosystem.PYTHON),
@@ -52,17 +51,19 @@ def detect_tool_versions_sources(root: Path) -> list[RuntimeEvidence]:
             continue
         runtime_name, ecosystem = info
         constraint = parse_constraint(runtime_name, version)
-        evidence.append(RuntimeEvidence(
-            runtime_evidence_id=_make_id(runtime_name, ".tool-versions", tool, version),
-            ecosystem=ecosystem,
-            runtime_name=runtime_name,
-            constraint=constraint,
-            source_type=RuntimeSourceType.TOOL_VERSIONS,
-            source_path=".tool-versions",
-            source_grade=RuntimeSourceGrade.TOOL_PIN,
-            source_detail=tool,
-            confidence=Confidence.HIGH,
-            raw_version=version,
-        ))
+        evidence.append(
+            RuntimeEvidence(
+                runtime_evidence_id=_make_id(runtime_name, ".tool-versions", tool, version),
+                ecosystem=ecosystem,
+                runtime_name=runtime_name,
+                constraint=constraint,
+                source_type=RuntimeSourceType.TOOL_VERSIONS,
+                source_path=".tool-versions",
+                source_grade=RuntimeSourceGrade.TOOL_PIN,
+                source_detail=tool,
+                confidence=Confidence.HIGH,
+                raw_version=version,
+            )
+        )
 
     return evidence

@@ -3,6 +3,7 @@
 Sources: rust-toolchain, rust-toolchain.toml, Cargo.toml rust-version,
 .tool-versions, GitHub Actions dtolnay/rust-toolchain, Dockerfile FROM rust.
 """
+
 from __future__ import annotations
 
 import re
@@ -63,18 +64,20 @@ def detect_rust_sources(root: Path) -> list[RuntimeEvidence]:
                     lower_bound=constraint.value,
                     raw=version,
                 )
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id("Rust", "Cargo.toml", "rust-version", version),
-                    ecosystem=RuntimeEcosystem.RUST,
-                    runtime_name="Rust",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.MANIFEST,
-                    source_path="Cargo.toml",
-                    source_grade=RuntimeSourceGrade.MANIFEST_RANGE,
-                    source_detail="rust-version",
-                    confidence=Confidence.MEDIUM,
-                    raw_version=version,
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id("Rust", "Cargo.toml", "rust-version", version),
+                        ecosystem=RuntimeEcosystem.RUST,
+                        runtime_name="Rust",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.MANIFEST,
+                        source_path="Cargo.toml",
+                        source_grade=RuntimeSourceGrade.MANIFEST_RANGE,
+                        source_detail="rust-version",
+                        confidence=Confidence.MEDIUM,
+                        raw_version=version,
+                    )
+                )
 
     return evidence
 

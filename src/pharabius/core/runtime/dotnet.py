@@ -3,6 +3,7 @@
 Sources: global.json, *.csproj (TargetFramework/TargetFrameworks),
 .tool-versions, GitHub Actions setup-dotnet, Dockerfile FROM dotnet.
 """
+
 from __future__ import annotations
 
 import re
@@ -37,18 +38,20 @@ def detect_dotnet_sources(root: Path) -> list[RuntimeEvidence]:
             version = sdk.get("version") if isinstance(sdk, dict) else None
             if version:
                 constraint = parse_constraint(".NET", str(version))
-                evidence.append(RuntimeEvidence(
-                    runtime_evidence_id=_make_id(".NET", "global.json", "sdk", str(version)),
-                    ecosystem=RuntimeEcosystem.DOTNET,
-                    runtime_name=".NET",
-                    constraint=constraint,
-                    source_type=RuntimeSourceType.MANIFEST,
-                    source_path="global.json",
-                    source_grade=RuntimeSourceGrade.MANIFEST_PIN,
-                    source_detail="sdk",
-                    confidence=Confidence.HIGH,
-                    raw_version=str(version),
-                ))
+                evidence.append(
+                    RuntimeEvidence(
+                        runtime_evidence_id=_make_id(".NET", "global.json", "sdk", str(version)),
+                        ecosystem=RuntimeEcosystem.DOTNET,
+                        runtime_name=".NET",
+                        constraint=constraint,
+                        source_type=RuntimeSourceType.MANIFEST,
+                        source_path="global.json",
+                        source_grade=RuntimeSourceGrade.MANIFEST_PIN,
+                        source_detail="sdk",
+                        confidence=Confidence.HIGH,
+                        raw_version=str(version),
+                    )
+                )
 
     # .csproj files — bounded recursive, excluding build artifacts
     for csproj in _find_csproj_files(root):
@@ -100,7 +103,7 @@ def _target_framework_evidence(target: str, source_path: str) -> RuntimeEvidence
     # Extract version from net8.0, net9.0, netcoreapp3.1, etc.
     version = re.sub(r"^(net|netcoreapp|netframework)", "", target, flags=re.IGNORECASE)
     # Only set bounds for modern netX.Y monikers (Correction 4)
-    m_ver = re.match(r'(\d+)\.(\d+)', version)
+    m_ver = re.match(r"(\d+)\.(\d+)", version)
     if m_ver:
         major_v, minor_v = int(m_ver.group(1)), int(m_ver.group(2))
         constraint = RuntimeConstraint(

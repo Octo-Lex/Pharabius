@@ -3,6 +3,7 @@
 Sources: go.mod (go directive + toolchain directive), .tool-versions,
 GitHub Actions setup-go, Dockerfile FROM golang.
 """
+
 from __future__ import annotations
 
 import re
@@ -53,18 +54,20 @@ def _parse_go_mod(text: str) -> list[RuntimeEvidence]:
             lower_bound=version,
             raw=version,
         )
-        evidence.append(RuntimeEvidence(
-            runtime_evidence_id=_make_id("Go", "go.mod", "go-directive", version),
-            ecosystem=RuntimeEcosystem.GO,
-            runtime_name="Go",
-            constraint=constraint,
-            source_type=RuntimeSourceType.MANIFEST,
-            source_path="go.mod",
-            source_grade=RuntimeSourceGrade.MANIFEST_RANGE,
-            source_detail="go-directive",
-            confidence=Confidence.HIGH,
-            raw_version=version,
-        ))
+        evidence.append(
+            RuntimeEvidence(
+                runtime_evidence_id=_make_id("Go", "go.mod", "go-directive", version),
+                ecosystem=RuntimeEcosystem.GO,
+                runtime_name="Go",
+                constraint=constraint,
+                source_type=RuntimeSourceType.MANIFEST,
+                source_path="go.mod",
+                source_grade=RuntimeSourceGrade.MANIFEST_RANGE,
+                source_detail="go-directive",
+                confidence=Confidence.HIGH,
+                raw_version=version,
+            )
+        )
 
     # toolchain directive: EXACT pin
     m = re.search(r"^toolchain\s+(go\S+)\s*$", text, re.MULTILINE)
@@ -73,17 +76,19 @@ def _parse_go_mod(text: str) -> list[RuntimeEvidence]:
         # Extract version from "go1.22.4"
         version = re.sub(r"^go", "", raw)
         constraint = parse_constraint("Go", version)
-        evidence.append(RuntimeEvidence(
-            runtime_evidence_id=_make_id("Go", "go.mod", "toolchain", raw),
-            ecosystem=RuntimeEcosystem.GO,
-            runtime_name="Go",
-            constraint=constraint,
-            source_type=RuntimeSourceType.MANIFEST,
-            source_path="go.mod",
-            source_grade=RuntimeSourceGrade.MANIFEST_PIN,
-            source_detail="toolchain",
-            confidence=Confidence.HIGH,
-            raw_version=raw,
-        ))
+        evidence.append(
+            RuntimeEvidence(
+                runtime_evidence_id=_make_id("Go", "go.mod", "toolchain", raw),
+                ecosystem=RuntimeEcosystem.GO,
+                runtime_name="Go",
+                constraint=constraint,
+                source_type=RuntimeSourceType.MANIFEST,
+                source_path="go.mod",
+                source_grade=RuntimeSourceGrade.MANIFEST_PIN,
+                source_detail="toolchain",
+                confidence=Confidence.HIGH,
+                raw_version=raw,
+            )
+        )
 
     return evidence

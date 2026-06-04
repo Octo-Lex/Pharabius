@@ -17,22 +17,23 @@ import json
 from pathlib import Path
 
 import pytest
-
 from benchmarks.fixture_builder import BenchmarkFixture
+
 from pharabius.core.constants import (
     RUNTIME_SIGNAL_CONFLICT,
     RUNTIME_SIGNAL_FROM_CI,
     RUNTIME_SIGNAL_MISSING,
     RUNTIME_SIGNAL_PINNED,
 )
+from pharabius.core.run_metadata import execute_run
 from pharabius.core.runtime import detect_runtime_version_pins
 from pharabius.core.runtime.conflict import detect_conflicts
 from pharabius.core.runtime.constraints import parse_constraint
 from pharabius.core.runtime.detector import (
-    detect_python_sources,
-    detect_node_sources,
-    detect_ruby_sources,
     detect_java_sources,
+    detect_node_sources,
+    detect_python_sources,
+    detect_ruby_sources,
 )
 from pharabius.core.runtime.models import (
     Confidence,
@@ -53,9 +54,7 @@ from pharabius.core.runtime.policy import (
 from pharabius.core.runtime_parsers import (
     detect_runtime_version_pins as compat_detect,
 )
-from pharabius.core.run_metadata import execute_run
 from pharabius.schemas.evidence import EvidenceBuilder
-
 
 # ── S01: Package imports ────────────────────────────────────────────
 
@@ -63,15 +62,18 @@ from pharabius.schemas.evidence import EvidenceBuilder
 class TestPackageImports:
     def test_canonical_import_works(self):
         from pharabius.core.runtime import detect_runtime_version_pins
+
         assert callable(detect_runtime_version_pins)
 
     def test_backward_compat_import_works(self):
         from pharabius.core.runtime_parsers import detect_runtime_version_pins
+
         assert callable(detect_runtime_version_pins)
 
     def test_same_function(self):
         from pharabius.core.runtime import detect_runtime_version_pins as canonical
         from pharabius.core.runtime_parsers import detect_runtime_version_pins as compat
+
         assert canonical is compat
 
 
@@ -151,6 +153,7 @@ class TestConflictGroup:
 
         evidence = detect_python_sources(tmp_path)
         from pharabius.core.runtime.tool_versions import detect_tool_versions_sources
+
         evidence.extend(detect_tool_versions_sources(tmp_path))
 
         conflicts = detect_conflicts(evidence)
@@ -165,6 +168,7 @@ class TestConflictGroup:
 
         evidence = detect_python_sources(tmp_path)
         from pharabius.core.runtime.tool_versions import detect_tool_versions_sources
+
         evidence.extend(detect_tool_versions_sources(tmp_path))
 
         conflicts = detect_conflicts(evidence)
@@ -179,6 +183,7 @@ class TestConflictGroup:
 class TestPolicyClassification:
     def test_policy_classifies_conflict_as_finding(self):
         from pharabius.core.runtime.models import RuntimeConflictKind
+
         group = RuntimeConflictGroup(
             ecosystem=RuntimeEcosystem.PYTHON,
             runtime_name="Python",
@@ -215,16 +220,15 @@ class TestPolicyClassification:
 class TestRuntimeSummary:
     def test_runtime_summary_in_history_snapshot(self, tmp_path):
         builder = BenchmarkFixture("rt-test", tmp_path)
-        (builder
-         .add_pyproject(name="test")
-         .add_runtime_pin("python", "3.12")
-         .add_python_file("src/app.py", "x = 1\n"))
+        (
+            builder.add_pyproject(name="test")
+            .add_runtime_pin("python", "3.12")
+            .add_python_file("src/app.py", "x = 1\n")
+        )
         builder.build()
         execute_run(tmp_path / "rt-test")
 
-        snaps = list(
-            (tmp_path / "rt-test" / ".ai-debt" / "runs").glob("*-history-snapshot.json")
-        )
+        snaps = list((tmp_path / "rt-test" / ".ai-debt" / "runs").glob("*-history-snapshot.json"))
         assert len(snaps) >= 1
         snap = json.loads(snaps[0].read_text(encoding="utf-8"))
         assert "runtime_evidence_summary" in snap
@@ -234,14 +238,15 @@ class TestRuntimeSummary:
 
     def test_reporter_runtime_section(self, tmp_path):
         builder = BenchmarkFixture("rt-report", tmp_path)
-        (builder
-         .add_pyproject(name="test")
-         .add_runtime_pin("python", "3.12")
-         .add_python_file("src/app.py", "x = 1\n"))
+        (
+            builder.add_pyproject(name="test")
+            .add_runtime_pin("python", "3.12")
+            .add_python_file("src/app.py", "x = 1\n")
+        )
         builder.build()
         execute_run(tmp_path / "rt-report")
 
-        report = (tmp_path / "rt-report" / ".ai-debt" / "reports" / "foundation-audit-report.md")
+        report = tmp_path / "rt-report" / ".ai-debt" / "reports" / "foundation-audit-report.md"
         text = report.read_text(encoding="utf-8")
         assert "Runtime Reproducibility" in text
 
@@ -252,11 +257,12 @@ class TestRuntimeSummary:
 class TestRegression:
     def test_clean_baseline_remains_quiet(self, tmp_path):
         builder = BenchmarkFixture("clean", tmp_path)
-        (builder
-         .add_requirements_txt(["flask==3.0.0"])
-         .add_runtime_pin("python", "3.12.0")
-         .add_coverage_json(92.0)
-         .add_python_file("src/app.py", "def hello():\n    return 1\n"))
+        (
+            builder.add_requirements_txt(["flask==3.0.0"])
+            .add_runtime_pin("python", "3.12.0")
+            .add_coverage_json(92.0)
+            .add_python_file("src/app.py", "def hello():\n    return 1\n")
+        )
         builder.build()
         execute_run(tmp_path / "clean")
         reg_path = tmp_path / "clean" / ".ai-debt" / "debt-register.json"
@@ -267,9 +273,7 @@ class TestRegression:
 
     def test_missing_pin_does_not_generate_work_packages(self, tmp_path):
         builder = BenchmarkFixture("rt-missing", tmp_path)
-        (builder
-         .add_pyproject(name="test")
-         .add_python_file("src/app.py", "x = 1\n"))
+        (builder.add_pyproject(name="test").add_python_file("src/app.py", "x = 1\n"))
         builder.build()
         execute_run(tmp_path / "rt-missing")
 
@@ -281,10 +285,11 @@ class TestRegression:
 
     def test_conflict_does_generate_work_package(self, tmp_path):
         builder = BenchmarkFixture("rt-conflict", tmp_path)
-        (builder
-         .add_file(".python-version", "3.11\n")
-         .add_file(".tool-versions", "python 3.12\n")
-         .add_file("pyproject.toml", "[project]\nname='x'\n"))
+        (
+            builder.add_file(".python-version", "3.11\n")
+            .add_file(".tool-versions", "python 3.12\n")
+            .add_file("pyproject.toml", "[project]\nname='x'\n")
+        )
         builder.build()
         execute_run(tmp_path / "rt-conflict")
 
@@ -293,7 +298,6 @@ class TestRegression:
         assert len(wp_files) >= 1
         # At least one WP should be about the conflict
         conflict_wp = [
-            wp for wp in wp_files
-            if "conflict" in wp.read_text(encoding="utf-8").lower()
+            wp for wp in wp_files if "conflict" in wp.read_text(encoding="utf-8").lower()
         ]
         assert len(conflict_wp) >= 1

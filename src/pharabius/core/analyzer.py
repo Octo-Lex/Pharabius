@@ -967,7 +967,7 @@ def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
     Reads ``large_file_detected`` evidence items produced by the scanner.
     Threshold is shared via ``scanner.LARGE_FILE_LINE_THRESHOLD``.
     """
-    from pharabius.core.constants import LARGE_FILE_LINE_THRESHOLD, EVIDENCE_LARGE_FILE
+    from pharabius.core.constants import EVIDENCE_LARGE_FILE, LARGE_FILE_LINE_THRESHOLD
 
     large_items: list[EvidenceItem] = []
     for item in store.evidence:
@@ -1113,9 +1113,7 @@ def _analyze_long_functions(store: EvidenceStore, builder: FindingBuilder) -> No
         by_file.setdefault(item.location.file, []).append(item)
 
     for file_path, items in by_file.items():
-        total_lines = sum(
-            item.metadata.get("line_count", 0) for item in items
-        )
+        total_lines = sum(item.metadata.get("line_count", 0) for item in items)
         breakdown = {
             **RISK_SCORE_TEMPLATE,
             "technical_severity": 4,
@@ -1191,10 +1189,7 @@ def _analyze_broad_exceptions(store: EvidenceStore, builder: FindingBuilder) -> 
         }
         builder.add(
             category="TD-CODE",
-            title=(
-                f"Broad exception handlers in {file_path} "
-                f"({len(items)} catch-all patterns)"
-            ),
+            title=(f"Broad exception handlers in {file_path} ({len(items)} catch-all patterns)"),
             description=(
                 f"{len(items)} broad exception handler(s) detected in {file_path}. "
                 "Broad catch-all patterns swallow errors, hide bugs, and make "
@@ -1241,8 +1236,7 @@ def _analyze_coverage_gaps(store: EvidenceStore, builder: FindingBuilder) -> Non
         return  # No coverage report → no finding
 
     low_metrics = [
-        m for m in metrics
-        if m.metadata.get("percent", 100) < COVERAGE_LOW_THRESHOLD_PCT
+        m for m in metrics if m.metadata.get("percent", 100) < COVERAGE_LOW_THRESHOLD_PCT
     ]
     if not low_metrics:
         return
@@ -1279,8 +1273,7 @@ def _analyze_coverage_gaps(store: EvidenceStore, builder: FindingBuilder) -> Non
         evidence_ids=_evidence_ids(low_metrics),
         locations=_locations(low_metrics),
         technical_impact=(
-            "Low test coverage means changes are more likely to "
-            "introduce undetected regressions."
+            "Low test coverage means changes are more likely to introduce undetected regressions."
         ),
         business_impact=(
             "Regression risk is inferred from coverage metrics. "
@@ -1321,9 +1314,9 @@ def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuild
     )
     from pharabius.core.signals.models import SignalDisposition
     from pharabius.core.signals.policy import (
+        is_informational,
         should_create_advisory,
         should_create_finding,
-        is_informational,
     )
 
     runtime_signals = [e for e in store.evidence if e.type == EVIDENCE_RUNTIME_VERSION_SIGNAL]
@@ -1377,8 +1370,7 @@ def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuild
             runtime = conflict_ev.metadata.get("runtime", "unknown")
             sources = conflict_ev.metadata.get("sources", [])
             source_desc = ", ".join(
-                f"{s.get('source_file', '?')}={s.get('version', '?')}"
-                for s in sources
+                f"{s.get('source_file', '?')}={s.get('version', '?')}" for s in sources
             )
             reason = conflict_ev.metadata.get("conflict_reason", "unknown")
 
@@ -1436,11 +1428,11 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
     """
     from pharabius.core.constants import EVIDENCE_DEPENDENCY_SIGNAL
     from pharabius.core.signals.dependency_adapters import (
-        dependency_unpinned_to_signal,
         dependency_lockfile_conflict_to_signal,
         dependency_manifest_without_lockfile_to_signal,
         dependency_orphan_lockfile_to_signal,
         dependency_parse_failure_to_signal,
+        dependency_unpinned_to_signal,
     )
     from pharabius.core.signals.policy import (
         output_behavior,
@@ -1464,11 +1456,11 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
                 eco = item.metadata.get("ecosystem", "unknown") if item.metadata else "unknown"
                 by_eco.setdefault(eco, []).append(item)
             for eco, eco_items in by_eco.items():
-                total_count = sum(
-                    item.metadata.get("count", 0) for item in eco_items
-                )
+                total_count = sum(item.metadata.get("count", 0) for item in eco_items)
                 sig = dependency_unpinned_to_signal(
-                    eco_items, ecosystem=eco, count=total_count,
+                    eco_items,
+                    ecosystem=eco,
+                    count=total_count,
                 )
                 behav = output_behavior(sig)
 
@@ -1517,7 +1509,11 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
                             "Reproducibility risk is inferred from manifest evidence. "
                             "Validate with the Product Engineering Team."
                         ),
-                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 3, "blast_radius": 3},
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 3,
+                            "blast_radius": 3,
+                        },
                         remediation_effort="Small",
                         recommended_action=(
                             "Pin dependency versions using lockfiles or exact version specifiers."
@@ -1536,7 +1532,8 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
             for item in items:
                 lockfiles = item.metadata.get("lockfiles", []) if item.metadata else []
                 sig = dependency_lockfile_conflict_to_signal(
-                    items, lockfiles=lockfiles,
+                    items,
+                    lockfiles=lockfiles,
                 )
                 behav = output_behavior(sig)
 
@@ -1554,8 +1551,7 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
                         locations=_locations(items),
                         technical_impact=sig.explanation,
                         business_impact=(
-                            "Build consistency risk. "
-                            "Validate with the Product Engineering Team."
+                            "Build consistency risk. Validate with the Product Engineering Team."
                         ),
                         risk_breakdown=breakdown,
                         remediation_effort="Small",
@@ -1581,10 +1577,13 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
                         locations=_locations(items),
                         technical_impact=sig.explanation,
                         business_impact=(
-                            "Build consistency risk. "
-                            "Validate with the Product Engineering Team."
+                            "Build consistency risk. Validate with the Product Engineering Team."
                         ),
-                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2},
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 2,
+                            "blast_radius": 2,
+                        },
                         remediation_effort="Small",
                         recommended_action=(
                             "Standardize on one package manager and remove other lockfiles. "
@@ -1664,7 +1663,11 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
                         business_impact=(
                             "Lockfile without manifest may indicate incomplete repository contents."
                         ),
-                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2},
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 2,
+                            "blast_radius": 2,
+                        },
                         remediation_effort="Small",
                         recommended_action="Verify manifest file is present and committed.",
                         verification_recommendations=[],
@@ -1688,7 +1691,11 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
                         locations=_locations(items),
                         technical_impact=sig.explanation,
                         business_impact="Parse failure limits dependency analysis coverage.",
-                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 1},
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 2,
+                            "blast_radius": 1,
+                        },
                         remediation_effort="Small",
                         recommended_action="Fix the manifest syntax and re-run the scan.",
                         verification_recommendations=[],
@@ -1712,10 +1719,10 @@ def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) 
     Adapters in security_adapters.py produce GovernedSignal instances.
     output_behavior() controls what gets created.
     """
+    from pharabius.core.signals.policy import output_behavior
     from pharabius.core.signals.security_adapters import (
         security_compliance_exposure_to_signal,
     )
-    from pharabius.core.signals.policy import output_behavior
 
     COMPLIANCE_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}
 
@@ -1807,7 +1814,11 @@ def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) 
                 "Compliance impact is inferred from keyword evidence. "
                 "Validate with legal/compliance teams before acting."
             ),
-            risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 3, "compliance_exposure": 6},
+            risk_breakdown={
+                **RISK_SCORE_TEMPLATE,
+                "technical_severity": 3,
+                "compliance_exposure": 6,
+            },
             remediation_effort="Medium",
             recommended_action=(
                 "Review compliance-sensitive code areas for data handling policies, "
@@ -2382,8 +2393,8 @@ def _add_architecture_findings(
     Routing uses spec.kind, not title text.
     """
     from pharabius.core.signals.architecture_adapters import (
-        architecture_cycle_to_signal,
         architecture_boundary_violation_to_signal,
+        architecture_cycle_to_signal,
     )
     from pharabius.core.signals.policy import output_behavior
 
@@ -2558,25 +2569,23 @@ def _deduplicate_findings(findings: list[DebtFinding]) -> list[DebtFinding]:
         # Explicitly enforce: highest risk_score across ALL group members
         highest_risk_score = max(int(f.risk_score or 0) for f in group)
 
-        all_evidence = list(dict.fromkeys(
-            eid for f in group for eid in f.evidence_ids
-        ))
-        all_locations = list(dict.fromkeys(
-            loc for f in group for loc in (f.locations or [])
-        ))
-        all_related = list(dict.fromkeys(
-            f.id for f in group if f.id != base.id
-        ))
+        all_evidence = list(dict.fromkeys(eid for f in group for eid in f.evidence_ids))
+        all_locations = list(dict.fromkeys(loc for f in group for loc in (f.locations or [])))
+        all_related = list(dict.fromkeys(f.id for f in group if f.id != base.id))
 
-        merged.append(base.model_copy(update={
-            "severity": highest_severity,
-            "risk_score": highest_risk_score,
-            "evidence_ids": all_evidence,
-            "locations": all_locations or None,
-            "related_findings": list(dict.fromkeys(
-                (base.related_findings or []) + all_related
-            )),
-        }))
+        merged.append(
+            base.model_copy(
+                update={
+                    "severity": highest_severity,
+                    "risk_score": highest_risk_score,
+                    "evidence_ids": all_evidence,
+                    "locations": all_locations or None,
+                    "related_findings": list(
+                        dict.fromkeys((base.related_findings or []) + all_related)
+                    ),
+                }
+            )
+        )
 
     return merged
 

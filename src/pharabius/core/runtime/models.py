@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-
 # ── Enums ────────────────────────────────────────────────────────────
 
 
@@ -42,14 +41,15 @@ class RuntimeSourceType(str, Enum):
 
 class RuntimeSourceGrade(str, Enum):
     """How strong is this evidence as a reproducibility signal?"""
-    LOCKFILE = "lockfile"          # Exact, deterministic: rust-toolchain, rust-toolchain.toml
-    TOOL_PIN = "tool_pin"          # .tool-versions entry
+
+    LOCKFILE = "lockfile"  # Exact, deterministic: rust-toolchain, rust-toolchain.toml
+    TOOL_PIN = "tool_pin"  # .tool-versions entry
     VERSION_FILE = "version_file"  # .python-version, .nvmrc
     MANIFEST_PIN = "manifest_pin"  # go.mod toolchain, global.json sdk, composer.json exact
     MANIFEST_RANGE = "manifest_range"  # go.mod go, Cargo.toml rust-version, ^8.2
-    CONTAINER = "container"        # Dockerfile FROM
-    CI = "ci"                      # GitHub Actions
-    UNKNOWN = "unknown"            # Not set — parsers MUST override
+    CONTAINER = "container"  # Dockerfile FROM
+    CI = "ci"  # GitHub Actions
+    UNKNOWN = "unknown"  # Not set — parsers MUST override
 
 
 class Confidence(str, Enum):

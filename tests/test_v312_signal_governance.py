@@ -324,6 +324,7 @@ class TestNoSignalStore:
     def test_signals_module_has_no_store_class(self) -> None:
         """Verify no SignalStore/EvidenceStore equivalent in signals package."""
         from pharabius.core import signals
+
         assert not hasattr(signals, "SignalStore")
         assert not hasattr(signals, "EvidenceStore")
 

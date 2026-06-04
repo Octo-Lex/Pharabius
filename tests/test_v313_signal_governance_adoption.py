@@ -25,6 +25,13 @@ from __future__ import annotations
 
 import pytest
 
+from pharabius.core.signals.adapters import (
+    build_ci_evidence_to_signal,
+    build_missing_ci_to_signal,
+    docs_evidence_to_signal,
+    docs_missing_to_signal,
+    process_missing_artifacts_to_signal,
+)
 from pharabius.core.signals.models import (
     GovernedSignal,
     SignalDisposition,
@@ -38,15 +45,7 @@ from pharabius.core.signals.policy import (
     should_create_finding,
     should_create_work_package,
 )
-from pharabius.core.signals.adapters import (
-    docs_missing_to_signal,
-    docs_evidence_to_signal,
-    build_missing_ci_to_signal,
-    build_ci_evidence_to_signal,
-    process_missing_artifacts_to_signal,
-)
 from pharabius.core.signals.summary import build_signal_summary
-
 
 # ── S01: Documentation adapters ───────────────────────────────────────
 
@@ -106,40 +105,50 @@ class TestDocsEvidenceAdapter:
     def test_docs_evidence_is_informational(self) -> None:
         class FakeEv:
             evidence_id = "ev-doc-1"
+
             class location:
                 file = "README.md"
+
         signal = docs_evidence_to_signal(FakeEv())
         assert signal.disposition == SignalDisposition.INFORMATIONAL
 
     def test_docs_evidence_family(self) -> None:
         class FakeEv:
             evidence_id = "ev-doc-1"
+
             class location:
                 file = "README.md"
+
         signal = docs_evidence_to_signal(FakeEv())
         assert signal.family == SignalFamily.DOCUMENTATION
 
     def test_docs_evidence_kind(self) -> None:
         class FakeEv:
             evidence_id = "ev-doc-1"
+
             class location:
                 file = "README.md"
+
         signal = docs_evidence_to_signal(FakeEv())
         assert signal.kind == "documentation_evidence"
 
     def test_docs_evidence_does_not_create_advisory(self) -> None:
         class FakeEv:
             evidence_id = "ev-doc-1"
+
             class location:
                 file = "README.md"
+
         signal = docs_evidence_to_signal(FakeEv())
         assert not should_create_advisory(signal)
 
     def test_docs_evidence_does_not_create_work_package(self) -> None:
         class FakeEv:
             evidence_id = "ev-doc-1"
+
             class location:
                 file = "README.md"
+
         signal = docs_evidence_to_signal(FakeEv())
         assert not should_create_work_package(signal)
 
@@ -189,24 +198,30 @@ class TestBuildCIEvidenceAdapter:
     def test_ci_evidence_is_informational(self) -> None:
         class FakeEv:
             evidence_id = "ev-ci-1"
+
             class location:
                 file = ".github/workflows/ci.yml"
+
         signal = build_ci_evidence_to_signal(FakeEv())
         assert signal.disposition == SignalDisposition.INFORMATIONAL
 
     def test_ci_evidence_family(self) -> None:
         class FakeEv:
             evidence_id = "ev-ci-1"
+
             class location:
                 file = ".github/workflows/ci.yml"
+
         signal = build_ci_evidence_to_signal(FakeEv())
         assert signal.family == SignalFamily.BUILD
 
     def test_ci_evidence_does_not_create_advisory(self) -> None:
         class FakeEv:
             evidence_id = "ev-ci-1"
+
             class location:
                 file = ".github/workflows/ci.yml"
+
         signal = build_ci_evidence_to_signal(FakeEv())
         assert not should_create_advisory(signal)
 
@@ -285,7 +300,8 @@ class TestAdapterContracts:
 
     def test_process_adapter_uses_process_family(self) -> None:
         sig = process_missing_artifacts_to_signal(
-            missing_artifacts=["CODEOWNERS"], evidence_ids=["ev1"],
+            missing_artifacts=["CODEOWNERS"],
+            evidence_ids=["ev1"],
         )
         assert sig.family == SignalFamily.PROCESS
 
@@ -293,7 +309,8 @@ class TestAdapterContracts:
         s1 = docs_missing_to_signal(evidence_ids=["ev1"])
         s2 = build_missing_ci_to_signal(evidence_ids=["ev1"])
         s3 = process_missing_artifacts_to_signal(
-            missing_artifacts=["CODEOWNERS"], evidence_ids=["ev1"],
+            missing_artifacts=["CODEOWNERS"],
+            evidence_ids=["ev1"],
         )
         # Same evidence_ids but different families → different IDs
         ids = {s1.signal_id, s2.signal_id, s3.signal_id}
@@ -303,7 +320,8 @@ class TestAdapterContracts:
         doc = docs_missing_to_signal(evidence_ids=["ev1"])
         build = build_missing_ci_to_signal(evidence_ids=["ev1"])
         process = process_missing_artifacts_to_signal(
-            missing_artifacts=["CODEOWNERS"], evidence_ids=["ev1"],
+            missing_artifacts=["CODEOWNERS"],
+            evidence_ids=["ev1"],
         )
         assert doc.category == "TD-DOC"
         assert build.category == "TD-BUILD"
@@ -323,8 +341,10 @@ class TestNoFindingInV313:
     def test_docs_evidence_not_finding(self) -> None:
         class FakeEv:
             evidence_id = "ev1"
+
             class location:
                 file = "README.md"
+
         sig = docs_evidence_to_signal(FakeEv())
         assert sig.disposition != SignalDisposition.FINDING
 
@@ -335,14 +355,17 @@ class TestNoFindingInV313:
     def test_build_ci_evidence_not_finding(self) -> None:
         class FakeEv:
             evidence_id = "ev1"
+
             class location:
                 file = "ci.yml"
+
         sig = build_ci_evidence_to_signal(FakeEv())
         assert sig.disposition != SignalDisposition.FINDING
 
     def test_process_missing_not_finding(self) -> None:
         sig = process_missing_artifacts_to_signal(
-            missing_artifacts=["CODEOWNERS"], evidence_ids=["ev1"],
+            missing_artifacts=["CODEOWNERS"],
+            evidence_ids=["ev1"],
         )
         assert sig.disposition != SignalDisposition.FINDING
 
@@ -358,7 +381,8 @@ class TestSignalSummaryIsSignalDriven:
             docs_missing_to_signal(evidence_ids=["ev1"]),
             build_missing_ci_to_signal(evidence_ids=["ev2"]),
             process_missing_artifacts_to_signal(
-                missing_artifacts=["CODEOWNERS"], evidence_ids=["ev3"],
+                missing_artifacts=["CODEOWNERS"],
+                evidence_ids=["ev3"],
             ),
         ]
         summary = build_signal_summary(signals)
@@ -372,7 +396,8 @@ class TestSignalSummaryIsSignalDriven:
             docs_missing_to_signal(evidence_ids=["ev1"]),
             build_missing_ci_to_signal(evidence_ids=["ev2"]),
             process_missing_artifacts_to_signal(
-                missing_artifacts=["CODEOWNERS"], evidence_ids=["ev3"],
+                missing_artifacts=["CODEOWNERS"],
+                evidence_ids=["ev3"],
             ),
         ]
         summary = build_signal_summary(signals)
@@ -381,26 +406,27 @@ class TestSignalSummaryIsSignalDriven:
 
     def test_runtime_summary_unchanged(self) -> None:
         """AC3: Runtime summary behavior unchanged."""
-        from pharabius.core.signals.adapters import runtime_conflict_to_signal
+        from pharabius.core.runtime.conflict import RuntimeConflictKind
         from pharabius.core.runtime.models import (
+            Confidence,
             RuntimeConflictGroup,
+            RuntimeConstraint,
+            RuntimeConstraintKind,
             RuntimeEcosystem,
             RuntimeEvidence,
             RuntimeSignalClassification,
             RuntimeSourceGrade,
             RuntimeSourceType,
-            Confidence,
-            RuntimeConstraint,
-            RuntimeConstraintKind,
         )
-        from pharabius.core.runtime.conflict import RuntimeConflictKind
+        from pharabius.core.signals.adapters import runtime_conflict_to_signal
 
         ev = RuntimeEvidence(
             runtime_evidence_id="rt1",
             runtime_name="Python",
             ecosystem=RuntimeEcosystem.PYTHON,
             constraint=RuntimeConstraint(
-                value="3.12", kind=RuntimeConstraintKind.EXACT,
+                value="3.12",
+                kind=RuntimeConstraintKind.EXACT,
             ),
             source_type=RuntimeSourceType.MANIFEST,
             source_path="pyproject.toml",
@@ -428,37 +454,49 @@ class TestMigrationBoundary:
 
     def test_missing_docs_analyzer_imports_should_create_advisory(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_docs)
         assert "should_create_advisory" in source
 
     def test_missing_ci_analyzer_imports_should_create_advisory(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_ci)
         assert "should_create_advisory" in source
 
     def test_missing_process_analyzer_imports_should_create_advisory(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_process_artifacts)
         assert "should_create_advisory" in source
 
     def test_missing_docs_analyzer_does_not_use_should_create_work_package(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_docs)
         assert "should_create_work_package" not in source
 
     def test_missing_ci_analyzer_does_not_use_should_create_work_package(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_ci)
         assert "should_create_work_package" not in source
 
     def test_missing_process_analyzer_does_not_use_should_create_work_package(self) -> None:
         import inspect
+
         from pharabius.core import analyzer
+
         source = inspect.getsource(analyzer._analyze_missing_process_artifacts)
         assert "should_create_work_package" not in source
 
@@ -495,7 +533,8 @@ class TestAnalyzerOutputPreserved:
 
     def test_process_missing_title(self) -> None:
         sig = process_missing_artifacts_to_signal(
-            missing_artifacts=["CODEOWNERS"], evidence_ids=["ev1"],
+            missing_artifacts=["CODEOWNERS"],
+            evidence_ids=["ev1"],
         )
         assert sig.title == "Missing repository process artifacts"
 
@@ -509,6 +548,7 @@ class TestAnalyzerOutputPreserved:
 
     def test_process_severity_low(self) -> None:
         sig = process_missing_artifacts_to_signal(
-            missing_artifacts=["CODEOWNERS"], evidence_ids=["ev1"],
+            missing_artifacts=["CODEOWNERS"],
+            evidence_ids=["ev1"],
         )
         assert sig.severity == "Low"
