@@ -41,7 +41,7 @@ jobs:
         continue-on-error: true  # No import-linter config; not blocking CI
 
       - name: Run tests
-        run: pytest
+        run: PYTHONPATH=benchmarks:$PYTHONPATH pytest
 
       - name: Build package
         run: python -m build
