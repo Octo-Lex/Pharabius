@@ -68,6 +68,7 @@ class ArchFindingSpec:
     evidence_ids: list[str] = field(default_factory=list)
     locations: list[str] = field(default_factory=list)
     analysis_unit_ids: list[str] = field(default_factory=list)
+    kind: str = ""  # "cycle" or "boundary_violation" — used for governance routing
     severity: str = "Medium"
     confidence: str = "High"
     technical_impact: str = ""
@@ -219,6 +220,7 @@ def _analyze_cycles(graph: ArchitectureGraph) -> list[ArchFindingSpec]:
                 evidence_ids=list(cycle.evidence_ids),
                 locations=locations,
                 analysis_unit_ids=au_ids,
+                kind="cycle",
                 severity=_map_severity(cycle.severity_hint),
                 confidence="High" if cycle.evidence_ids else "Medium",
                 technical_impact=(
@@ -315,6 +317,7 @@ def _analyze_violations(graph: ArchitectureGraph) -> list[ArchFindingSpec]:
                 evidence_ids=list(violation.evidence_ids),
                 locations=locations,
                 analysis_unit_ids=au_ids,
+                kind="boundary_violation",
                 severity=_map_severity(violation.severity_hint),
                 confidence="High" if violation.evidence_ids else "Medium",
                 technical_impact=(

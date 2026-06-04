@@ -321,6 +321,7 @@ class FindingBuilder:
         risks_and_cautions: list[str],
         confidence: str = "Medium",
         suggested_owner_area: str = "",
+        issue_type: str = "technical_debt",
     ) -> None:
         if not evidence_ids:
             return
@@ -328,13 +329,21 @@ class FindingBuilder:
         self._counters[category] += 1
         raw_score, priority = _score(risk_breakdown)
 
+        # Advisory severity cap: Low severity, risk_score <= 10
+        if issue_type == "advisory":
+            severity = "Low"
+            raw_score = min(raw_score, 10)
+        else:
+            severity = _severity_for_priority(priority)
+
         self.findings.append(
             DebtFinding(
                 id=f"{category}-{self._counters[category]:03d}",
                 category=category,
+                issue_type=issue_type,
                 title=title,
                 description=description,
-                severity=_severity_for_priority(priority),
+                severity=severity,
                 confidence=confidence,
                 locations=locations,
                 evidence_ids=evidence_ids,
@@ -358,6 +367,17 @@ def _analyze_missing_tests(store: EvidenceStore, builder: FindingBuilder) -> Non
 
     risk_items = _risk_signal_items(store)
     supporting_evidence = risk_items or store.evidence[:1]
+
+    # v3.14.0: governed signal disposition check
+    from pharabius.core.signals.adapters import scan_test_missing_to_signal
+    from pharabius.core.signals.policy import should_create_finding
+
+    signal = scan_test_missing_to_signal(
+        evidence_ids=_evidence_ids(supporting_evidence),
+        has_risk_signals=bool(risk_items),
+    )
+    if not should_create_finding(signal):
+        return
 
     breakdown = {
         **RISK_SCORE_TEMPLATE,
@@ -410,6 +430,16 @@ def _analyze_risk_sensitive_without_tests(store: EvidenceStore, builder: Finding
     risk_items = _risk_signal_items(store)
 
     if not risk_items or _has_tests(store):
+        return
+
+    # v3.14.0: governed signal disposition check
+    from pharabius.core.signals.adapters import scan_test_risk_sensitive_without_tests_to_signal
+    from pharabius.core.signals.policy import should_create_finding
+
+    signal = scan_test_risk_sensitive_without_tests_to_signal(
+        evidence_ids=_evidence_ids(risk_items),
+    )
+    if not should_create_finding(signal):
         return
 
     breakdown = {
@@ -474,6 +504,14 @@ def _analyze_missing_ci(store: EvidenceStore, builder: FindingBuilder) -> None:
     manifests = _evidence_by_type(store, "manifest_detected")
     supporting_evidence = manifests or store.evidence[:1]
 
+    # v3.13.0: governed signal disposition check
+    from pharabius.core.signals.adapters import build_missing_ci_to_signal
+    from pharabius.core.signals.policy import should_create_advisory
+
+    signal = build_missing_ci_to_signal(evidence_ids=_evidence_ids(supporting_evidence))
+    if not should_create_advisory(signal):
+        return
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 3,
@@ -516,6 +554,7 @@ def _analyze_missing_ci(store: EvidenceStore, builder: FindingBuilder) -> None:
             "Do not add slow or flaky checks directly to the required path without stabilization.",
         ],
         suggested_owner_area="Platform / DevOps",
+        issue_type="advisory",
     )
 
 
@@ -524,6 +563,14 @@ def _analyze_missing_docs(store: EvidenceStore, builder: FindingBuilder) -> None
         return
 
     supporting_evidence = store.evidence[:1]
+
+    # v3.13.0: governed signal disposition check
+    from pharabius.core.signals.adapters import docs_missing_to_signal
+    from pharabius.core.signals.policy import should_create_advisory
+
+    signal = docs_missing_to_signal(evidence_ids=_evidence_ids(supporting_evidence))
+    if not should_create_advisory(signal):
+        return
 
     breakdown = {
         **RISK_SCORE_TEMPLATE,
@@ -563,6 +610,7 @@ def _analyze_missing_docs(store: EvidenceStore, builder: FindingBuilder) -> None
             "Avoid writing aspirational documentation that does not match the repository behavior.",
         ],
         suggested_owner_area="Product Engineering",
+        issue_type="advisory",
     )
 
 
@@ -687,6 +735,11 @@ def _emit_lockfile_finding(
     manifest_items: list[EvidenceItem],
     package_root: str,
 ) -> None:
+    from pharabius.core.signals.dependency_adapters import (
+        dependency_missing_lockfile_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
+
     evidence_ids = _evidence_ids(manifest_items)
     locations = _locations(manifest_items)
 
@@ -696,6 +749,14 @@ def _emit_lockfile_finding(
     reproducibility_term = "dependency reproducibility evidence" if is_java else "lockfile evidence"
 
     is_rust = ecosystem.rust_library_exempt
+
+    # Build governed signal
+    sig = dependency_missing_lockfile_to_signal(
+        manifest_items,
+        ecosystem=ecosystem.name,
+        package_root=package_root,
+    )
+    behav = output_behavior(sig)
 
     title = f"{ecosystem.name} dependency manifest detected without {reproducibility_term}"
 
@@ -757,28 +818,60 @@ def _emit_lockfile_finding(
             " For binary crates, run `cargo generate-lockfile` and commit the resulting Cargo.lock."
         )
 
-    builder.add(
-        category="TD-DEP",
-        title=title,
-        description=description,
-        evidence_ids=evidence_ids,
-        locations=locations,
-        technical_impact=technical_impact,
-        business_impact=(
-            "Release and environment reproducibility risk is inferred "
-            "from dependency manifest evidence."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Small",
-        recommended_action=recommended_action,
-        verification_recommendations=verification,
-        risks_and_cautions=risks_and_cautions,
-        confidence=confidence,
-        suggested_owner_area="Product Engineering / Platform",
-    )
+    if behav.creates_advisory:
+        builder.add(
+            category=sig.category,
+            title=title,
+            description=description,
+            evidence_ids=evidence_ids,
+            locations=locations,
+            technical_impact=technical_impact,
+            business_impact=(
+                "Release and environment reproducibility risk is inferred "
+                "from dependency manifest evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=recommended_action,
+            verification_recommendations=verification,
+            risks_and_cautions=risks_and_cautions,
+            confidence=confidence,
+            suggested_owner_area="Product Engineering / Platform",
+            issue_type="advisory",
+        )
+    elif behav.creates_finding:
+        builder.add(
+            category=sig.category,
+            title=title,
+            description=description,
+            evidence_ids=evidence_ids,
+            locations=locations,
+            technical_impact=technical_impact,
+            business_impact=(
+                "Release and environment reproducibility risk is inferred "
+                "from dependency manifest evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=recommended_action,
+            verification_recommendations=verification,
+            risks_and_cautions=risks_and_cautions,
+            confidence=confidence,
+            suggested_owner_area="Product Engineering / Platform",
+        )
+    # INFORMATIONAL / SUPPRESSED: record signal only
 
 
 def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """Detect .env without .env.example and emit TD-CONFIG finding.
+
+    v3.19.0: Uses governed signal disposition controls promotion.
+    """
+    from pharabius.core.signals.configuration_adapters import (
+        configuration_env_without_example_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
+
     config_items = _evidence_by_type(store, "configuration_file_detected")
     config_locations = {item.location.file for item in config_items}
 
@@ -790,6 +883,9 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
 
     env_items = [item for item in config_items if item.location.file in {".env", ".env.local"}]
 
+    sig = configuration_env_without_example_to_signal(env_items)
+    behav = output_behavior(sig)
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 3,
@@ -799,35 +895,67 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
         "remediation_simplicity": -2,
     }
 
-    builder.add(
-        category="TD-CONFIG",
-        title="Environment configuration detected without example file",
-        description=(
-            "An environment configuration file was detected, but no `.env.example` file was found."
-        ),
-        evidence_ids=_evidence_ids(env_items),
-        locations=_locations(env_items),
-        technical_impact=(
-            "Missing environment examples make setup, onboarding, and environment parity harder "
-            "to verify."
-        ),
-        business_impact=(
-            "Operational setup risk is inferred from environment configuration evidence."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Small",
-        recommended_action=(
-            "Add a sanitized `.env.example` documenting required variables without secrets."
-        ),
-        verification_recommendations=[
-            "Verify `.env.example` contains no real secrets.",
-            "Confirm local setup works from documented environment variables.",
-        ],
-        risks_and_cautions=[
-            "Never commit real credentials or production secrets.",
-        ],
-        suggested_owner_area="Platform / Product Engineering",
-    )
+    if behav.creates_finding:
+        builder.add(
+            category="TD-CONFIG",
+            title="Environment configuration detected without example file",
+            description=(
+                "An environment configuration file was detected, but no `.env.example` file was found."  # noqa: E501
+            ),
+            evidence_ids=_evidence_ids(env_items),
+            locations=_locations(env_items),
+            technical_impact=(
+                "Missing environment examples make setup, onboarding, and environment parity harder "  # noqa: E501
+                "to verify."
+            ),
+            business_impact=(
+                "Operational setup risk is inferred from environment configuration evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                "Add a sanitized `.env.example` documenting required variables without secrets."
+            ),
+            verification_recommendations=[
+                "Verify `.env.example` contains no real secrets.",
+                "Confirm local setup works from documented environment variables.",
+            ],
+            risks_and_cautions=[
+                "Never commit real credentials or production secrets.",
+            ],
+            suggested_owner_area="Platform / Product Engineering",
+        )
+    elif behav.creates_advisory:
+        builder.add(
+            category="TD-CONFIG",
+            title="Environment configuration detected without example file",
+            description=(
+                "An environment configuration file was detected, but no `.env.example` file was found."  # noqa: E501
+            ),
+            evidence_ids=_evidence_ids(env_items),
+            locations=_locations(env_items),
+            technical_impact=(
+                "Missing environment examples make setup, onboarding, and environment parity harder "  # noqa: E501
+                "to verify."
+            ),
+            business_impact=(
+                "Operational setup risk is inferred from environment configuration evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                "Add a sanitized `.env.example` documenting required variables without secrets."
+            ),
+            verification_recommendations=[
+                "Verify `.env.example` contains no real secrets.",
+                "Confirm local setup works from documented environment variables.",
+            ],
+            risks_and_cautions=[
+                "Never commit real credentials or production secrets.",
+            ],
+            suggested_owner_area="Platform / Product Engineering",
+            issue_type="advisory",
+        )
 
 
 # ── TD-CODE: Code-level debt ───────────────────────────────────────────────
@@ -836,43 +964,25 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
 def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
     """TD-CODE: Flag very large source files as code-level debt.
 
-    Conservative threshold: files > 1000 lines detected as evidence.
-    Only applies to source files (not generated, config, or lockfiles).
+    Reads ``large_file_detected`` evidence items produced by the scanner.
+    Threshold is shared via ``scanner.LARGE_FILE_LINE_THRESHOLD``.
     """
-    LARGE_FILE_THRESHOLD = 1000
-    source_extensions = {
-        ".py",
-        ".js",
-        ".ts",
-        ".jsx",
-        ".tsx",
-        ".java",
-        ".cs",
-        ".go",
-        ".rs",
-        ".rb",
-        ".php",
-        ".swift",
-        ".kt",
-        ".scala",
-    }
+    from pharabius.core.constants import EVIDENCE_LARGE_FILE, LARGE_FILE_LINE_THRESHOLD
 
     large_items: list[EvidenceItem] = []
     for item in store.evidence:
-        if item.type != "file_detected" or not item.location.file:
+        if item.type != EVIDENCE_LARGE_FILE:
             continue
-        ext = Path(item.location.file).suffix.lower()
-        if ext not in source_extensions:
-            continue
-        # Check raw_observation for line count hint
-        obs = item.raw_observation.lower()
-        if "lines" not in obs:
-            continue
-        # Extract line count from observation if present
-        import re as _re
-
-        match = _re.search(r"(\d+)\s*lines?", obs)
-        if match and int(match.group(1)) > LARGE_FILE_THRESHOLD:
+        # Read line count from metadata (canonical source)
+        if item.metadata and "line_count" in item.metadata:
+            line_count = int(item.metadata["line_count"])
+        else:
+            # Fallback: parse raw_observation
+            match = re.search(r"(\d+)\s*lines?", item.raw_observation)
+            if not match:
+                continue
+            line_count = int(match.group(1))
+        if line_count >= LARGE_FILE_LINE_THRESHOLD:
             large_items.append(item)
 
     if not large_items:
@@ -890,7 +1000,7 @@ def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
         category="TD-CODE",
         title="Very large source files detected",
         description=(
-            f"{len(large_items)} source file(s) exceed {LARGE_FILE_THRESHOLD} lines. "
+            f"{len(large_items)} source file(s) exceed {LARGE_FILE_LINE_THRESHOLD} lines. "
             "Large files increase cognitive load, review difficulty, and merge conflict risk."
         ),
         evidence_ids=_evidence_ids(large_items),
@@ -922,23 +1032,26 @@ def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
 
 
 def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None:
-    """TD-CODE: Flag TODO/FIXME/HACK debt markers in source evidence.
+    """TD-CODE: Flag TODO/FIXME/HACK/XXX debt markers in source evidence.
 
-    Only counts markers in source code evidence, not in config or CI files.
-    Requires multiple markers to avoid noise from single-line annotations.
+    Reads ``debt_marker_detected`` evidence items produced by the scanner.
+    Counts total occurrences (not unique marker names) across files.
     """
-    DEBT_MARKERS = {"todo", "fixme", "hack", "xxx"}
-    MIN_MARKERS = 5
+    from pharabius.core.constants import EVIDENCE_DEBT_MARKER, MIN_DEBT_MARKER_OCCURRENCES
 
     marker_items: list[EvidenceItem] = []
+    total_marker_count = 0
     for item in store.evidence:
-        if item.type != "risk_sensitive_keyword_detected":
+        if item.type != EVIDENCE_DEBT_MARKER:
             continue
-        keyword = item.raw_observation.lower().strip()
-        if keyword in DEBT_MARKERS:
-            marker_items.append(item)
+        marker_items.append(item)
+        # Read occurrence count from metadata
+        if item.metadata and "total_count" in item.metadata:
+            total_marker_count += int(item.metadata["total_count"])
+        else:
+            total_marker_count += 1  # fallback
 
-    if len(marker_items) < MIN_MARKERS:
+    if total_marker_count < MIN_DEBT_MARKER_OCCURRENCES:
         return
 
     breakdown = {
@@ -951,9 +1064,10 @@ def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None
 
     builder.add(
         category="TD-CODE",
-        title=f"Accumulated debt markers ({len(marker_items)} TODO/FIXME/HACK)",
+        title=f"Accumulated debt markers ({total_marker_count} TODO/FIXME/HACK)",
         description=(
-            f"{len(marker_items)} debt marker(s) (TODO, FIXME, HACK, XXX) detected in source code. "
+            f"{total_marker_count} debt marker occurrence(s) across "
+            f"{len(marker_items)} file(s). "
             "Accumulated debt markers indicate deferred maintenance that may compound over time."
         ),
         evidence_ids=_evidence_ids(marker_items),
@@ -986,15 +1100,628 @@ def _analyze_debt_markers(store: EvidenceStore, builder: FindingBuilder) -> None
 # ── TD-COMP: Compliance debt ────────────────────────────────────────────────
 
 
+def _analyze_long_functions(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-CODE: Flag functions exceeding line threshold."""
+    from pharabius.core.constants import EVIDENCE_LONG_FUNCTION, LONG_FUNCTION_LINE_THRESHOLD
+
+    long_items = [e for e in store.evidence if e.type == EVIDENCE_LONG_FUNCTION]
+    if not long_items:
+        return
+
+    by_file: dict[str, list[EvidenceItem]] = {}
+    for item in long_items:
+        by_file.setdefault(item.location.file, []).append(item)
+
+    for file_path, items in by_file.items():
+        total_lines = sum(item.metadata.get("line_count", 0) for item in items)
+        breakdown = {
+            **RISK_SCORE_TEMPLATE,
+            "technical_severity": 4,
+            "blast_radius": 2,
+            "remediation_simplicity": -1,
+        }
+        builder.add(
+            category="TD-CODE",
+            title=(
+                f"Long functions detected in {file_path} "
+                f"({len(items)} function(s), {total_lines} total lines)"
+            ),
+            description=(
+                f"{len(items)} Python function(s) exceed "
+                f"{LONG_FUNCTION_LINE_THRESHOLD} lines. "
+                "Long functions increase cognitive load, testing difficulty, "
+                "and defect density. Detection is heuristic (indentation-based), "
+                "not AST-grade certainty."
+            ),
+            evidence_ids=_evidence_ids(items),
+            locations=_locations(items),
+            technical_impact=(
+                "Functions exceeding 80 lines are harder to understand, test, "
+                "and refactor. They often indicate mixed responsibilities."
+            ),
+            business_impact=(
+                "Maintenance cost is inferred from function length evidence. "
+                "Validate impact with the Product Engineering Team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Consider decomposing long functions into focused, testable units. "
+                "Prioritize functions with the most change activity."
+            ),
+            verification_recommendations=[
+                "Verify decomposition does not change public API behavior.",
+                "Run existing tests after refactoring.",
+            ],
+            risks_and_cautions=[
+                "Some long functions are legitimate (parsers, data transformations).",
+                "Detection is indentation-based, not AST-precise.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering",
+        )
+
+
+def _analyze_broad_exceptions(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-CODE: Flag files with excessive broad exception handlers."""
+    from pharabius.core.constants import (
+        BROAD_EXCEPTION_PER_FILE_THRESHOLD,
+        EVIDENCE_BROAD_EXCEPTION,
+    )
+
+    broad_items = [e for e in store.evidence if e.type == EVIDENCE_BROAD_EXCEPTION]
+    if not broad_items:
+        return
+
+    by_file: dict[str, list[EvidenceItem]] = {}
+    for item in broad_items:
+        by_file.setdefault(item.location.file, []).append(item)
+
+    for file_path, items in by_file.items():
+        if len(items) < BROAD_EXCEPTION_PER_FILE_THRESHOLD:
+            continue
+
+        breakdown = {
+            **RISK_SCORE_TEMPLATE,
+            "technical_severity": 4,
+            "blast_radius": 3,
+            "remediation_simplicity": -2,
+        }
+        builder.add(
+            category="TD-CODE",
+            title=(f"Broad exception handlers in {file_path} ({len(items)} catch-all patterns)"),
+            description=(
+                f"{len(items)} broad exception handler(s) detected in {file_path}. "
+                "Broad catch-all patterns swallow errors, hide bugs, and make "
+                "debugging harder. Detection is regex-based, not AST-precise."
+            ),
+            evidence_ids=_evidence_ids(items),
+            locations=_locations(items),
+            technical_impact=(
+                "Broad exception handlers can mask real errors, making bugs "
+                "harder to diagnose and fix."
+            ),
+            business_impact=(
+                "Error-handling quality is inferred from pattern evidence. "
+                "Validate with the Product Engineering Team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                "Replace broad exception handlers with specific exception types. "
+                "Log or re-raise unexpected errors."
+            ),
+            verification_recommendations=[
+                "Verify error handling changes do not suppress legitimate errors.",
+                "Add tests for specific error paths.",
+            ],
+            risks_and_cautions=[
+                "Some broad handlers are intentional (top-level error boundaries).",
+                "Detection is regex-based, not AST-precise.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering",
+        )
+
+
+def _analyze_coverage_gaps(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-TEST: Generate findings from low coverage when reports exist."""
+    from pharabius.core.constants import (
+        COVERAGE_LOW_THRESHOLD_PCT,
+        EVIDENCE_COVERAGE_METRIC,
+    )
+
+    metrics = [e for e in store.evidence if e.type == EVIDENCE_COVERAGE_METRIC]
+    if not metrics:
+        return  # No coverage report → no finding
+
+    low_metrics = [
+        m for m in metrics if m.metadata.get("percent", 100) < COVERAGE_LOW_THRESHOLD_PCT
+    ]
+    if not low_metrics:
+        return
+
+    # v3.14.0: governed signal disposition check
+    from pharabius.core.signals.adapters import scan_test_coverage_gap_to_signal
+    from pharabius.core.signals.policy import should_create_finding
+
+    signal = scan_test_coverage_gap_to_signal(
+        evidence_ids=_evidence_ids(low_metrics),
+        low_count=len(low_metrics),
+        threshold_pct=COVERAGE_LOW_THRESHOLD_PCT,
+    )
+    if not should_create_finding(signal):
+        return
+
+    breakdown = {
+        **RISK_SCORE_TEMPLATE,
+        "technical_severity": 5,
+        "blast_radius": 4,
+        "test_gap": 3,
+    }
+    builder.add(
+        category="TD-TEST",
+        title=(
+            f"Low test coverage detected "
+            f"({len(low_metrics)} metric(s) below {COVERAGE_LOW_THRESHOLD_PCT:.0f}%)"
+        ),
+        description=(
+            f"Coverage report shows {len(low_metrics)} metric(s) below "
+            f"{COVERAGE_LOW_THRESHOLD_PCT:.0f}%. "
+            "Low coverage increases regression risk."
+        ),
+        evidence_ids=_evidence_ids(low_metrics),
+        locations=_locations(low_metrics),
+        technical_impact=(
+            "Low test coverage means changes are more likely to introduce undetected regressions."
+        ),
+        business_impact=(
+            "Regression risk is inferred from coverage metrics. "
+            "Validate with the Product Engineering Team."
+        ),
+        risk_breakdown=breakdown,
+        remediation_effort="Large",
+        recommended_action=(
+            "Prioritize adding tests for high-risk and high-change-frequency areas."
+        ),
+        verification_recommendations=[
+            "Run coverage analysis after adding tests.",
+            "Ensure CI fails on coverage regression.",
+        ],
+        risks_and_cautions=[
+            "Coverage percentage alone does not guarantee test quality.",
+            "Some low-coverage areas may not need tests (e.g., generated code).",
+        ],
+        confidence="Medium",
+        suggested_owner_area="Quality Engineering",
+    )
+
+
+def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-DEP: Generate findings/advisories from runtime version signals.
+
+    v3.8.0: Missing pins → advisory. Conflicts → technical_debt finding.
+    v3.12.0: Governed signal disposition controls promotion.
+    """
+    from pharabius.core.constants import (
+        EVIDENCE_RUNTIME_VERSION_SIGNAL,
+        RUNTIME_SIGNAL_CONFLICT,
+        RUNTIME_SIGNAL_MISSING,
+    )
+    from pharabius.core.signals.adapters import (
+        runtime_conflict_to_signal_from_evidence,
+        runtime_missing_pin_to_signal_from_evidence,
+    )
+    from pharabius.core.signals.policy import (
+        should_create_advisory,
+        should_create_finding,
+    )
+
+    runtime_signals = [e for e in store.evidence if e.type == EVIDENCE_RUNTIME_VERSION_SIGNAL]
+    if not runtime_signals:
+        return
+
+    # ── Missing runtime pins → governed advisory ─────────────────
+    missing = [e for e in runtime_signals if e.metadata.get("signal") == RUNTIME_SIGNAL_MISSING]
+    if missing:
+        signal = runtime_missing_pin_to_signal_from_evidence(missing)
+
+        if should_create_advisory(signal):
+            [e.metadata.get("runtime", "unknown") for e in missing]
+            breakdown = {**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2}
+            builder.add(
+                category=signal.category,
+                title=signal.title,
+                description=signal.summary,
+                evidence_ids=_evidence_ids(missing),
+                locations=_locations(missing),
+                technical_impact=(
+                    "Without runtime version pins, different environments may use "
+                    "different runtime versions, causing subtle compatibility issues."
+                ),
+                business_impact=(
+                    "Reproducibility risk is inferred from repository evidence. "
+                    "Validate with the Product Engineering Team."
+                ),
+                risk_breakdown=breakdown,
+                remediation_effort="Small",
+                recommended_action=(
+                    "Add a runtime version file (.python-version, .nvmrc, .ruby-version, "
+                    ".java-version, or .tool-versions) or specify in manifest."
+                ),
+                verification_recommendations=["Verify CI uses the pinned runtime version."],
+                risks_and_cautions=[
+                    "Some projects intentionally use latest runtime versions.",
+                    "Docker images may already pin runtime versions.",
+                ],
+                confidence="Low",
+                suggested_owner_area="Product Engineering",
+                issue_type="advisory",
+            )
+
+    # ── Runtime conflicts → governed finding ───────────────────────
+    conflicts = [e for e in runtime_signals if e.metadata.get("signal") == RUNTIME_SIGNAL_CONFLICT]
+    for conflict_ev in conflicts:
+        signal = runtime_conflict_to_signal_from_evidence(conflict_ev)
+
+        if should_create_finding(signal):
+            runtime = conflict_ev.metadata.get("runtime", "unknown")
+            sources = conflict_ev.metadata.get("sources", [])
+            source_desc = ", ".join(
+                f"{s.get('source_file', '?')}={s.get('version', '?')}" for s in sources
+            )
+            reason = conflict_ev.metadata.get("conflict_reason", "unknown")
+
+            breakdown = {
+                **RISK_SCORE_TEMPLATE,
+                "technical_severity": 4,
+                "blast_radius": 3,
+                "dependency_risk": 5,
+                "remediation_simplicity": -2,
+            }
+
+            builder.add(
+                category=signal.category,
+                title=signal.title,
+                description=(
+                    f"Multiple {runtime} runtime version declarations disagree: "
+                    f"{source_desc}. This creates direct reproducibility risk "
+                    f"({reason})."
+                ),
+                evidence_ids=[conflict_ev.evidence_id],
+                locations=["."],
+                technical_impact=(
+                    "Conflicting runtime declarations mean different tools may "
+                    "select different runtime versions, causing inconsistent builds "
+                    "and test failures."
+                ),
+                business_impact=(
+                    "Reproducibility risk from conflicting runtime declarations. "
+                    "Validate with the Product Engineering Team."
+                ),
+                risk_breakdown=breakdown,
+                remediation_effort="Small",
+                recommended_action=(
+                    f"Align all {runtime} runtime declarations to a single version "
+                    "or ensure range constraints are compatible."
+                ),
+                verification_recommendations=[
+                    "Run the build in a clean environment.",
+                    "Verify all runtime sources select the same version.",
+                ],
+                risks_and_cautions=[
+                    "Some conflicts may be intentional (e.g., development vs production).",
+                ],
+                confidence="High",
+                suggested_owner_area="Product Engineering / Platform",
+            )
+
+
+def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """TD-DEP: Generate findings from dependency health signals.
+
+    v3.16.0: Uses governed signal disposition controls promotion.
+    Adapters in dependency_adapters.py produce GovernedSignal instances.
+    output_behavior() controls what gets created.
+    """
+    from pharabius.core.constants import EVIDENCE_DEPENDENCY_SIGNAL
+    from pharabius.core.signals.dependency_adapters import (
+        dependency_lockfile_conflict_to_signal,
+        dependency_manifest_without_lockfile_to_signal,
+        dependency_orphan_lockfile_to_signal,
+        dependency_parse_failure_to_signal,
+        dependency_unpinned_to_signal,
+    )
+    from pharabius.core.signals.policy import (
+        output_behavior,
+    )
+
+    dep_signals = [e for e in store.evidence if e.type == EVIDENCE_DEPENDENCY_SIGNAL]
+    if not dep_signals:
+        return
+
+    # Group by signal type
+    by_signal: dict[str, list[EvidenceItem]] = {}
+    for item in dep_signals:
+        signal = item.metadata.get("signal", "unknown") if item.metadata else "unknown"
+        by_signal.setdefault(signal, []).append(item)
+
+    for signal_type, items in by_signal.items():
+        if signal_type == "unpinned_dependency":
+            # Group by ecosystem
+            by_eco: dict[str, list[EvidenceItem]] = {}
+            for item in items:
+                eco = item.metadata.get("ecosystem", "unknown") if item.metadata else "unknown"
+                by_eco.setdefault(eco, []).append(item)
+            for eco, eco_items in by_eco.items():
+                total_count = sum(item.metadata.get("count", 0) for item in eco_items)
+                sig = dependency_unpinned_to_signal(
+                    eco_items,
+                    ecosystem=eco,
+                    count=total_count,
+                )
+                behav = output_behavior(sig)
+
+                if behav.creates_finding:
+                    breakdown = {
+                        **RISK_SCORE_TEMPLATE,
+                        "technical_severity": 3,
+                        "blast_radius": 3,
+                        "remediation_simplicity": -1,
+                    }
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(eco_items),
+                        locations=_locations(eco_items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Reproducibility risk is inferred from manifest evidence. "
+                            "Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown=breakdown,
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Pin dependency versions using lockfiles or exact version specifiers."
+                        ),
+                        verification_recommendations=[
+                            "Verify pinned dependencies install correctly in CI.",
+                            "Run full test suite after dependency pinning.",
+                        ],
+                        risks_and_cautions=[
+                            "Some broad ranges are intentional (monorepo shared deps).",
+                        ],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                    )
+                elif behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(eco_items),
+                        locations=_locations(eco_items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Reproducibility risk is inferred from manifest evidence. "
+                            "Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 3,
+                            "blast_radius": 3,
+                        },
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Pin dependency versions using lockfiles or exact version specifiers."
+                        ),
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
+                elif behav.appears_in_summary:
+                    # INFORMATIONAL — record signal only, no finding/advisory
+                    pass
+
+        elif signal_type == "lockfile_conflict":
+            for item in items:
+                lockfiles = item.metadata.get("lockfiles", []) if item.metadata else []
+                sig = dependency_lockfile_conflict_to_signal(
+                    items,
+                    lockfiles=lockfiles,
+                )
+                behav = output_behavior(sig)
+
+                if behav.creates_finding:
+                    breakdown = {
+                        **RISK_SCORE_TEMPLATE,
+                        "technical_severity": 2,
+                        "blast_radius": 2,
+                    }
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Build consistency risk. Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown=breakdown,
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Standardize on one package manager and remove other lockfiles. "
+                            "Add the unused lockfile to .gitignore."
+                        ),
+                        verification_recommendations=[
+                            "Verify CI uses the chosen package manager exclusively.",
+                        ],
+                        risks_and_cautions=[
+                            "Some monorepos intentionally use multiple package managers.",
+                        ],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                    )
+                elif behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Build consistency risk. Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 2,
+                            "blast_radius": 2,
+                        },
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Standardize on one package manager and remove other lockfiles. "
+                            "Add the unused lockfile to .gitignore."
+                        ),
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
+
+        elif signal_type in (
+            "poetry_manifest_without_lockfile",
+            "pipfile_without_lockfile",
+        ):
+            for item in items:
+                sig = dependency_manifest_without_lockfile_to_signal(item)
+                behav = output_behavior(sig)
+
+                if behav.creates_advisory:
+                    breakdown = {
+                        **RISK_SCORE_TEMPLATE,
+                        "technical_severity": 3,
+                        "dependency_risk": 5,
+                        "operational_exposure": 3,
+                        "business_critical_proxy": 3,
+                        "remediation_simplicity": -2,
+                    }
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Release and environment reproducibility risk is inferred "
+                            "from dependency manifest evidence."
+                        ),
+                        risk_breakdown=breakdown,
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Adopt the appropriate lockfile strategy and document "
+                            "whether applications or libraries are expected to commit lockfiles."
+                        ),
+                        verification_recommendations=[
+                            "Generate or confirm the appropriate lockfile.",
+                            "Run dependency installation in a clean environment.",
+                            "Ensure CI uses deterministic dependency installation where supported.",
+                        ],
+                        risks_and_cautions=[
+                            "Some library repositories intentionally avoid committed "
+                            "lockfiles; validate project policy.",
+                        ],
+                        confidence="High",
+                        suggested_owner_area="Product Engineering / Platform",
+                        issue_type="advisory",
+                    )
+
+        elif signal_type in (
+            "poetry_lockfile_without_manifest",
+            "pipfile_lock_without_manifest",
+        ):
+            for item in items:
+                sig = dependency_orphan_lockfile_to_signal(item)
+                behav = output_behavior(sig)
+
+                if behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Lockfile without manifest may indicate incomplete repository contents."
+                        ),
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 2,
+                            "blast_radius": 2,
+                        },
+                        remediation_effort="Small",
+                        recommended_action="Verify manifest file is present and committed.",
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="High",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
+
+        elif signal_type == "dependency_manifest_parse_failure":
+            for item in items:
+                sig = dependency_parse_failure_to_signal(item)
+                behav = output_behavior(sig)
+
+                if behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact="Parse failure limits dependency analysis coverage.",
+                        risk_breakdown={
+                            **RISK_SCORE_TEMPLATE,
+                            "technical_severity": 2,
+                            "blast_radius": 1,
+                        },
+                        remediation_effort="Small",
+                        recommended_action="Fix the manifest syntax and re-run the scan.",
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="Low",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
+
+
 def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) -> None:
     """TD-COMP: Flag potential compliance-sensitive areas without supporting controls.
 
-    Detects compliance-related keywords (PII, GDPR, HIPAA, PCI, audit, retention)
+    Detects compliance-related keywords (PII, GDPR, HIPAA, PCI, retention, patient)
     in application/domain source code. Creates a finding only when compliance-sensitive
     evidence exists in application code — NOT in scanner logic, test fixtures, docs,
     or keyword-list definitions.
     Does NOT claim legal non-compliance.
+
+    v3.17.0: Uses governed signal disposition controls promotion.
+    Adapters in security_adapters.py produce GovernedSignal instances.
+    output_behavior() controls what gets created.
     """
+    from pharabius.core.signals.policy import output_behavior
+    from pharabius.core.signals.security_adapters import (
+        security_compliance_exposure_to_signal,
+    )
+
     COMPLIANCE_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}
 
     # Paths that indicate tooling/infrastructure rather than application logic
@@ -1029,54 +1756,82 @@ def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) 
     if not comp_items:
         return
 
-    breakdown = {
-        **RISK_SCORE_TEMPLATE,
-        "technical_severity": 3,
-        "security_exposure": 3,
-        "compliance_exposure": 6,
-        "blast_radius": 3,
-        "business_critical_proxy": 5,
-        "remediation_simplicity": -1,
-    }
+    sig = security_compliance_exposure_to_signal(comp_items)
+    behav = output_behavior(sig)
 
-    builder.add(
-        category="TD-COMP",
-        title="Potential compliance exposure detected",
-        description=(
-            f"Compliance-related keywords detected in {len(comp_items)} location(s). "
-            "Areas handling PII, healthcare, financial, or regulatory data may require "
-            "additional controls, audit logging, or policy documentation."
-        ),
-        evidence_ids=_evidence_ids(comp_items),
-        locations=_locations(comp_items),
-        technical_impact=(
-            "Compliance-sensitive code areas may lack explicit data handling policies, "
-            "audit trails, or retention controls. "
-            "This is a potential exposure, not a confirmed violation."
-        ),
-        business_impact=(
-            "Compliance impact is inferred from keyword evidence. "
-            "Validate with legal/compliance teams before acting."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Medium",
-        recommended_action=(
-            "Review compliance-sensitive code areas for data handling policies, "
-            "audit logging, and retention controls. Document compliance requirements."
-        ),
-        verification_recommendations=[
-            "Verify data handling policies exist for sensitive areas.",
-            "Confirm audit logging covers compliance-relevant operations.",
-            "Review with legal/compliance team.",
-        ],
-        risks_and_cautions=[
-            "This is a potential exposure based on keyword evidence, "
-            "not a confirmed compliance gap.",
-            "Do not assume legal non-compliance without legal review.",
-        ],
-        confidence="Low",
-        suggested_owner_area="Product Engineering / Compliance",
-    )
+    if behav.creates_finding:
+        breakdown = {
+            **RISK_SCORE_TEMPLATE,
+            "technical_severity": 3,
+            "security_exposure": 3,
+            "compliance_exposure": 6,
+            "blast_radius": 3,
+            "business_critical_proxy": 5,
+            "remediation_simplicity": -1,
+        }
+
+        builder.add(
+            category=sig.category,
+            title=sig.title,
+            description=sig.summary,
+            evidence_ids=_evidence_ids(comp_items),
+            locations=_locations(comp_items),
+            technical_impact=sig.explanation,
+            business_impact=(
+                "Compliance impact is inferred from keyword evidence. "
+                "Validate with legal/compliance teams before acting."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Review compliance-sensitive code areas for data handling policies, "
+                "audit logging, and retention controls. Document compliance requirements."
+            ),
+            verification_recommendations=[
+                "Verify data handling policies exist for sensitive areas.",
+                "Confirm audit logging covers compliance-relevant operations.",
+                "Review with legal/compliance team.",
+            ],
+            risks_and_cautions=[
+                "This is a potential exposure based on keyword evidence, "
+                "not a confirmed compliance gap.",
+                "Do not assume legal non-compliance without legal review.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering / Compliance",
+        )
+    elif behav.creates_advisory:
+        builder.add(
+            category=sig.category,
+            title=sig.title,
+            description=sig.summary,
+            evidence_ids=_evidence_ids(comp_items),
+            locations=_locations(comp_items),
+            technical_impact=sig.explanation,
+            business_impact=(
+                "Compliance impact is inferred from keyword evidence. "
+                "Validate with legal/compliance teams before acting."
+            ),
+            risk_breakdown={
+                **RISK_SCORE_TEMPLATE,
+                "technical_severity": 3,
+                "compliance_exposure": 6,
+            },
+            remediation_effort="Medium",
+            recommended_action=(
+                "Review compliance-sensitive code areas for data handling policies, "
+                "audit logging, and retention controls."
+            ),
+            verification_recommendations=[],
+            risks_and_cautions=[
+                "This is a potential exposure based on keyword evidence, "
+                "not a confirmed compliance gap.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering / Compliance",
+            issue_type="advisory",
+        )
+    # INFORMATIONAL / SUPPRESSED: record signal only
 
 
 # ── TD-OPS: Operational / DevOps debt ───────────────────────────────────────
@@ -1364,7 +2119,14 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
     Only triggers when deployment/service evidence exists but no
     observability keywords are found. Conservative to avoid noise on
     libraries or simple projects.
+
+    v3.20.0: Uses governed signal disposition controls promotion.
     """
+    from pharabius.core.signals.observability_adapters import (
+        observability_missing_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
+
     OBS_KEYWORDS = {"logging", "monitoring", "tracing", "alert", "metrics"}
 
     # Need deployment/infra evidence to be relevant
@@ -1384,7 +2146,7 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
     if not deploy_artifacts and not infra_items:
         return
 
-    # Check if any observability keywords exist
+    # Check if any observability keywords exist in existing evidence
     obs_items: list[EvidenceItem] = []
     for item in store.evidence:
         if item.type != "risk_sensitive_keyword_detected":
@@ -1398,6 +2160,9 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
 
     ops_evidence = (deploy_artifacts + infra_items)[:5]
 
+    sig = observability_missing_to_signal(ops_evidence)
+    behav = output_behavior(sig)
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 3,
@@ -1407,39 +2172,75 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
         "remediation_simplicity": -2,
     }
 
-    builder.add(
-        category="TD-OBS",
-        title="Deployment without observability evidence",
-        description=(
-            "Deployment/infrastructure files detected but no logging, monitoring, "
-            "tracing, or alerting keywords found. Operational visibility may be insufficient."
-        ),
-        evidence_ids=_evidence_ids(ops_evidence),
-        locations=_locations(ops_evidence),
-        technical_impact=(
-            "Without observability, incidents are harder to detect, diagnose, and resolve. "
-            "This is inferred from missing evidence, not confirmed absence."
-        ),
-        business_impact=(
-            "Operational risk is inferred from deployment evidence. "
-            "Validate with the SRE/Platform team."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Medium",
-        recommended_action=(
-            "Add structured logging, health metrics, and alerting to deployment configurations. "
-            "Consider distributed tracing for service-oriented architectures."
-        ),
-        verification_recommendations=[
-            "Verify logging covers critical operations.",
-            "Confirm alerts fire for known failure modes.",
-        ],
-        risks_and_cautions=[
-            "Observability may exist outside repository files (managed services, SaaS tools).",
-        ],
-        confidence="Low",
-        suggested_owner_area="Platform / SRE",
-    )
+    if behav.creates_finding:
+        builder.add(
+            category="TD-OBS",
+            title="Deployment without observability evidence",
+            description=(
+                "Deployment/infrastructure files detected but no logging, monitoring, "
+                "tracing, or alerting keywords found. Operational visibility may be insufficient."
+            ),
+            evidence_ids=_evidence_ids(ops_evidence),
+            locations=_locations(ops_evidence),
+            technical_impact=(
+                "Without observability, incidents are harder to detect, diagnose, and resolve. "
+                "This is inferred from missing evidence, not confirmed absence."
+            ),
+            business_impact=(
+                "Operational risk is inferred from deployment evidence. "
+                "Validate with the SRE/Platform team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Add structured logging, health metrics, and alerting to deployment configurations. "  # noqa: E501
+                "Consider distributed tracing for service-oriented architectures."
+            ),
+            verification_recommendations=[
+                "Verify logging covers critical operations.",
+                "Confirm alerts fire for known failure modes.",
+            ],
+            risks_and_cautions=[
+                "Observability may exist outside repository files (managed services, SaaS tools).",
+            ],
+            confidence="Low",
+            suggested_owner_area="Platform / SRE",
+        )
+    elif behav.creates_advisory:
+        builder.add(
+            category="TD-OBS",
+            title="Deployment without observability evidence",
+            description=(
+                "Deployment/infrastructure files detected but no logging, monitoring, "
+                "tracing, or alerting keywords found. Operational visibility may be insufficient."
+            ),
+            evidence_ids=_evidence_ids(ops_evidence),
+            locations=_locations(ops_evidence),
+            technical_impact=(
+                "Without observability, incidents are harder to detect, diagnose, and resolve. "
+                "This is inferred from missing evidence, not confirmed absence."
+            ),
+            business_impact=(
+                "Operational risk is inferred from deployment evidence. "
+                "Validate with the SRE/Platform team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Add structured logging, health metrics, and alerting to deployment configurations. "  # noqa: E501
+                "Consider distributed tracing for service-oriented architectures."
+            ),
+            verification_recommendations=[
+                "Verify logging covers critical operations.",
+                "Confirm alerts fire for known failure modes.",
+            ],
+            risks_and_cautions=[
+                "Observability may exist outside repository files (managed services, SaaS tools).",
+            ],
+            confidence="Low",
+            suggested_owner_area="Platform / SRE",
+            issue_type="advisory",
+        )
 
 
 # ── TD-PROCESS: Repository process debt ─────────────────────────────────────
@@ -1504,6 +2305,17 @@ def _analyze_missing_process_artifacts(store: EvidenceStore, builder: FindingBui
     if len(missing) < 3:
         return
 
+    # v3.13.0: governed signal disposition check
+    from pharabius.core.signals.adapters import process_missing_artifacts_to_signal
+    from pharabius.core.signals.policy import should_create_advisory
+
+    signal = process_missing_artifacts_to_signal(
+        missing_artifacts=missing,
+        evidence_ids=_first_evidence_id(store),
+    )
+    if not should_create_advisory(signal):
+        return
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 1,
@@ -1547,15 +2359,20 @@ def _analyze_missing_process_artifacts(store: EvidenceStore, builder: FindingBui
         ],
         confidence="Low",
         suggested_owner_area="Product Engineering",
+        issue_type="advisory",
     )
 
 
 def _summarize(findings: list[DebtFinding]) -> DebtRegisterSummary:
     severity_counts = Counter(finding.severity.lower() for finding in findings)
     category_counts = Counter(finding.category for finding in findings)
+    tech_debt = sum(1 for f in findings if f.issue_type != "advisory")
+    advisory = sum(1 for f in findings if f.issue_type == "advisory")
 
     return DebtRegisterSummary(
         total_findings=len(findings),
+        technical_debt_count=tech_debt,
+        advisory_count=advisory,
         critical=severity_counts["critical"],
         high=severity_counts["high"],
         medium=severity_counts["medium"],
@@ -1568,26 +2385,82 @@ def _add_architecture_findings(
     repository_root: Path,
     builder: FindingBuilder,
 ) -> None:
-    """Convert architecture graph specs into DebtFinding entries."""
+    """Convert architecture graph specs into DebtFinding entries.
+
+    v3.18.0: Uses governed signal disposition controls promotion.
+    Routing uses spec.kind, not title text.
+    """
+    from pharabius.core.signals.architecture_adapters import (
+        architecture_boundary_violation_to_signal,
+        architecture_cycle_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
 
     specs = _analyze_architecture_graph(repository_root)
     for spec in specs:
-        builder.add(
-            category=spec.category,
-            title=spec.title,
-            description=spec.description,
-            evidence_ids=spec.evidence_ids,
-            locations=spec.locations,
-            technical_impact=spec.technical_impact,
-            business_impact=spec.business_impact,
-            risk_breakdown=spec.risk_breakdown,
-            remediation_effort=spec.remediation_effort,
-            recommended_action=spec.recommended_action,
-            verification_recommendations=spec.verification_recommendations,
-            risks_and_cautions=spec.risks_and_cautions,
-            confidence=spec.confidence,
-            suggested_owner_area=spec.suggested_owner_area,
-        )
+        kind = spec.kind
+
+        if kind == "cycle":
+            sig = architecture_cycle_to_signal(spec)
+        elif kind == "boundary_violation":
+            sig = architecture_boundary_violation_to_signal(spec)
+        else:
+            # Unknown spec kind — fall back to direct path for safety
+            builder.add(
+                category=spec.category,
+                title=spec.title,
+                description=spec.description,
+                evidence_ids=spec.evidence_ids,
+                locations=spec.locations,
+                technical_impact=spec.technical_impact,
+                business_impact=spec.business_impact,
+                risk_breakdown=spec.risk_breakdown,
+                remediation_effort=spec.remediation_effort,
+                recommended_action=spec.recommended_action,
+                verification_recommendations=spec.verification_recommendations,
+                risks_and_cautions=spec.risks_and_cautions,
+                confidence=spec.confidence,
+                suggested_owner_area=spec.suggested_owner_area,
+            )
+            continue
+
+        behav = output_behavior(sig)
+
+        if behav.creates_finding:
+            builder.add(
+                category=sig.category,
+                title=spec.title,
+                description=spec.description,
+                evidence_ids=spec.evidence_ids,
+                locations=spec.locations,
+                technical_impact=spec.technical_impact,
+                business_impact=spec.business_impact,
+                risk_breakdown=spec.risk_breakdown,
+                remediation_effort=spec.remediation_effort,
+                recommended_action=spec.recommended_action,
+                verification_recommendations=spec.verification_recommendations,
+                risks_and_cautions=spec.risks_and_cautions,
+                confidence=spec.confidence,
+                suggested_owner_area=spec.suggested_owner_area,
+            )
+        elif behav.creates_advisory:
+            builder.add(
+                category=sig.category,
+                title=spec.title,
+                description=spec.description,
+                evidence_ids=spec.evidence_ids,
+                locations=spec.locations,
+                technical_impact=spec.technical_impact,
+                business_impact=spec.business_impact,
+                risk_breakdown=spec.risk_breakdown,
+                remediation_effort=spec.remediation_effort,
+                recommended_action=spec.recommended_action,
+                verification_recommendations=spec.verification_recommendations,
+                risks_and_cautions=spec.risks_and_cautions,
+                confidence=spec.confidence,
+                suggested_owner_area=spec.suggested_owner_area,
+                issue_type="advisory",
+            )
 
 
 def _apply_enhanced_scoring(root: Path, findings: list[DebtFinding]) -> None:
@@ -1642,6 +2515,79 @@ def _apply_enhanced_scoring(root: Path, findings: list[DebtFinding]) -> None:
         finding.priority = _score(breakdown)[1]
 
 
+_SEVERITY_RANK = {"Low": 1, "Medium": 2, "High": 3, "Critical": 4}
+
+
+def _dedupe_key(f: DebtFinding) -> tuple[str, str, tuple[str, ...]]:
+    """Deterministic deduplication key: category + normalized title + sorted locations."""
+    locations = tuple(sorted(set(f.locations or [])))
+    normalized_title = " ".join(f.title.lower().split())
+    return (f.category, normalized_title, locations)
+
+
+def _deduplicate_findings(findings: list[DebtFinding]) -> list[DebtFinding]:
+    """Deterministic deduplication by category + normalized title + sorted locations.
+
+    Merge rules:
+    - Keep all evidence_ids (union, order-preserving, deduplicated)
+    - Keep all locations (union, order-preserving, deduplicated)
+    - Choose base by highest risk_score (best explanatory detail)
+    - Explicitly preserve highest severity across ALL group members
+    - Explicitly preserve highest risk_score across ALL group members
+    - Store merged-away finding IDs in related_findings
+
+    This ensures a Critical-severity finding with risk_score=10 is never
+    downgraded when merged with a Medium-severity finding with risk_score=30.
+    """
+    groups: dict[tuple, list[DebtFinding]] = {}
+    group_order: list[tuple] = []
+
+    for f in findings:
+        key = _dedupe_key(f)
+        if key not in groups:
+            groups[key] = []
+            group_order.append(key)
+        groups[key].append(f)
+
+    merged: list[DebtFinding] = []
+    for key in group_order:
+        group = groups[key]
+        if len(group) == 1:
+            merged.append(group[0])
+            continue
+
+        # Base: highest risk_score (best explanatory detail for the finding body)
+        base = max(group, key=lambda f: int(f.risk_score or 0))
+
+        # Explicitly enforce: highest severity across ALL group members
+        highest_severity = max(
+            (f.severity for f in group),
+            key=lambda s: _SEVERITY_RANK.get(s, 0),
+        )
+        # Explicitly enforce: highest risk_score across ALL group members
+        highest_risk_score = max(int(f.risk_score or 0) for f in group)
+
+        all_evidence = list(dict.fromkeys(eid for f in group for eid in f.evidence_ids))
+        all_locations = list(dict.fromkeys(loc for f in group for loc in (f.locations or [])))
+        all_related = list(dict.fromkeys(f.id for f in group if f.id != base.id))
+
+        merged.append(
+            base.model_copy(
+                update={
+                    "severity": highest_severity,
+                    "risk_score": highest_risk_score,
+                    "evidence_ids": all_evidence,
+                    "locations": all_locations or None,
+                    "related_findings": list(
+                        dict.fromkeys((base.related_findings or []) + all_related)
+                    ),
+                }
+            )
+        )
+
+    return merged
+
+
 def analyze_evidence(repository_root: Path) -> DebtRegister:
     root = repository_root.resolve()
     store = _load_evidence_store(root)
@@ -1658,6 +2604,11 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
     # Taxonomy closure (v0.10.0)
     _analyze_large_files(store, builder)
     _analyze_debt_markers(store, builder)
+    _analyze_long_functions(store, builder)
+    _analyze_broad_exceptions(store, builder)
+    _analyze_coverage_gaps(store, builder)
+    _analyze_dependency_signals(store, builder)
+    _analyze_runtime_version_signals(store, builder)
     _analyze_compliance_keywords(store, builder)
     _analyze_deployment_without_healthchecks(store, builder)
     _analyze_data_migration_risk(store, builder)
@@ -1673,6 +2624,9 @@ def analyze_evidence(repository_root: Path) -> DebtRegister:
         key=lambda finding: finding.risk_score,
         reverse=True,
     )
+
+    # Deterministic deduplication (v3.1.0)
+    findings = _deduplicate_findings(findings)
 
     # Enhanced risk scoring (v1.5) — opt-in only
     _apply_enhanced_scoring(root, findings)

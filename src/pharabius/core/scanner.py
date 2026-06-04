@@ -1,13 +1,35 @@
 from __future__ import annotations
 
-import json
 import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
+from pharabius.core.constants import (
+    COMPLETENESS_PARTIAL,
+    COMPLETENESS_SKIPPED,
+    COVERAGE_PATTERNS,
+    EVIDENCE_BROAD_EXCEPTION,
+    EVIDENCE_DEBT_MARKER,
+    EVIDENCE_LARGE_FILE,
+    EVIDENCE_LONG_FUNCTION,
+    EVIDENCE_SOURCE_FILE_SKIPPED,
+    LARGE_FILE_LINE_THRESHOLD,
+    LONG_FUNCTION_LINE_THRESHOLD,
+    OBSERVATION_STRENGTH_HEURISTIC,
+    OBSERVATION_STRENGTH_LIMITATION,
+    PARSER_BUILTIN_REGEX,
+    PARSER_FILESYSTEM,
+    READ_MODE_SKIPPED,
+    READ_MODE_TEXT,
+)
 from pharabius.core.exclusions import EXCLUDED_DIR_NAMES, is_excluded_path
-from pharabius.schemas.evidence import EvidenceItem, EvidenceLocation, EvidenceStore
+from pharabius.schemas.evidence import (
+    EvidenceBuilder,
+    EvidenceStore,
+)
+
+_DEBT_MARKER_RE = re.compile(r"\b(todo|fixme|hack|xxx)\b", re.IGNORECASE)
 
 SOURCE_EXTENSIONS = {
     ".py",
@@ -178,8 +200,16 @@ _RUST_GROUPED_USE = re.compile(r"^\s*use\s+([\w:]+)::\{([^}]+)\}\s*;", re.MULTIL
 _RUST_LINE_COMMENT = re.compile(r"^\s*//")
 
 
+from pharabius.core.io_helpers import read_json, read_text  # noqa: E402
+from pharabius.core.path_utils import (  # noqa: E402
+    path_matches_exact_or_suffix,
+    relative_repo_path,
+)
+
+
+# Keep _relative as thin wrapper for backward compatibility with call sites
 def _relative(path: Path, root: Path) -> str:
-    return path.relative_to(root).as_posix()
+    return relative_repo_path(path, root)
 
 
 def _is_excluded(
@@ -230,22 +260,11 @@ def _iter_files(
 
 
 def _read_text(path: Path, max_chars: int = 100_000) -> str:
-    try:
-        return path.read_text(encoding="utf-8", errors="ignore")[:max_chars]
-    except Exception:
-        return ""
+    return read_text(path, max_chars=max_chars)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-    if isinstance(value, dict):
-        return value
-
-    return {}
+    return read_json(path)
 
 
 def _is_test_path(path: Path, root: Path) -> bool:
@@ -504,46 +523,133 @@ def _git_value(root: Path, command: list[str]) -> str:
     return result.stdout.strip()
 
 
-class EvidenceBuilder:
-    def __init__(self) -> None:
-        self._counter = 0
-        self.items: list[EvidenceItem] = []
+def _debt_markers_in_text(text: str) -> dict[str, int]:
+    """Count debt-marker occurrences (TODO/FIXME/HACK/XXX) in source text.
 
-    def add(
-        self,
-        *,
-        type_: str,
-        category: str,
-        summary: str,
-        location_file: str = "",
-        line_start: int | None = None,
-        line_end: int | None = None,
-        subject: str = "",
-        object_: str = "",
-        raw_observation: str = "",
-        confidence: str = "Medium",
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
-        self._counter += 1
+    Returns {"todo": 5, "fixme": 3, ...} — occurrence counts, not just presence.
+    """
+    counts: dict[str, int] = {}
+    for match in _DEBT_MARKER_RE.finditer(text):
+        marker = match.group(1).lower()
+        counts[marker] = counts.get(marker, 0) + 1
+    return counts
 
-        item = EvidenceItem(
-            evidence_id=f"EVD-{self._counter:06d}",
-            type=type_,
-            category=category,
-            location=EvidenceLocation(
-                file=location_file,
-                line_start=line_start,
-                line_end=line_end,
-            ),
-            subject=subject,
-            object=object_,
-            summary=summary,
-            raw_observation=raw_observation,
-            confidence=confidence,
-            metadata=metadata or {},
-        )
 
-        self.items.append(item)
+def _detect_long_python_functions(
+    text: str,
+    relative: str,
+    builder: EvidenceBuilder,
+) -> None:
+    """Detect Python functions exceeding LONG_FUNCTION_LINE_THRESHOLD.
+
+    Uses indentation-based span counting. Only applies to .py files.
+    Observation strength is heuristic — not AST-grade certainty.
+    End detection prefers next nonblank line at same or lesser indent
+    for better accuracy than simple next-function-start.
+    """
+    lines = text.split("\n")
+    func_starts: list[tuple[int, int, str]] = []  # (line_index, indent, name)
+
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(stripped)
+        if stripped.startswith(("def ", "async def ")):
+            # Extract function name
+            def_line = stripped.split("(")[0]
+            name = def_line.replace("def ", "").replace("async ", "").strip()
+            func_starts.append((i, indent, name))
+
+    for _start_idx, (start_line, base_indent, func_name) in enumerate(func_starts):
+        # Find end: next nonblank line at same or lesser indent, or next function start
+        end_line = len(lines) - 1
+        # First try: next nonblank line at <= base_indent
+        found_end = False
+        for j in range(start_line + 1, len(lines)):
+            stripped = lines[j].lstrip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            current_indent = len(lines[j]) - len(stripped)
+            if current_indent <= base_indent:
+                end_line = j - 1
+                found_end = True
+                break
+        if not found_end:
+            end_line = len(lines) - 1
+
+        func_lines = end_line - start_line + 1
+        if func_lines >= LONG_FUNCTION_LINE_THRESHOLD:
+            builder.add(
+                type_=EVIDENCE_LONG_FUNCTION,
+                category="code_structure",
+                summary=(f"Long function {func_name} spans {func_lines} lines in {relative}"),
+                location_file=relative,
+                subject=func_name,
+                raw_observation=f"{func_name}:{func_lines}lines",
+                confidence="Medium",
+                metadata={
+                    "function_name": func_name,
+                    "line_start": start_line + 1,
+                    "line_end": end_line + 1,
+                    "line_count": func_lines,
+                    "threshold": LONG_FUNCTION_LINE_THRESHOLD,
+                    "language": "python",
+                    "observation_strength": OBSERVATION_STRENGTH_HEURISTIC,
+                    "completeness": COMPLETENESS_PARTIAL,
+                    "parser": PARSER_BUILTIN_REGEX,
+                    "read_mode": READ_MODE_TEXT,
+                },
+            )
+
+
+def _detect_broad_exceptions(
+    text: str,
+    relative: str,
+    builder: EvidenceBuilder,
+) -> None:
+    """Detect bare except / catch-all patterns in source code.
+
+    Supports Python, JavaScript/TypeScript, and Java patterns.
+    """
+    BROAD_PATTERNS: list[tuple[str, str]] = [
+        (r"^\s*except\s*:", "python_bare_except"),
+        (r"^\s*except\s+Exception\s*[:\[]", "python_exception_catch"),
+        (r"^\s*except\s+BaseException\s*:", "python_base_exception"),
+        (r"catch\s*\(\s*\w*\s*\)\s*\{", "js_catch_all"),
+        (r"catch\s*\(\s*Exception\s+\w+\s*\)", "java_exception_catch"),
+        (r"catch\s*\(\s*Throwable\s+\w+\s*\)", "java_throwable_catch"),
+    ]
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        for pattern, label in BROAD_PATTERNS:
+            if re.search(pattern, line):
+                builder.add(
+                    type_=EVIDENCE_BROAD_EXCEPTION,
+                    category="code_structure",
+                    summary=(f"Broad exception handler ({label}) in {relative} line {i + 1}"),
+                    location_file=relative,
+                    subject=relative,
+                    raw_observation=f"{label}:line{i + 1}",
+                    confidence="Medium",
+                    metadata={
+                        "pattern": label,
+                        "line_number": i + 1,
+                        "observation_strength": OBSERVATION_STRENGTH_HEURISTIC,
+                        "completeness": COMPLETENESS_PARTIAL,
+                        "parser": PARSER_BUILTIN_REGEX,
+                        "read_mode": READ_MODE_TEXT,
+                    },
+                )
+                break  # one detection per line
+
+
+from pharabius.core.coverage_parsers import scan_coverage_artifact  # noqa: E402
+from pharabius.core.dependency_parsers import (  # noqa: E402
+    scan_dependency_manifest,
+    scan_repository_dependency_consistency,
+)
+from pharabius.core.runtime_parsers import detect_runtime_version_pins  # noqa: E402
 
 
 def scan_repository(
@@ -595,6 +701,21 @@ def scan_repository(
             confidence="High",
         )
 
+    # Repository-level dependency signals
+    scan_repository_dependency_consistency(root, builder)
+
+    # Runtime version pinning (v3.3.0)
+    detect_runtime_version_pins(root, builder)
+
+    # Repository-level coverage artifact scanning (v3.2.0)
+    # Coverage dirs are normally excluded, so we scan them separately
+    for pattern, format_type in COVERAGE_PATTERNS.items():
+        parts = pattern.split("/")
+        candidate = root / Path(*parts)
+        if candidate.exists() and candidate.is_file():
+            rel = _relative(candidate, root)
+            scan_coverage_artifact(candidate, rel, format_type, builder)
+
     for file_path in files:
         relative = _relative(file_path, root)
 
@@ -612,6 +733,36 @@ def scan_repository(
             },
         )
 
+        # Size-based skip for source files (v3.2.0)
+        if max_file_size_kb is not None and file_path.suffix in SOURCE_EXTENSIONS:
+            try:
+                size_kb = file_path.stat().st_size / 1024
+            except OSError:
+                size_kb = 0
+            if size_kb > max_file_size_kb:
+                builder.add(
+                    type_=EVIDENCE_SOURCE_FILE_SKIPPED,
+                    category="scanner_limit",
+                    summary=(
+                        f"Source file skipped: {relative} "
+                        f"({size_kb:.0f} KB exceeds {max_file_size_kb} KB limit)"
+                    ),
+                    location_file=relative,
+                    subject=relative,
+                    raw_observation=f"skipped:{size_kb:.0f}kb>max:{max_file_size_kb}kb",
+                    confidence="High",
+                    metadata={
+                        "size_kb": round(size_kb, 1),
+                        "max_file_size_kb": max_file_size_kb,
+                        "reason": "file_size_limit",
+                        "observation_strength": OBSERVATION_STRENGTH_LIMITATION,
+                        "completeness": COMPLETENESS_SKIPPED,
+                        "parser": PARSER_FILESYSTEM,
+                        "read_mode": READ_MODE_SKIPPED,
+                    },
+                )
+                continue  # Skip all content scanning for this file
+
         if file_path.name in MANIFEST_FILES:
             builder.add(
                 type_="manifest_detected",
@@ -624,6 +775,9 @@ def scan_repository(
                 confidence="High",
                 metadata={"manifest_type": MANIFEST_FILES[file_path.name]},
             )
+
+            # Dependency signal: unpinned deps
+            scan_dependency_manifest(file_path, relative, builder)
 
         # Suffix-based manifest detection (.NET project files)
         if file_path.suffix in MANIFEST_SUFFIXES:
@@ -692,6 +846,14 @@ def scan_repository(
                 raw_observation=relative,
                 confidence="High",
             )
+
+        # Coverage report detection (v3.2.0) — handles files NOT in excluded dirs
+        for pattern, format_type in COVERAGE_PATTERNS.items():
+            if path_matches_exact_or_suffix(relative, pattern):
+                scan_coverage_artifact(file_path, relative, format_type, builder)
+                break
+                break
+                break
 
         if _is_test_path(file_path, root):
             builder.add(
@@ -769,6 +931,49 @@ def scan_repository(
                     confidence="Medium",
                     metadata={"keywords": text_keywords[:50]},
                 )
+
+            # Debt marker detection (occurrence-counting, not just unique names)
+            if file_path.suffix in SOURCE_EXTENSIONS:
+                marker_counts = _debt_markers_in_text(text)
+                total_marker_count = sum(marker_counts.values())
+                if total_marker_count:
+                    builder.add(
+                        type_=EVIDENCE_DEBT_MARKER,
+                        category="code_quality",
+                        summary=f"Debt markers detected in {relative}",
+                        location_file=relative,
+                        subject=relative,
+                        raw_observation=", ".join(
+                            f"{marker}:{count}" for marker, count in sorted(marker_counts.items())
+                        ),
+                        confidence="High",
+                        metadata={
+                            "marker_counts": marker_counts,
+                            "total_count": total_marker_count,
+                        },
+                    )
+
+            # Large file detection for source files
+            if file_path.suffix in SOURCE_EXTENSIONS:
+                line_count = text.count("\n") + 1
+                if line_count >= LARGE_FILE_LINE_THRESHOLD:
+                    builder.add(
+                        type_=EVIDENCE_LARGE_FILE,
+                        category="code_structure",
+                        summary=f"Large source file: {relative} ({line_count} lines)",
+                        location_file=relative,
+                        subject=relative,
+                        raw_observation=f"{line_count} lines",
+                        confidence="High",
+                        metadata={"line_count": line_count},
+                    )
+
+            # Long function detection (Python only for v3.2.0)
+            if file_path.suffix == ".py":
+                _detect_long_python_functions(text, relative, builder)
+
+            # Broad exception detection
+            _detect_broad_exceptions(text, relative, builder)
 
         imports = _extract_imports(file_path)
         if imports:

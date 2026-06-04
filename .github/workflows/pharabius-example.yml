@@ -22,11 +22,14 @@ jobs:
         uses: ./
         with:
           command: run+gate
+          mode: advisory
           max-critical: "0"
           sarif-output: pharabius.sarif
+          generate-sarif: "true"
 
       - name: Upload SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true  # SARIF processing may fail for repos without Code Scanning
         with:
-          sarif_file: pharabius.sarif
+          sarif_file: .ai-debt/reports/findings.sarif

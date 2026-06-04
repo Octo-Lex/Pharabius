@@ -17,7 +17,7 @@ class Base(DeclarativeBase):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(microsecond=0)
+    return datetime.now(UTC)
 
 
 def _uuid() -> uuid.UUID:
@@ -96,6 +96,9 @@ class Run(Base):
     low: Mapped[int] = mapped_column(Integer, default=0)
     readiness_status: Mapped[str] = mapped_column(String(50), default="unknown")
     gate_result: Mapped[str] = mapped_column(String(20), default="unknown")
+    commit_sha: Mapped[str] = mapped_column(String(40), default="")
+    branch_name: Mapped[str] = mapped_column(String(255), default="")
+    analysis_mode: Mapped[str] = mapped_column(String(50), default="baseline")
 
     bundle: Mapped[ArtifactBundle] = relationship(back_populates="runs")
     repository: Mapped[Repository] = relationship(back_populates="runs")
@@ -294,3 +297,70 @@ class EvidenceRecord(Base):
 
     repository = relationship("Repository")
     run = relationship("Run")
+
+
+class WorkPackage(Base):
+    """Persisted work package from .ai-debt/work-packages/*.md.
+
+    Work packages are run-scoped: UNIQUE(repository_id, run_id, package_id).
+    Evidence basis is derived through linked findings, not stored directly.
+    """
+
+    __tablename__ = "work_packages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    repository_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("repositories.id"), nullable=False, index=True
+    )
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("runs.id"), nullable=False, index=True
+    )
+    package_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    objective: Mapped[str] = mapped_column(Text, default="")
+    current_risk: Mapped[str] = mapped_column(Text, default="")
+    recommended_engineering_approach: Mapped[list[str] | None] = mapped_column(JSON, default=list)
+    expected_affected_areas: Mapped[list[str] | None] = mapped_column(JSON, default=list)
+    preconditions: Mapped[list[str] | None] = mapped_column(JSON, default=list)
+    verification_recommendations: Mapped[list[str] | None] = mapped_column(JSON, default=list)
+    risks_and_cautions: Mapped[list[str] | None] = mapped_column(JSON, default=list)
+    definition_of_done: Mapped[list[str] | None] = mapped_column(JSON, default=list)
+    estimated_effort: Mapped[str] = mapped_column(String(100), default="")
+    expected_risk_reduction: Mapped[str] = mapped_column(String(100), default="")
+    suggested_owner_area: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(100), default="")
+    declared_evidence_ids: Mapped[list[str] | None] = mapped_column(JSON, default=list)
+    raw_payload: Mapped[dict[str, object] | None] = mapped_column(JSON, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    repository = relationship("Repository")
+    run = relationship("Run")
+    finding_links = relationship(
+        "WorkPackageFinding", back_populates="work_package", cascade="all, delete-orphan"
+    )
+
+
+class WorkPackageFinding(Base):
+    """Link table: work package → finding with resolution status.
+
+    finding_id is NULLABLE: missing/malformed linked findings are preserved
+    as first-class rows, not dropped.
+    Malformed debt_item_id values normalized to __malformed__:{index}.
+    UNIQUE(work_package_id, debt_item_id).
+    """
+
+    __tablename__ = "work_package_findings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    work_package_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("work_packages.id"), nullable=False, index=True
+    )
+    finding_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("findings.id"), nullable=True
+    )
+    debt_item_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    resolution_status: Mapped[str] = mapped_column(String(30), default="unresolved")
+    reason: Mapped[str | None] = mapped_column(Text, default=None)
+
+    work_package = relationship("WorkPackage", back_populates="finding_links")
+    finding = relationship("Finding")

@@ -82,6 +82,7 @@ KNOWN_DIRS = {
     "review",
     "ticket-drafts",
     "export-bundles",
+    "exports/governance-summary.json",
     "portfolio",
     "claims",
     "traceability",

@@ -1,0 +1,8 @@
+{
+  "description": "PHP: exact version in composer.json → MANIFEST_PIN, no conflict",
+  "files": {
+    "composer.json": "{\"require\": {\"php\": \"8.2.12\"}}"
+  },
+  "expected_conflicts": [],
+  "expected_advisories": []
+}

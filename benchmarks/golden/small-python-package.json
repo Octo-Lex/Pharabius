@@ -1,0 +1,40 @@
+{
+  "fixture": "small-python-package",
+  "pharabius_version": "3.0.0",
+  "volatile_fields_ignored": [
+    "generated_at",
+    "run_id",
+    "repository"
+  ],
+  "path_normalization": "strip absolute prefix",
+  "expected": {
+    "finding_count_min": 5,
+    "finding_count_max": 9,
+    "categories": [
+      "TD-BUILD",
+      "TD-DEP",
+      "TD-DOC",
+      "TD-PROCESS",
+      "TD-TEST"
+    ],
+    "evidence_count_min": 3,
+    "work_package_count_min": 0,
+    "claim_count_min": 0,
+    "severity_distribution": {
+      "critical_max": 1,
+      "high_max": 2,
+      "medium_min": 2
+    },
+    "risk_score_range": {
+      "min": 3,
+      "max": 17
+    },
+    "traceability_grade_allowed": [
+      "partial",
+      "usable",
+      "complete",
+      "weak"
+    ],
+    "history_snapshot_enriched": true
+  }
+}
