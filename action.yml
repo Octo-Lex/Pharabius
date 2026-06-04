@@ -49,7 +49,7 @@ runs:
   steps:
     - name: Install Pharabius
       shell: bash
-      run: pip install "pharabius==${{ inputs.pharabius-version }}"
+      run: pip install -e .
 
     - name: Run analysis
       if: inputs.command == 'run' || inputs.command == 'run+gate'
