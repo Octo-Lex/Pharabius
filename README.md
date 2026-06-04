@@ -94,6 +94,18 @@ Five bundled governance presets are available:
 
 See `docs/PRESET_REFERENCE.md` for details.
 
+## Known Gaps
+
+Pharabius is a mature CLI engine with an early-stage platform. Current limitations:
+
+- **No external scanner connectors** — No SAST/DAST/SBOM integration (Semgrep, CodeQL, Trivy, etc.)
+- **No live ticket sync** — No Jira, Linear, or GitHub Issues integration
+- **Platform frontend is prototype-grade** — 28 tests pass, build succeeds, but 5 pre-existing TypeScript errors in test mocks
+- **No portfolio governance** — Multi-repo governance workflows not implemented
+- **Runtime governance is limited** — `AIBudget` handles context assembly only; no Schema-Budget Coupling
+
+See `docs/PROJECT_STATUS.md` for the full maturity assessment.
+
 ## Documentation
 
 | Document | Description |
@@ -111,4 +123,5 @@ See `docs/PRESET_REFERENCE.md` for details.
 | [V4 Readiness](docs/V4_READINESS.md) | v4 direction options |
 | [Architecture](docs/ARCHITECTURE.md) | Module structure and import contract |
 | [Known Limitations](docs/KNOWN_LIMITATIONS.md) | Honest constraints of current version |
+| [Operating Doctrine](docs/OPERATING_DOCTRINE.md) | Release process and wave execution rules |
 | [Roadmap](docs/ROADMAP.md) | Release history and future work |
