@@ -1011,9 +1011,161 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
 
     lines.extend([
         "",
-        "> Findings are promoted into the technical debt register.",
-        "> Advisories are reportable but do not generate work packages.",
-        "> Informational signals provide context and coverage visibility.",
-        "> Suppressed signals are omitted from normal reports unless diagnostics are enabled.",
+        "> Findings are promoted into the technical debt register and may create work packages.",
+        "> Advisories are reportable warnings but do not create work packages.",
+        "> Informational signals provide context and coverage visibility; they are not remediation items.",
+        "> Suppressed signals are diagnostics-only and excluded from normal summaries unless diagnostics are enabled.",
+        ">",
+        "> Category describes the finding taxonomy (e.g., TD-ARCH, TD-DEP).",
+        "> Family describes the governance owner (e.g., Architecture, Dependency).",
+        "> They are usually aligned, but not always identical.",
         "",
     ])
+
+    # ── Governance quality metrics (v3.23.0) ──
+    from pharabius.core.signals.quality import build_governance_quality_metrics
+
+    metrics = build_governance_quality_metrics(signals)
+
+    lines.extend([
+        "",
+        "## 6e. Governance Quality Metrics",
+        "",
+        "These metrics describe the governed signal surface. They do not change",
+        "findings, advisories, risk scores, or work-package generation.",
+        "",
+        "| Metric | Value |",
+        "|---|---:|",
+        f"| Total governed signals | {metrics.total_signals} |",
+        f"| Finding evidence coverage | {metrics.finding_evidence_coverage:.0%} |",
+        f"| Finding metadata coverage | {metrics.finding_metadata_coverage:.0%} |",
+        f"| Advisory evidence/basis coverage | {metrics.advisory_evidence_coverage:.0%} |",
+        f"| Informational evidence coverage | {metrics.informational_evidence_coverage:.0%} |",
+        "",
+        "> No quality gates are applied.",
+        "> No signal is promoted or demoted by these metrics.",
+        "",
+    ])
+
+    # ── Governance quality trends (v3.24.0) ──
+    # Compute trend from run-history if available
+    try:
+        from pharabius.core.run_history import build_run_history_index, _load_json
+        from pharabius.core.signals.trends import (
+            build_governance_trend_summary,
+            format_coverage_delta,
+            format_count_delta,
+            governance_trend_to_dict,
+        )
+
+        workspace = ctx.repository_root / ".ai-debt"
+        index = build_run_history_index(workspace)
+        runs = index.get("runs", [])
+
+        # Load snapshots with governance_quality
+        snapshots = []
+        for r in reversed(runs):
+            snap = _load_json(workspace / "runs" / f"{r.get('run_id', '')}-history-snapshot.json")
+            if snap and snap.get("governance_quality") is not None:
+                snapshots.insert(0, snap)  # maintain chronological order
+                if len(snapshots) >= 2:
+                    break
+
+        trend = build_governance_trend_summary(snapshots)
+    except Exception:
+        trend = None
+
+    if trend and trend.unavailable_reason is None:
+        lines.extend([
+            "",
+            "## 6f. Governance Quality Trends",
+            "",
+            "These trends compare governance quality metrics across recent runs. They are",
+            "descriptive only; no quality gates, thresholds, or pass/fail rules are applied.",
+            "",
+            "| Metric | Previous | Current | Change |",
+            "|---|---:|---:|---:|",
+            f"| Total governed signals | {trend.signal_count_delta.previous or 0} | {trend.signal_count_delta.current} | {format_count_delta(trend.signal_count_delta)} |",
+            f"| Finding evidence coverage | {(trend.finding_evidence_coverage_delta.previous or 1.0):.0%} | {trend.finding_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.finding_evidence_coverage_delta)} |",
+            f"| Advisory evidence/basis coverage | {(trend.advisory_evidence_coverage_delta.previous or 1.0):.0%} | {trend.advisory_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.advisory_evidence_coverage_delta)} |",
+            f"| Informational evidence coverage | {(trend.informational_evidence_coverage_delta.previous or 1.0):.0%} | {trend.informational_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.informational_evidence_coverage_delta)} |",
+            "",
+        ])
+
+        # Family breakdown if deltas exist
+        if trend.by_family_delta:
+            lines.extend([
+                "| Family | Signals (prev) | Signals (curr) | Change |",
+                "|---|---:|---:|---:|",
+            ])
+            for fam, delta in sorted(trend.by_family_delta.items()):
+                lines.append(
+                    f"| {fam.title()} | {delta.previous or 0} | {delta.current} | {format_count_delta(delta)} |"
+                )
+            lines.append("")
+
+        # Recurring diagnostics
+        if trend.recurring_diagnostics:
+            lines.extend([
+                "| Diagnostic | Family | Runs | Latest severity |",
+                "|---|---|---:|---|",
+            ])
+            for diag in trend.recurring_diagnostics:
+                lines.append(
+                    f"| {diag.code} | {diag.family or '-'} | {diag.occurrences} | {diag.latest_severity} |"
+                )
+            lines.append("")
+    elif trend and trend.unavailable_reason:
+        lines.extend([
+            "",
+            "## 6f. Governance Quality Trends",
+            "",
+            f"{trend.unavailable_reason}",
+            "",
+        ])
+
+    # ── Governance quality trend (v3.24.0) ──
+    from pharabius.core.run_history import _load_previous_governance_quality
+    from pharabius.core.signals.quality import (
+        build_governance_quality_trend as _build_trend,
+    )
+    try:
+        _ws = ctx.repository_root / ".ai-debt"
+        _prev_gq = _load_previous_governance_quality(_ws)
+        _trend = _build_trend(current=metrics, previous=_prev_gq)
+    except Exception:
+        _trend = None
+
+    if _trend and _trend.has_previous:
+        lines.extend([
+            "",
+            "## 6f. Governance Quality Trend",
+            "",
+            "Trend deltas compare current run to the immediately previous snapshot.",
+            "They are descriptive only and do not influence any behavior.",
+            "",
+            "| Metric | Delta |",
+            "|--------|------:|",
+            f"| Total Signals | {_trend.total_signals_delta:+d} |",
+            f"| Evidence Coverage | {_trend.evidence_coverage_delta:+.4f} |",
+            f"| Metadata Coverage | {_trend.metadata_coverage_delta:+.4f} |",
+            f"| Finding Evidence Coverage | {_trend.finding_evidence_coverage_delta:+.4f} |",
+            f"| Advisory Basis Coverage | {_trend.advisory_basis_coverage_delta:+.4f} |",
+            f"| Diagnostic Count | {_trend.diagnostic_count_delta:+d} |",
+            "",
+            "> No quality gates are applied.",
+            "> No thresholds are enforced.",
+            "> Trend deltas are descriptive only.",
+            "",
+        ])
+    else:
+        lines.extend([
+            "",
+            "## 6f. Governance Quality Trend",
+            "",
+            "No previous governance quality snapshot available.",
+            "",
+            "> No quality gates are applied.",
+            "> No thresholds are enforced.",
+            "",
+        ])
