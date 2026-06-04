@@ -25,9 +25,7 @@ import pytest
 from benchmarks.fixture_builder import BenchmarkFixture, build_all_fixtures
 from benchmarks.rubric import (
     QUALITY_TARGETS,
-    RUBRIC_CRITERIA,
     compute_fixture_quality,
-    score_finding,
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -141,7 +139,7 @@ class TestGoldenBounds:
         fixtures = build_all_fixtures(tmp_path)
         result = _run_pipeline(fixtures["medium-python-service"])
         golden = self._load_golden(golden_dir, "medium-python-service")
-        actual_cats = set(str(f.get("category", "")) for f in result["findings"])
+        actual_cats = {str(f.get("category", "")) for f in result["findings"]}
         for cat in golden["expected"]["categories"]:
             assert cat in actual_cats, f"Expected category {cat} not found"
 
@@ -163,14 +161,14 @@ class TestGoldenBounds:
         fixtures = build_all_fixtures(tmp_path)
         result = _run_pipeline(fixtures["coverage-heavy"])
         cov_types = {"coverage_report_detected", "coverage_metric_detected"}
-        actual_types = set(str(e.get("type", "")) for e in result["evidence_items"])
+        actual_types = {str(e.get("type", "")) for e in result["evidence_items"]}
         assert actual_types & cov_types, "Expected coverage evidence not found"
 
     def test_medium_node_dep_signals(self, tmp_path):
         fixtures = build_all_fixtures(tmp_path)
         result = _run_pipeline(fixtures["medium-node-app"])
         dep_types = {"dependency_health_signal"}
-        actual_types = set(str(e.get("type", "")) for e in result["evidence_items"])
+        actual_types = {str(e.get("type", "")) for e in result["evidence_items"]}
         assert actual_types & dep_types, "Expected dependency signal not found"
 
 

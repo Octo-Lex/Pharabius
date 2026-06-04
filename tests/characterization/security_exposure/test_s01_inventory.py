@@ -3,7 +3,7 @@
 These tests lock down the CURRENT behavior of security-exposure analysis
 before migration to governed signals. Every output field is captured.
 
-After migration (S02–S04), these same tests must pass with identical output.
+After migration (S02-S04), these same tests must pass with identical output.  # noqa: RUF002
 Field-level comparison uses assert_finding_unchanged() for explicit verification.
 
 Boundary: _analyze_risk_sensitive_without_tests is already governed under
@@ -205,7 +205,7 @@ class TestComplianceKeywordsInventory:
 class TestComplianceKeywordSet:
     """Verify the exact compliance keyword set from the analyzer."""
 
-    EXACT_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}
+    EXACT_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}  # noqa: RUF012
 
     @pytest.mark.parametrize("keyword", list(EXACT_KEYWORDS))
     def test_keyword_creates_compliance_finding(self, tmp_path: Path, keyword: str) -> None:

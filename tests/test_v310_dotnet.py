@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pharabius.core.runtime.dotnet import detect_dotnet_sources
-from pharabius.core.runtime.models import RuntimeConstraintKind, RuntimeEcosystem
+from pharabius.core.runtime.models import RuntimeConstraintKind
 
 
 class TestDotnetSources:

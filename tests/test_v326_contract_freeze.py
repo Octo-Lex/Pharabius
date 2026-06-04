@@ -40,21 +40,21 @@ from pharabius.core.signals.trends import (
 
 
 def _sig(**kwargs):
-    defaults = dict(
-        signal_id="test-sig",
-        family=SignalFamily.RUNTIME,
-        kind="test",
-        disposition=SignalDisposition.FINDING,
-        category="TD-TEST",
-        severity="Medium",
-        confidence="High",
-        evidence_ids=["ev1"],
-        source_signal_ids=[],
-        title="Test",
-        summary="Test",
-        explanation="Test",
-        metadata={"spec_kind": "test"},
-    )
+    defaults = {
+        "signal_id": "test-sig",
+        "family": SignalFamily.RUNTIME,
+        "kind": "test",
+        "disposition": SignalDisposition.FINDING,
+        "category": "TD-TEST",
+        "severity": "Medium",
+        "confidence": "High",
+        "evidence_ids": ["ev1"],
+        "source_signal_ids": [],
+        "title": "Test",
+        "summary": "Test",
+        "explanation": "Test",
+        "metadata": {"spec_kind": "test"},
+    }
     defaults.update(kwargs)
     return GovernedSignal(**defaults)
 
@@ -371,7 +371,7 @@ class TestNonPolicyBoundary:
     def test_export_json_no_forbidden_terms(self) -> None:
         """Serialized export JSON contains no policy judgment terms."""
         export = build_governance_export(run_id="R1")
-        export_json = json.dumps(export).lower()
+        json.dumps(export).lower()
         # Check field names (keys), not prose values
         for key in export:
             assert key.lower() not in {

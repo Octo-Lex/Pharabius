@@ -12,7 +12,7 @@ from pathlib import Path
 from pharabius.ai.mock_provider import MockAIAdapter
 from pharabius.core.analyzer import _deduplicate_findings
 from pharabius.core.claims import generate_claims_from_findings
-from pharabius.core.planner import _group_findings, _should_group
+from pharabius.core.planner import _group_findings
 from pharabius.core.run_metadata import execute_run
 from pharabius.core.scanner import _debt_markers_in_text, scan_repository
 from pharabius.schemas.finding import DebtFinding

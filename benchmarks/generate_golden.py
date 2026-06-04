@@ -32,15 +32,15 @@ def generate_golden_snapshot(fixture_name: str, repo_root: Path) -> dict:
     # Load outputs
     register = _load_json(workspace / "debt-register.json")
     evidence = _load_json(workspace / "evidence.json")
-    claims = _load_json(workspace / "claims" / "operational-claims.json")
-    trace_quality = _load_json(workspace / "traceability" / "traceability-quality.json")
+    _load_json(workspace / "claims" / "operational-claims.json")
+    _load_json(workspace / "traceability" / "traceability-quality.json")
 
     findings = register.get("findings", [])
     evidence_items = evidence.get("evidence", [])
-    summary = register.get("summary", {})
+    register.get("summary", {})
 
     # Category set
-    categories = sorted(set(str(f.get("category", "")) for f in findings if f.get("category")))
+    categories = sorted({str(f.get("category", "")) for f in findings if f.get("category")})
 
     # Severity distribution
     severity_dist = {"critical": 0, "high": 0, "medium": 0, "low": 0}

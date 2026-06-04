@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pharabius.core.runtime.conflict import detect_conflicts
 from pharabius.core.runtime.docker import detect_dockerfile_sources
 from pharabius.core.runtime.dotnet import detect_dotnet_sources

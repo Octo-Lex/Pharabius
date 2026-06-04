@@ -11,7 +11,7 @@ new fields may be added; existing fields are never removed or renamed.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pharabius.core.signals.quality import (
@@ -89,7 +89,7 @@ def build_governance_export(
         "export_type": EXPORT_TYPE,
         "tool_version": _get_tool_version(),
         "run_id": run_id,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "signal_summary": signal_summary,
         "governance_quality": quality_dict,
         "governance_trends": trend_dict,

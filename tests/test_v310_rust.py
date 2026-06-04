@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from pharabius.core.runtime.models import RuntimeConstraintKind, RuntimeEcosystem
+from pharabius.core.runtime.models import RuntimeConstraintKind
 from pharabius.core.runtime.rust import detect_rust_sources
 
 

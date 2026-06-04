@@ -160,7 +160,7 @@ def _check_exact_exact(
     """Check for exact-vs-exact version mismatches."""
     if len(exacts) < 2:
         return None
-    unique_values = set(e.constraint.value for e in exacts if e.constraint.value)
+    unique_values = {e.constraint.value for e in exacts if e.constraint.value}
     if len(unique_values) <= 1:
         return None
     return RuntimeConflictGroup(
@@ -185,7 +185,7 @@ def _check_range_exact(
         return None
     exact_ev = exacts[0]
     for rng_ev in ranges:
-        if rng_ev.constraint.lower_bound and exact_ev.constraint.value:
+        if rng_ev.constraint.lower_bound and exact_ev.constraint.value:  # noqa: SIM102
             if range_excludes_exact(rng_ev.constraint, exact_ev.constraint.value):
                 return RuntimeConflictGroup(
                     ecosystem=exact_ev.ecosystem,

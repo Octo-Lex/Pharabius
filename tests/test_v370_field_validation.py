@@ -19,18 +19,15 @@ from __future__ import annotations
 
 import json
 import tarfile
-import tempfile
 from io import BytesIO
 from pathlib import Path
 
 import pytest
-import yaml
 from benchmarks.fixture_builder import BenchmarkFixture
 from benchmarks.oss_validation import (
     load_oss_manifest,
     safe_extract_tar,
     unpack_oss_snapshot,
-    validate_against_oss_golden,
 )
 
 from pharabius.core.run_metadata import execute_run
@@ -128,8 +125,8 @@ class TestSnapshotExtraction:
             tar.addfile(info, BytesIO(b"test"))
         buf.seek(0)
 
-        with tarfile.open(fileobj=buf, mode="r:gz") as tar:
-            with pytest.raises(ValueError, match="Unsafe|Traversal"):
+        with tarfile.open(fileobj=buf, mode="r:gz") as tar:  # noqa: SIM117
+            with pytest.raises(ValueError, match=r"Unsafe|Traversal"):
                 safe_extract_tar(tar, tmp_path / "safe")
 
     def test_safe_extract_rejects_absolute_path(self, tmp_path):
@@ -141,8 +138,8 @@ class TestSnapshotExtraction:
             tar.addfile(info, BytesIO(b"test"))
         buf.seek(0)
 
-        with tarfile.open(fileobj=buf, mode="r:gz") as tar:
-            with pytest.raises(ValueError, match="Unsafe|absolute"):
+        with tarfile.open(fileobj=buf, mode="r:gz") as tar:  # noqa: SIM117
+            with pytest.raises(ValueError, match=r"Unsafe|absolute"):
                 safe_extract_tar(tar, tmp_path / "safe")
 
 

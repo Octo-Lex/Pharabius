@@ -7,6 +7,7 @@ and JaCoCo XML coverage reports.
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 from pharabius.core.constants import (
@@ -129,25 +130,17 @@ def _parse_lcov_coverage(
     for line in text.split("\n"):
         line = line.strip()
         if line.startswith("LF:"):
-            try:
+            with contextlib.suppress(ValueError):
                 lf += int(line[3:])
-            except ValueError:
-                pass
         elif line.startswith("LH:"):
-            try:
+            with contextlib.suppress(ValueError):
                 lh += int(line[3:])
-            except ValueError:
-                pass
         elif line.startswith("FNF:"):
-            try:
+            with contextlib.suppress(ValueError):
                 fnf += int(line[4:])
-            except ValueError:
-                pass
         elif line.startswith("FNH:"):
-            try:
+            with contextlib.suppress(ValueError):
                 fnh += int(line[4:])
-            except ValueError:
-                pass
     if lf > 0:
         line_pct = round(lh / lf * 100, 1)
         builder.add(

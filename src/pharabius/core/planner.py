@@ -241,10 +241,7 @@ def _should_group(a: DebtFinding, b: DebtFinding) -> bool:
     # Explicit related-findings link
     a_related = set(a.related_findings or [])
     b_related = set(b.related_findings or [])
-    if b.id in a_related or a.id in b_related:
-        return True
-
-    return False
+    return bool(b.id in a_related or a.id in b_related)
 
 
 def _group_findings(findings: list[DebtFinding]) -> list[list[DebtFinding]]:
@@ -275,7 +272,7 @@ def _group_findings(findings: list[DebtFinding]) -> list[list[DebtFinding]]:
 def _make_grouped_work_package(index: int, group: list[DebtFinding]) -> WorkPackage:
     """Create a work package from grouped findings."""
     primary = group[0]  # Pre-sorted: highest risk_score first
-    all_evidence = list(dict.fromkeys(eid for f in group for eid in f.evidence_ids))
+    list(dict.fromkeys(eid for f in group for eid in f.evidence_ids))
     all_locations = list(dict.fromkeys(loc for f in group for loc in (f.locations or [])))
 
     return WorkPackage(

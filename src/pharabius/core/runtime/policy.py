@@ -104,9 +104,7 @@ def is_runtime_pin(evidence: RuntimeEvidence) -> bool:
         if evidence.source_detail and evidence.source_detail in _NON_PIN_SOURCE_DETAILS:
             return False
         # Container and CI pins are scoped pins, not project-level pins
-        if evidence.source_type in (RuntimeSourceType.CONTAINER, RuntimeSourceType.CI):
-            return False
-        return True
+        return evidence.source_type not in (RuntimeSourceType.CONTAINER, RuntimeSourceType.CI)
 
     # MISSING, UNPINNED → not pins
     return False

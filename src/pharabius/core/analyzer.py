@@ -978,7 +978,7 @@ def _analyze_large_files(store: EvidenceStore, builder: FindingBuilder) -> None:
             line_count = int(item.metadata["line_count"])
         else:
             # Fallback: parse raw_observation
-            match = _re.search(r"(\d+)\s*lines?", item.raw_observation)
+            match = re.search(r"(\d+)\s*lines?", item.raw_observation)
             if not match:
                 continue
             line_count = int(match.group(1))
@@ -1312,9 +1312,7 @@ def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuild
         runtime_conflict_to_signal_from_evidence,
         runtime_missing_pin_to_signal_from_evidence,
     )
-    from pharabius.core.signals.models import SignalDisposition
     from pharabius.core.signals.policy import (
-        is_informational,
         should_create_advisory,
         should_create_finding,
     )
@@ -1329,7 +1327,7 @@ def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuild
         signal = runtime_missing_pin_to_signal_from_evidence(missing)
 
         if should_create_advisory(signal):
-            runtimes = [e.metadata.get("runtime", "unknown") for e in missing]
+            [e.metadata.get("runtime", "unknown") for e in missing]
             breakdown = {**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2}
             builder.add(
                 category=signal.category,

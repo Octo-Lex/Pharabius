@@ -122,7 +122,7 @@ class TestNegativeCases:
     def test_high_coupling_only_no_finding(self) -> None:
         coupling = CouplingMetrics(node_id="n1", fan_in=20, fan_out=15, instability=0.43)
         graph = _make_graph(coupling=[coupling])
-        specs = (
+        (
             analyze_architecture_graph.__wrapped__(graph)
             if hasattr(analyze_architecture_graph, "__wrapped__")
             else []

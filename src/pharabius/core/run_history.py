@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from pharabius.core.constants import (
     EVIDENCE_SOURCE_FILE_SKIPPED,
@@ -140,7 +140,7 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
         }
 
     # Evidence type counts
-    evidence_type_counts: dict[str, int] = {t: 0 for t in _EVIDENCE_TYPES}
+    evidence_type_counts: dict[str, int] = dict.fromkeys(_EVIDENCE_TYPES, 0)
     for e in evidence_items:
         etype = str(e.get("type", ""))
         if etype in evidence_type_counts:
@@ -207,11 +207,7 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
 
     # Owner areas
     owner_areas: list[str] = sorted(
-        set(
-            str(f.get("suggested_owner_area", ""))
-            for f in findings
-            if f.get("suggested_owner_area")
-        )
+        {str(f.get("suggested_owner_area", "")) for f in findings if f.get("suggested_owner_area")}
     )
 
     return {
@@ -266,7 +262,6 @@ def _build_runtime_summary(evidence_items: list[dict], findings: list[dict]) -> 
     """Build runtime evidence summary from enriched snapshot data."""
     from pharabius.core.constants import (
         EVIDENCE_RUNTIME_VERSION_SIGNAL,
-        RUNTIME_SIGNAL_CONFLICT,
         RUNTIME_SIGNAL_MISSING,
         RUNTIME_SIGNAL_PINNED,
     )
@@ -839,7 +834,7 @@ def compute_risk_trend(index: dict[str, Any]) -> dict[str, Any]:
         }
 
     # Load snapshot for detailed risk data
-    workspace = Path(".ai-debt")  # Will be overridden by build_run_history_summary
+    Path(".ai-debt")  # Will be overridden by build_run_history_summary
     # For now, use the data stored in the index entry
     latest_risk = int(latest.get("total_risk_score", 0))
 

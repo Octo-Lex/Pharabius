@@ -4,13 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pharabius.core.runtime.go import detect_go_sources
 from pharabius.core.runtime.models import (
     RuntimeConstraintKind,
     RuntimeEcosystem,
-    RuntimeSourceType,
 )
 
 

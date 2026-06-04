@@ -6,8 +6,6 @@ produces well-formed RuntimeEvidence with all required fields.
 
 from __future__ import annotations
 
-import re
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -217,5 +215,5 @@ class TestDeterministicIDs:
         ids = [e.runtime_evidence_id for e in evidence]
         assert len(ids) == len(set(ids)), "IDs must distinguish source_detail"
         # Verify different source paths
-        paths = set(e.source_path for e in evidence)
+        paths = {e.source_path for e in evidence}
         assert len(paths) >= 2, "Should have evidence from multiple sources"

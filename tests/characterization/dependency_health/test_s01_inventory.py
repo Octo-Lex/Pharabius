@@ -3,7 +3,7 @@
 These tests lock down the CURRENT behavior of dependency-health analysis
 before migration to governed signals. Every output field is captured.
 
-After migration (S02–S04), these same tests must pass with identical output.
+After migration (S02-S04), these same tests must pass with identical output.  # noqa: RUF002
 Field-level comparison uses assert_finding_unchanged() for explicit verification.
 """
 
@@ -399,7 +399,7 @@ class TestRuntimeDependencySeparation:
 
         # Findings should have different titles (runtime vs dependency purpose)
         # The same title appearing in both means double-counting
-        overlap = runtime_titles & dep_titles
+        runtime_titles & dep_titles
         # Note: runtime missing pins use TD-DEP category but answer a different question
         # (runtime selection, not dependency management)
         # Verify unpinned deps finding is present and distinct from runtime pin finding

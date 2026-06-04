@@ -19,15 +19,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 from benchmarks.fixture_builder import BenchmarkFixture
 
 from pharabius.core.constants import (
-    EVIDENCE_RUNTIME_VERSION_SIGNAL,
     RUNTIME_SIGNAL_CONFLICT,
     RUNTIME_SIGNAL_FROM_CI,
     RUNTIME_SIGNAL_FROM_CONTAINER,
-    RUNTIME_SIGNAL_MISSING,
     RUNTIME_SIGNAL_PARTIAL,
     RUNTIME_SIGNAL_PINNED,
 )

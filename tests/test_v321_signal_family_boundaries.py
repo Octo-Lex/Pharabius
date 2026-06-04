@@ -28,7 +28,7 @@ class TestRuntimeDependencyBoundary:
             evidence_id = "EVD-001"
             raw_observation = "engines.node=18"
             location = type("L", (), {"file": "package.json"})()
-            metadata = {"runtime_name": "node", "grade": "pinned", "source": "engines"}
+            metadata = {"runtime_name": "node", "grade": "pinned", "source": "engines"}  # noqa: RUF012
 
         sig = runtime_missing_pin_to_signal_from_evidence([FakeEvidence()])
         assert sig.family == SignalFamily.RUNTIME
@@ -44,7 +44,7 @@ class TestRuntimeDependencyBoundary:
             evidence_id = "EVD-001"
             raw_observation = "lockfile conflict"
             location = type("L", (), {"file": "package-lock.json"})()
-            metadata = {"package_manager": "npm"}
+            metadata = {"package_manager": "npm"}  # noqa: RUF012
 
         sig = dependency_lockfile_conflict_to_signal([FakeItem()])
         assert sig.family == SignalFamily.DEPENDENCY
@@ -120,7 +120,7 @@ class TestSecurityComplianceBoundary:
             evidence_id = "EVD-001"
             raw_observation = "hipaa"
             location = type("L", (), {"file": "src/handler.py"})()
-            metadata = {"keyword": "hipaa"}
+            metadata = {"keyword": "hipaa"}  # noqa: RUF012
 
         sig = security_compliance_exposure_to_signal([FakeItem()])
         assert sig.family == SignalFamily.SECURITY
@@ -138,9 +138,9 @@ class TestArchitectureBoundary:
             category = "TD-ARCH"
             title = "Cycle"
             description = "Circular dep"
-            evidence_ids = ["EVD-001"]
-            locations = []
-            analysis_unit_ids = []
+            evidence_ids = ["EVD-001"]  # noqa: RUF012
+            locations = []  # noqa: RUF012
+            analysis_unit_ids = []  # noqa: RUF012
             severity = "Medium"
             confidence = "High"
             technical_impact = ""
@@ -161,9 +161,9 @@ class TestArchitectureBoundary:
             category = "TD-ARCH"
             title = "Violation"
             description = "Layer violation"
-            evidence_ids = ["EVD-001"]
-            locations = []
-            analysis_unit_ids = []
+            evidence_ids = ["EVD-001"]  # noqa: RUF012
+            locations = []  # noqa: RUF012
+            analysis_unit_ids = []  # noqa: RUF012
             severity = "Medium"
             confidence = "High"
             technical_impact = ""
@@ -197,7 +197,7 @@ class TestDockerfileRuntimeBuildBoundary:
             evidence_id = "EVD-001"
             raw_observation = "FROM python:3.11"
             location = type("L", (), {"file": "Dockerfile"})()
-            metadata = {"runtime_name": "python", "grade": "pinned", "source": "dockerfile"}
+            metadata = {"runtime_name": "python", "grade": "pinned", "source": "dockerfile"}  # noqa: RUF012
 
         sig = runtime_conflict_to_signal_from_evidence(FakeEvidence())
         assert sig.family == SignalFamily.RUNTIME

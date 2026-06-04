@@ -23,8 +23,6 @@ Acceptance criteria:
 
 from __future__ import annotations
 
-import pytest
-
 from pharabius.core.signals.adapters import (
     build_ci_evidence_to_signal,
     build_missing_ci_to_signal,
@@ -33,10 +31,8 @@ from pharabius.core.signals.adapters import (
     process_missing_artifacts_to_signal,
 )
 from pharabius.core.signals.models import (
-    GovernedSignal,
     SignalDisposition,
     SignalFamily,
-    make_signal_id,
 )
 from pharabius.core.signals.policy import (
     is_informational,
@@ -414,7 +410,6 @@ class TestSignalSummaryIsSignalDriven:
             RuntimeConstraintKind,
             RuntimeEcosystem,
             RuntimeEvidence,
-            RuntimeSignalClassification,
             RuntimeSourceGrade,
             RuntimeSourceType,
         )

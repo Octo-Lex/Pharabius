@@ -54,9 +54,7 @@ def parse_constraint(runtime: str, raw: str) -> RuntimeConstraint:
     major = match.group(1)
     minor = match.group(2)
 
-    if runtime == "Node.js":
-        return RuntimeConstraint(kind=RuntimeConstraintKind.EXACT, value=major, raw=raw_stripped)
-    elif runtime == "Java":
+    if runtime == "Node.js" or runtime == "Java":
         return RuntimeConstraint(kind=RuntimeConstraintKind.EXACT, value=major, raw=raw_stripped)
     elif runtime in ("Python", "Ruby"):
         if minor is not None:
@@ -164,7 +162,7 @@ def range_excludes_exact(
     if exact_major == range_major:
         range_minor = _extract_minor(constraint.lower_bound)
         exact_minor = _extract_minor(exact_value)
-        if range_minor is not None and exact_minor is not None:
+        if range_minor is not None and exact_minor is not None:  # noqa: SIM102
             if exact_minor < range_minor:
                 return True
 
@@ -217,10 +215,10 @@ def ranges_are_disjoint(
         if lb_b is not None and ub_a is not None:
             if lb_b > ub_a:
                 return True
-            if lb_b == ub_a:
-                if lb_b_minor is not None and ub_a_minor is not None and lb_b_minor >= ub_a_minor:
-                    return True
-                elif lb_b_minor is None and ub_a_minor is None:
+            if lb_b == ub_a:  # noqa: SIM102
+                if (
+                    lb_b_minor is not None and ub_a_minor is not None and lb_b_minor >= ub_a_minor
+                ) or (lb_b_minor is None and ub_a_minor is None):
                     return True
 
     return False

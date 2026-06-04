@@ -19,8 +19,6 @@ Acceptance criteria:
 
 from __future__ import annotations
 
-import pytest
-
 from pharabius.core.signals.adapters import (
     scan_test_coverage_evidence_to_signal,
     scan_test_coverage_gap_to_signal,
@@ -29,13 +27,10 @@ from pharabius.core.signals.adapters import (
     scan_test_risk_sensitive_without_tests_to_signal,
 )
 from pharabius.core.signals.models import (
-    GovernedSignal,
     SignalDisposition,
     SignalFamily,
-    make_signal_id,
 )
 from pharabius.core.signals.policy import (
-    is_informational,
     is_reportable,
     should_create_advisory,
     should_create_finding,

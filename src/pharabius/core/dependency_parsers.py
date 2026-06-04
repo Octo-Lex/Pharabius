@@ -81,9 +81,12 @@ def _check_node_unpinned_deps(
     for name, version in deps.items():
         if not isinstance(version, str):
             continue
-        if version in ("*", "latest", ""):
-            unpinned.append({"name": name, "specifier": version})
-        elif version.startswith(">") or version.startswith("<") or version.startswith("~"):
+        if (
+            version in ("*", "latest", "")
+            or version.startswith(">")
+            or version.startswith("<")
+            or version.startswith("~")
+        ):
             unpinned.append({"name": name, "specifier": version})
     if unpinned:
         builder.add(

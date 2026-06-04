@@ -16,8 +16,6 @@ import json
 import textwrap
 from pathlib import Path
 
-import pytest
-
 from pharabius.core.constants import (
     EVIDENCE_COVERAGE_METRIC,
     EVIDENCE_COVERAGE_REPORT,
@@ -25,7 +23,7 @@ from pharabius.core.constants import (
     EVIDENCE_RUNTIME_VERSION_SIGNAL,
 )
 from pharabius.core.io_helpers import read_json, read_text
-from pharabius.schemas.evidence import EvidenceBuilder, EvidenceItem, EvidenceStore
+from pharabius.schemas.evidence import EvidenceBuilder, EvidenceStore
 
 # ── S04: Module importability ─────────────────────────────────────────
 

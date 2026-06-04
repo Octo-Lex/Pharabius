@@ -14,17 +14,9 @@ Tests cover:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-import pytest
 from benchmarks.fixture_builder import BenchmarkFixture
 
-from pharabius.core.constants import (
-    RUNTIME_SIGNAL_CONFLICT,
-    RUNTIME_SIGNAL_FROM_CI,
-    RUNTIME_SIGNAL_MISSING,
-    RUNTIME_SIGNAL_PINNED,
-)
 from pharabius.core.run_metadata import execute_run
 from pharabius.core.runtime import detect_runtime_version_pins
 from pharabius.core.runtime.conflict import detect_conflicts
@@ -36,7 +28,6 @@ from pharabius.core.runtime.detector import (
     detect_ruby_sources,
 )
 from pharabius.core.runtime.models import (
-    Confidence,
     RuntimeConflictGroup,
     RuntimeConstraint,
     RuntimeConstraintKind,
@@ -51,17 +42,12 @@ from pharabius.core.runtime.policy import (
     classify_evidence,
     classify_missing_pin,
 )
-from pharabius.core.runtime_parsers import (
-    detect_runtime_version_pins as compat_detect,
-)
-from pharabius.schemas.evidence import EvidenceBuilder
 
 # ── S01: Package imports ────────────────────────────────────────────
 
 
 class TestPackageImports:
     def test_canonical_import_works(self):
-        from pharabius.core.runtime import detect_runtime_version_pins
 
         assert callable(detect_runtime_version_pins)
 

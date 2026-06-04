@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from pharabius.core.constants import (
-    EVIDENCE_BROAD_EXCEPTION,
     EVIDENCE_COVERAGE_METRIC,
     EVIDENCE_COVERAGE_REPORT,
     EVIDENCE_DEPENDENCY_SIGNAL,
@@ -503,7 +502,6 @@ class TestS07TraceabilityTrend:
         assert trend["trajectory"] == "worsening"
 
     def test_traceability_history_appends_snapshot(self, tmp_path: Path) -> None:
-        from pharabius.core.traceability import append_quality_snapshot
 
         append_quality_snapshot(
             tmp_path,

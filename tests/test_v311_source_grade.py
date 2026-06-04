@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pharabius.core.runtime.models import (
     RuntimeConstraint,
     RuntimeConstraintKind,

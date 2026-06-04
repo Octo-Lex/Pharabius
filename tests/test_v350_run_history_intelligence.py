@@ -18,8 +18,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from pharabius.core.constants import EVIDENCE_SOURCE_FILE_SKIPPED
 from pharabius.core.run_history import (
     _is_history_snapshot_file,

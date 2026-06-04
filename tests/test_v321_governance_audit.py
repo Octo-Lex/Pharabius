@@ -135,7 +135,7 @@ class TestStaticAnalyzerAudit:
         """No governed analyzer uses should_create_work_package as a proxy."""
         import pharabius.core.analyzer as analyzer_module
 
-        source = inspect.getsource(analyzer_module)
+        inspect.getsource(analyzer_module)
         # should_create_work_package may exist in imports but should not be
         # used in governed analyzer functions for promotion decisions
         for family_name, entry in GOVERNED_FAMILY_INVENTORY.items():

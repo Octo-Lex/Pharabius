@@ -9,7 +9,6 @@ from pharabius.core.io_helpers import read_json, read_text
 from pharabius.core.runtime.constraints import parse_constraint
 from pharabius.core.runtime.models import (
     Confidence,
-    RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
     RuntimeSourceGrade,

@@ -8,11 +8,11 @@ domain-specific evidence models (RuntimeEvidence, etc.).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class SignalDisposition(str, Enum):
+class SignalDisposition(StrEnum):
     """What should the platform do with this signal?"""
 
     FINDING = "finding"
@@ -21,7 +21,7 @@ class SignalDisposition(str, Enum):
     SUPPRESSED = "suppressed"
 
 
-class SignalFamily(str, Enum):
+class SignalFamily(StrEnum):
     """Which evidence domain produced this signal?"""
 
     RUNTIME = "runtime"

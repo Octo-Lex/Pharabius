@@ -6,7 +6,6 @@ GitHub Actions shivammathur/setup-php, Dockerfile FROM php.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from pharabius.core.io_helpers import read_json
@@ -14,8 +13,6 @@ from pharabius.core.runtime.constraints import parse_constraint
 from pharabius.core.runtime.ecosystems import _make_id
 from pharabius.core.runtime.models import (
     Confidence,
-    RuntimeConstraint,
-    RuntimeConstraintKind,
     RuntimeEcosystem,
     RuntimeEvidence,
     RuntimeSourceGrade,

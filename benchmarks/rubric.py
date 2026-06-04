@@ -6,8 +6,9 @@ or noisy. Each criterion is a callable evaluator, not a string description.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -108,7 +109,7 @@ RUBRIC_CRITERIA: list[RubricCriterion] = [
 
 
 def score_finding(finding: dict, all_findings: list[dict]) -> float:
-    """Score a finding 0–1.0 on the rubric. Higher is better."""
+    """Score a finding 0–1.0 on the rubric. Higher is better."""  # noqa: RUF002
     total_weight = sum(c.weight for c in RUBRIC_CRITERIA)
     if total_weight == 0:
         return 0.0

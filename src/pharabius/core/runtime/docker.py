@@ -118,7 +118,6 @@ def detect_dockerfile_sources(root: Path) -> list[RuntimeEvidence]:
 
 
 def _runtime_to_ecosystem(runtime: str):
-    from pharabius.core.runtime.models import RuntimeEcosystem
 
     mapping = {
         "Python": RuntimeEcosystem.PYTHON,

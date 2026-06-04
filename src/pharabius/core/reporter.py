@@ -1023,7 +1023,7 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
         return
 
     # ── Build summary from signals ──
-    summary = build_signal_summary(signals)
+    build_signal_summary(signals)
 
     # Count by family and disposition
     family_rows: dict[str, dict[str, int]] = {}
@@ -1075,8 +1075,8 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
             "",
             "## 6e. Governance Quality Metrics",
             "",
-            f"| Metric | Value |",
-            f"|---|---:|",
+            "| Metric | Value |",
+            "|---|---:|",
             f"| Total governed signals | {metrics.total_signals} |",
             f"| Finding evidence coverage | {metrics.finding_evidence_coverage:.0%} |",
             f"| Finding metadata coverage | {metrics.finding_metadata_coverage:.0%} |",

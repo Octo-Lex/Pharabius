@@ -1,46 +1,31 @@
 from __future__ import annotations
 
-import json
 import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
 from pharabius.core.constants import (
-    BROAD_EXCEPTION_PER_FILE_THRESHOLD,
-    COMPLETENESS_COMPLETE,
     COMPLETENESS_PARTIAL,
     COMPLETENESS_SKIPPED,
-    COVERAGE_LOW_THRESHOLD_PCT,
     COVERAGE_PATTERNS,
-    DEFAULT_MAX_FILE_SIZE_KB,
     EVIDENCE_BROAD_EXCEPTION,
-    EVIDENCE_COVERAGE_GAP,
-    EVIDENCE_COVERAGE_METRIC,
-    EVIDENCE_COVERAGE_REPORT,
     EVIDENCE_DEBT_MARKER,
-    EVIDENCE_DEPENDENCY_SIGNAL,
     EVIDENCE_LARGE_FILE,
     EVIDENCE_LONG_FUNCTION,
     EVIDENCE_SOURCE_FILE_SKIPPED,
     LARGE_FILE_LINE_THRESHOLD,
     LONG_FUNCTION_LINE_THRESHOLD,
-    OBSERVATION_STRENGTH_DIRECT,
     OBSERVATION_STRENGTH_HEURISTIC,
     OBSERVATION_STRENGTH_LIMITATION,
     PARSER_BUILTIN_REGEX,
-    PARSER_COVERAGE,
     PARSER_FILESYSTEM,
-    PARSER_MANIFEST,
-    READ_MODE_JSON,
     READ_MODE_SKIPPED,
     READ_MODE_TEXT,
 )
 from pharabius.core.exclusions import EXCLUDED_DIR_NAMES, is_excluded_path
 from pharabius.schemas.evidence import (
     EvidenceBuilder,
-    EvidenceItem,
-    EvidenceLocation,
     EvidenceStore,
 )
 
@@ -86,7 +71,6 @@ TEXT_EXTENSIONS = SOURCE_EXTENSIONS | {
 
 MANIFEST_FILES = {
     "package.json": "node_manifest",
-    "Pipfile": "pipfile_manifest",
     "package-lock.json": "node_lockfile",
     "yarn.lock": "node_lockfile",
     "pnpm-lock.yaml": "node_lockfile",
@@ -218,7 +202,6 @@ _RUST_LINE_COMMENT = re.compile(r"^\s*//")
 
 from pharabius.core.io_helpers import read_json, read_text  # noqa: E402
 from pharabius.core.path_utils import (  # noqa: E402
-    normalize_repo_path,
     path_matches_exact_or_suffix,
     relative_repo_path,
 )
@@ -578,7 +561,7 @@ def _detect_long_python_functions(
             name = def_line.replace("def ", "").replace("async ", "").strip()
             func_starts.append((i, indent, name))
 
-    for start_idx, (start_line, base_indent, func_name) in enumerate(func_starts):
+    for _start_idx, (start_line, base_indent, func_name) in enumerate(func_starts):
         # Find end: next nonblank line at same or lesser indent, or next function start
         end_line = len(lines) - 1
         # First try: next nonblank line at <= base_indent

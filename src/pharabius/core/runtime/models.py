@@ -7,12 +7,12 @@ All runtime parsing and analysis flows through these types.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 # ── Enums ────────────────────────────────────────────────────────────
 
 
-class RuntimeEcosystem(str, Enum):
+class RuntimeEcosystem(StrEnum):
     PYTHON = "Python"
     NODE = "Node.js"
     RUBY = "Ruby"
@@ -23,7 +23,7 @@ class RuntimeEcosystem(str, Enum):
     PHP = "PHP"
 
 
-class RuntimeConstraintKind(str, Enum):
+class RuntimeConstraintKind(StrEnum):
     EXACT = "exact"
     RANGE = "range"
     UNPINNED = "unpinned"
@@ -31,7 +31,7 @@ class RuntimeConstraintKind(str, Enum):
     UNKNOWN = "unknown"
 
 
-class RuntimeSourceType(str, Enum):
+class RuntimeSourceType(StrEnum):
     VERSION_FILE = "version_file"
     TOOL_VERSIONS = "tool_versions"
     MANIFEST = "manifest"
@@ -39,7 +39,7 @@ class RuntimeSourceType(str, Enum):
     CI = "ci"
 
 
-class RuntimeSourceGrade(str, Enum):
+class RuntimeSourceGrade(StrEnum):
     """How strong is this evidence as a reproducibility signal?"""
 
     LOCKFILE = "lockfile"  # Exact, deterministic: rust-toolchain, rust-toolchain.toml
@@ -52,20 +52,20 @@ class RuntimeSourceGrade(str, Enum):
     UNKNOWN = "unknown"  # Not set — parsers MUST override
 
 
-class Confidence(str, Enum):
+class Confidence(StrEnum):
     HIGH = "High"
     MEDIUM = "Medium"
     LOW = "Low"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     CRITICAL = "Critical"
     HIGH = "High"
     MEDIUM = "Medium"
     LOW = "Low"
 
 
-class RuntimeConflictKind(str, Enum):
+class RuntimeConflictKind(StrEnum):
     EXACT_EXACT_MISMATCH = "exact_vs_exact_disagreement"
     RANGE_EXCLUDES_EXACT = "range_excludes_exact"
     DOCKERFILE_DIFFERS = "dockerfile_differs_from_manifest"
@@ -74,7 +74,7 @@ class RuntimeConflictKind(str, Enum):
     INCOMPATIBLE_RANGES = "incompatible_ranges"
 
 
-class RuntimeSignalClassification(str, Enum):
+class RuntimeSignalClassification(StrEnum):
     FINDING = "finding"
     ADVISORY = "advisory"
     INFORMATIONAL = "informational"

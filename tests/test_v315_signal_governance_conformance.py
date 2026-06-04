@@ -11,14 +11,6 @@ import pytest
 from pharabius.core.signals.invariants import (
     ALL_INVARIANTS,
     INV_001_FINDING_ONLY_CREATES_FINDING,
-    INV_002_ADVISORY_NEVER_CREATES_WORK_PACKAGE,
-    INV_003_INFORMATIONAL_NON_ACTIONABLE,
-    INV_004_SUPPRESSED_DIAGNOSTIC_ONLY,
-    INV_005_SIGNAL_ID_DETERMINISTIC,
-    INV_006_PROMOTED_FINDING_HAS_EVIDENCE,
-    INV_007_MIGRATED_ANALYZER_USES_POLICY,
-    INV_008_SUMMARY_COUNTS_GOVERNED_SIGNALS,
-    SignalInvariant,
     SignalValidationSeverity,
 )
 from pharabius.core.signals.models import (
@@ -28,8 +20,6 @@ from pharabius.core.signals.models import (
     make_signal_id,
 )
 from pharabius.core.signals.policy import (
-    SignalOutputBehavior,
-    is_informational,
     is_reportable,
     output_behavior,
     should_create_advisory,
@@ -38,9 +28,6 @@ from pharabius.core.signals.policy import (
 )
 from pharabius.core.signals.summary import build_signal_summary
 from pharabius.core.signals.validation import (
-    SignalDiagnostic,
-    SignalValidationResult,
-    SignalValidationViolation,
     diagnose_signal,
     validate_governed_signal,
 )
@@ -1042,7 +1029,7 @@ class TestAnalyzerBoundaries:
     def test_all_ten_families_governed(self) -> None:
         """v3.20.0: All 10 SignalFamily values are in the conformance suite."""
         governed = set(_FAMILY_ADAPTER_FACTORIES.keys())
-        all_families = set(f.value for f in SignalFamily)
+        all_families = {f.value for f in SignalFamily}
         assert governed == all_families, f"Missing: {all_families - governed}"
 
     def test_no_work_package_proxy_observability(self) -> None:

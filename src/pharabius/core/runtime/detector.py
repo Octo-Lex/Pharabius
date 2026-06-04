@@ -17,7 +17,6 @@ from pharabius.core.constants import (
     OBSERVATION_STRENGTH_LIMITATION,
     PARSER_FILESYSTEM,
     PARSER_MANIFEST,
-    READ_MODE_JSON,
     READ_MODE_SKIPPED,
     READ_MODE_TEXT,
     READ_MODE_YAML,
@@ -41,7 +40,6 @@ from pharabius.core.runtime.github_actions import detect_ci_sources
 from pharabius.core.runtime.go import detect_go_sources
 from pharabius.core.runtime.models import (
     Confidence,
-    RuntimeConflictKind,
     RuntimeConstraintKind,
     RuntimeEvidence,
     RuntimeSourceType,
@@ -153,7 +151,6 @@ def _emit_evidence(evidence: list[RuntimeEvidence], builder: EvidenceBuilder) ->
 
 def _emit_conflicts(conflicts: list, builder: EvidenceBuilder) -> None:
     """Emit conflict evidence items."""
-    from pharabius.core.runtime.models import RuntimeConflictGroup
 
     for group in conflicts:
         sources_meta = [

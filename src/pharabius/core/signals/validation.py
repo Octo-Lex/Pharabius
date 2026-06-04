@@ -140,7 +140,7 @@ def validate_governed_signal(signal: GovernedSignal) -> SignalValidationResult:
         )
 
     # ADVISORY should have evidence or explicit metadata basis
-    if signal.disposition == SignalDisposition.ADVISORY and not signal.evidence_ids:
+    if signal.disposition == SignalDisposition.ADVISORY and not signal.evidence_ids:  # noqa: SIM102
         if not signal.metadata:
             _add(
                 "SIG-ADVISORY-EVIDENCE",
@@ -149,7 +149,7 @@ def validate_governed_signal(signal: GovernedSignal) -> SignalValidationResult:
             )
 
     # INFORMATIONAL derived from evidence should carry evidence_ids
-    if signal.disposition == SignalDisposition.INFORMATIONAL:
+    if signal.disposition == SignalDisposition.INFORMATIONAL:  # noqa: SIM102
         if not signal.evidence_ids and signal.kind.endswith("_evidence"):
             _add(
                 "SIG-INFO-EVIDENCE",
