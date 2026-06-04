@@ -2,6 +2,32 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.0.1] - Unreleased
+
+### Stabilization
+
+This is a stabilization release. No new product behavior.
+
+- Added `docs/OPERATING_DOCTRINE.md` — disk-verified large-wave execution rules
+- Added "Known Gaps" section to README
+- Added Operating Doctrine to README documentation table
+- Verified clean-checkout validation: all six verification steps pass
+- Confirmed internal wave tags (v3.1–v3.15) remain local-only
+- Confirmed doc consistency across PROJECT_STATUS, PUBLIC_SYNC_NOTES, RELEASE_STATE
+- Confirmed packaging: `python -m build` produces clean sdist + wheel
+
+### Validation
+
+- CLI tests: 2,970 passed, 7 skipped
+- Platform backend tests: 276 passed, 5 skipped
+- Platform frontend tests: 28 passed
+- Frontend build: succeeds
+- `ruff format --check .`: clean
+- `ruff check .`: clean
+- `python -m build`: pharabius-3.0.1.tar.gz + pharabius-3.0.1-py3-none-any.whl
+
+---
+
 ## [3.0.0] - 2026-06-04
 
 ### Public Catch-Up Release
