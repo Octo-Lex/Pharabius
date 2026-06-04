@@ -42,6 +42,8 @@ class DebtFinding(BaseModel):
 
 class DebtRegisterSummary(BaseModel):
     total_findings: int = 0
+    technical_debt_count: int = 0
+    advisory_count: int = 0
     critical: int = 0
     high: int = 0
     medium: int = 0

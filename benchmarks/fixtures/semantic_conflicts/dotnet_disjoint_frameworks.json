@@ -1,0 +1,9 @@
+{
+  "description": ".NET: net8.0 and net5.0 are disjoint → INCOMPATIBLE_RANGES",
+  "files": {
+    "Modern.csproj": "<Project><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>",
+    "Legacy.csproj": "<Project><PropertyGroup><TargetFramework>net5.0</TargetFramework></PropertyGroup></Project>"
+  },
+  "expected_conflicts": ["incompatible_ranges"],
+  "expected_advisories": []
+}

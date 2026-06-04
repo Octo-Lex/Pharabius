@@ -83,6 +83,78 @@ class ExportResult:
     warnings: list[str] = field(default_factory=list)
 
 
+def _write_governance_export(root: Path, out: Path) -> Path | None:
+    """Write governance analytics export if data is available.
+
+    Returns the path to the written file, or None if no governance data exists.
+    Does not backfill or infer missing data.
+    """
+    from pharabius.core.governance_export import (
+        build_governance_export,
+        write_governance_export,
+        write_governance_export_jsonl,
+    )
+    from pharabius.core.run_history import _load_json
+
+    workspace = root / ".ai-debt"
+
+    # Try to load run-history index
+    index = _load_json(workspace / "run-history-index.json")
+    if not index:
+        return None
+
+    runs = index.get("runs", [])
+    if not runs:
+        return None
+
+    # Load latest snapshot
+    latest_run = runs[-1]
+    run_id = latest_run.get("run_id", "")
+    latest_snap = _load_json(workspace / "runs" / f"{run_id}-history-snapshot.json")
+    if not latest_snap:
+        return None
+
+    signal_summary = latest_snap.get("signal_summary")
+    governance_quality = latest_snap.get("governance_quality")
+
+    # No governance data at all → skip
+    if signal_summary is None and governance_quality is None:
+        return None
+
+    # Build trends from comparable snapshots
+    governance_trends = None
+    try:
+        from pharabius.core.signals.trends import build_governance_trend_summary
+
+        comparable = []
+        for r in reversed(runs):
+            snap = _load_json(workspace / "runs" / f"{r.get('run_id', '')}-history-snapshot.json")
+            if snap and snap.get("governance_quality") is not None:
+                comparable.insert(0, snap)
+                if len(comparable) >= 2:
+                    break
+        if comparable:
+            governance_trends = build_governance_trend_summary(comparable)
+    except Exception:
+        pass
+
+    export = build_governance_export(
+        signal_summary=signal_summary,
+        governance_quality=None,  # pass as dict, not metrics object
+        governance_trends=governance_trends,
+        run_id=run_id,
+    )
+
+    # Embed raw governance_quality dict directly
+    export["governance_quality"] = governance_quality
+
+    # Write JSON and JSONL
+    json_path = write_governance_export(export, out / "governance-summary.json")
+    write_governance_export_jsonl(export, out / "governance-summary.jsonl")
+
+    return json_path
+
+
 def _load_json_safe(path: Path) -> dict[str, object] | None:
     """Load a JSON file, returning None on missing or malformed."""
     if not path.exists():
@@ -353,7 +425,7 @@ def export_findings(
 
     Args:
         repository_root: Repository root containing .ai-debt/.
-        formats: List of formats to export ("sarif", "csv", "jsonl").
+        formats: List of formats to export ("sarif", "csv", "jsonl", "governance").
         output_dir: Override output directory.
 
     Returns:
@@ -402,5 +474,11 @@ def export_findings(
             path = out / "findings.jsonl"
             _write_jsonl(register, verification_lookup, wp_lookup, path)
             result.files_written.append(path)
+        elif fmt == "governance":
+            gov_path = _write_governance_export(root, out)
+            if gov_path:
+                result.files_written.append(gov_path)
+            else:
+                result.warnings.append("No governance data available for export.")
 
     return result

@@ -700,11 +700,79 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
             f"| Medium | {ctx.debt_register.summary.medium} |",
             f"| Low | {ctx.debt_register.summary.low} |",
             "",
-            f"Total findings: **{ctx.debt_register.summary.total_findings}**",
+            f"Total findings: **{ctx.debt_register.summary.total_findings}** "
+            f"(technical debt: {ctx.debt_register.summary.technical_debt_count}, "
+            f"advisories: {ctx.debt_register.summary.advisory_count})",
             "",
             "## 6. Top Findings",
             "",
             *_finding_table(findings[:10]),
+        ]
+    )
+
+    # Advisory section (v3.7.0)
+    advisories = [f for f in findings if f.issue_type == "advisory"]
+    if advisories:
+        lines.extend(
+            [
+                "",
+                "## 6b. Advisory Signals",
+                "",
+                "> These are hygiene observations, not actionable debt.",
+                "> They do not generate work packages or operational claims by default.",
+                "",
+                "| Category | Title | Severity | Risk Score |",
+                "|---|---|---|---:|",
+            ]
+        )
+        for a in advisories:
+            lines.append(f"| {a.category} | {a.title[:80]} | {a.severity} | {a.risk_score} |")
+
+    # Runtime reproducibility section (v3.9.0)
+    runtime_evidence = [
+        e for e in ctx.evidence_store.evidence if e.type == "runtime_version_signal"
+    ]
+    if runtime_evidence:
+        runtime_by_signal: dict[str, list] = {}
+        for re_ev in runtime_evidence:
+            sig = re_ev.metadata.get("signal", "unknown")
+            runtime_by_signal.setdefault(sig, []).append(re_ev)
+
+        lines.extend(
+            [
+                "",
+                "## 6c. Runtime Reproducibility",
+                "",
+            ]
+        )
+
+        if runtime_by_signal.get("runtime_version_conflict"):
+            lines.append("**Conflicts detected.** See debt register for details.")
+            lines.append("")
+
+        pinned = runtime_by_signal.get("runtime_version_pinned", [])
+        if pinned:
+            lines.append("| Runtime | Source | Version | Constraint |")
+            lines.append("|---|---|---|---|")
+            for p in pinned:
+                rt = p.metadata.get("runtime", "?")
+                src = p.metadata.get("source_file", "?")
+                ver = p.metadata.get("version", "?")
+                ck = p.metadata.get("constraint_kind", "?")
+                lines.append(f"| {rt} | {src} | {ver} | {ck} |")
+            lines.append("")
+
+        missing = runtime_by_signal.get("runtime_version_missing", [])
+        if missing:
+            runtimes = [m.metadata.get("runtime", "?") for m in missing]
+            lines.append(f"**Missing pins:** {', '.join(runtimes)}")
+            lines.append("")
+
+    # Signal governance summary (v3.12.0)
+    _add_signal_governance_section(lines, ctx)
+
+    lines.extend(
+        [
             "",
             "## 7. Architecture Summary",
             "",
@@ -804,3 +872,345 @@ def write_reports(repository_root: Path) -> ReportWriteResult:
         files_written.append(path)
 
     return ReportWriteResult(files_written=files_written)
+
+
+def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None:
+    """Add signal governance summary section to the foundation report (v3.13.0).
+
+    Builds from GovernedSignal instances, not raw evidence heuristics.
+    """
+    from pharabius.core.constants import (
+        EVIDENCE_RUNTIME_VERSION_SIGNAL,
+        RUNTIME_SIGNAL_CONFLICT,
+        RUNTIME_SIGNAL_MISSING,
+    )
+    from pharabius.core.signals.adapters import (
+        build_ci_evidence_to_signal,
+        build_missing_ci_to_signal,
+        docs_evidence_to_signal,
+        docs_missing_to_signal,
+        process_missing_artifacts_to_signal,
+        runtime_conflict_to_signal_from_evidence,
+        runtime_missing_pin_to_signal_from_evidence,
+        scan_test_coverage_evidence_to_signal,
+        scan_test_coverage_gap_to_signal,
+        scan_test_evidence_to_signal,
+        scan_test_missing_to_signal,
+        scan_test_risk_sensitive_without_tests_to_signal,
+    )
+    from pharabius.core.signals.summary import build_signal_summary
+
+    signals = []
+
+    # ── Runtime signals ──
+    for ev in ctx.evidence_store.evidence:
+        if ev.type != EVIDENCE_RUNTIME_VERSION_SIGNAL:
+            continue
+        signal_kind = ev.metadata.get("signal", "")
+        if signal_kind == RUNTIME_SIGNAL_CONFLICT:
+            signals.append(runtime_conflict_to_signal_from_evidence(ev))
+        elif signal_kind == RUNTIME_SIGNAL_MISSING:
+            signals.append(runtime_missing_pin_to_signal_from_evidence([ev]))
+        # Informational runtime evidence not needed for report summary
+
+    # ── Documentation signals ──
+    docs_evidence = [
+        e for e in ctx.evidence_store.evidence if e.type == "documentation_file_detected"
+    ]
+    for ev in docs_evidence:
+        signals.append(docs_evidence_to_signal(ev))
+
+    # Check for documentation advisory in findings
+    doc_advisory = next(
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-DOC" and f.issue_type == "advisory"
+        ),
+        None,
+    )
+    if doc_advisory:
+        signals.append(
+            docs_missing_to_signal(
+                evidence_ids=doc_advisory.evidence_ids[:1] if doc_advisory.evidence_ids else []
+            )
+        )
+
+    # ── Build signals ──
+    ci_evidence = [e for e in ctx.evidence_store.evidence if e.type == "deployment_file_detected"]
+    for ev in ci_evidence:
+        signals.append(build_ci_evidence_to_signal(ev))
+
+    build_advisory = next(
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-BUILD" and f.issue_type == "advisory"
+        ),
+        None,
+    )
+    if build_advisory:
+        signals.append(build_missing_ci_to_signal(evidence_ids=build_advisory.evidence_ids))
+
+    # ── Process signals ──
+    process_advisory = next(
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-PROCESS" and f.issue_type == "advisory"
+        ),
+        None,
+    )
+    if process_advisory:
+        desc = process_advisory.description or ""
+        missing = [
+            t
+            for t in ["CODEOWNERS", "CONTRIBUTING", "PULL_REQUEST_TEMPLATE"]
+            if t.lower() in desc.lower()
+        ]
+        signals.append(
+            process_missing_artifacts_to_signal(
+                missing_artifacts=missing or ["unknown"],
+                evidence_ids=process_advisory.evidence_ids,
+            )
+        )
+
+    # ── Test signals ──
+    test_evidence = [e for e in ctx.evidence_store.evidence if e.type == "test_file_detected"]
+    for ev in test_evidence:
+        signals.append(scan_test_evidence_to_signal(ev))
+
+    coverage_types = {"coverage_report_detected", "coverage_metric_detected"}
+    for ev in [e for e in ctx.evidence_store.evidence if e.type in coverage_types]:
+        signals.append(scan_test_coverage_evidence_to_signal(ev))
+
+    # Test-related findings from debt register
+    test_findings = [
+        f
+        for f in ctx.debt_register.findings
+        if f.category == "TD-TEST" and f.issue_type != "advisory"
+    ]
+    for f in test_findings:
+        if "coverage" in (f.title or "").lower():
+            signals.append(
+                scan_test_coverage_gap_to_signal(
+                    evidence_ids=f.evidence_ids,
+                    low_count=f.evidence_ids.__len__(),
+                )
+            )
+        else:
+            signals.append(scan_test_missing_to_signal(evidence_ids=f.evidence_ids))
+
+    # Risk-sensitive without tests
+    risk_sensitive_finding = next(
+        (
+            f
+            for f in ctx.debt_register.findings
+            if f.category == "TD-SEC"
+            and "test" in (f.title or "").lower()
+            and f.issue_type != "advisory"
+        ),
+        None,
+    )
+    if risk_sensitive_finding:
+        signals.append(
+            scan_test_risk_sensitive_without_tests_to_signal(
+                evidence_ids=risk_sensitive_finding.evidence_ids,
+            )
+        )
+
+    if not signals:
+        return
+
+    # ── Build summary from signals ──
+    build_signal_summary(signals)
+
+    # Count by family and disposition
+    family_rows: dict[str, dict[str, int]] = {}
+    for signal in signals:
+        fam = signal.family.value
+        disp = signal.disposition.value
+        if fam not in family_rows:
+            family_rows[fam] = {"finding": 0, "advisory": 0, "informational": 0, "suppressed": 0}
+        family_rows[fam][disp] += 1
+
+    lines.extend(
+        [
+            "",
+            "## 6d. Signal Governance Summary",
+            "",
+            "| Family | Findings | Advisories | Informational | Suppressed |",
+            "|---|---:|---:|---:|---:|",
+        ]
+    )
+
+    for fam in sorted(family_rows.keys()):
+        r = family_rows[fam]
+        lines.append(
+            f"| {fam.title()} | {r['finding']} | {r['advisory']} | {r['informational']} | {r['suppressed']} |"  # noqa: E501
+        )
+
+    lines.extend(
+        [
+            "",
+            "> Findings are promoted into the technical debt register and may create work packages.",  # noqa: E501
+            "> Advisories are reportable but do not create work packages.",
+            "> Informational signals provide context and coverage visibility.",
+            "> Suppressed signals are diagnostics-only and omitted from normal reports unless diagnostics are enabled.",  # noqa: E501
+            "",
+            "> Category describes the finding taxonomy (e.g., TD-DEP, TD-SEC).",
+            "> Family describes the governance owner (e.g., dependency, security).",
+            "> Category and family are not always identical: TD-COMP → SECURITY, TD-SEC → TEST.",
+            "",
+        ]
+    )
+
+    # ── Governance quality metrics (v3.23.0) ──
+    from pharabius.core.signals.quality import build_governance_quality_metrics
+
+    metrics = build_governance_quality_metrics(signals)
+
+    lines.extend(
+        [
+            "",
+            "## 6e. Governance Quality Metrics",
+            "",
+            "| Metric | Value |",
+            "|---|---:|",
+            f"| Total governed signals | {metrics.total_signals} |",
+            f"| Finding evidence coverage | {metrics.finding_evidence_coverage:.0%} |",
+            f"| Finding metadata coverage | {metrics.finding_metadata_coverage:.0%} |",
+            f"| Advisory evidence/basis coverage | {metrics.advisory_evidence_coverage:.0%} |",
+            f"| Informational evidence coverage | {metrics.informational_evidence_coverage:.0%} |",
+            "",
+        ]
+    )
+
+    # Disposition breakdown
+    if metrics.by_disposition:
+        lines.extend(
+            [
+                "| Disposition | Count |",
+                "|---|---:|",
+            ]
+        )
+        for disp, count in sorted(metrics.by_disposition.items()):
+            lines.append(f"| {disp.title()} | {count} |")
+        lines.append("")
+
+    # Confidence breakdown
+    if metrics.by_confidence:
+        lines.extend(
+            [
+                "| Confidence | Count |",
+                "|---|---:|",
+            ]
+        )
+        for conf, count in sorted(metrics.by_confidence.items()):
+            lines.append(f"| {conf} | {count} |")
+        lines.append("")
+
+    # Diagnostics
+    if metrics.diagnostics:
+        lines.extend(
+            [
+                "| Code | Severity | Message |",
+                "|---|---|---|",
+            ]
+        )
+        for d in metrics.diagnostics:
+            lines.append(f"| {d.code} | {d.severity} | {d.message} |")
+        lines.append("")
+
+    lines.extend(
+        [
+            "> These metrics are descriptive only.",
+            "> No quality gates are applied.",
+            "> No signal is promoted or demoted by these metrics.",
+            "",
+        ]
+    )
+
+    # ── Governance quality trends (v3.24.0) ──
+    # Compute trend from run-history if available
+    try:
+        from pharabius.core.run_history import _load_json, build_run_history_index
+        from pharabius.core.signals.trends import (
+            build_governance_trend_summary,
+            format_count_delta,
+            format_coverage_delta,
+        )
+
+        workspace = ctx.repository_root / ".ai-debt"
+        index = build_run_history_index(workspace)
+        runs = index.get("runs", [])
+
+        # Load snapshots with governance_quality
+        snapshots = []
+        for r in reversed(runs):
+            snap = _load_json(workspace / "runs" / f"{r.get('run_id', '')}-history-snapshot.json")
+            if snap and snap.get("governance_quality") is not None:
+                snapshots.insert(0, snap)  # maintain chronological order
+                if len(snapshots) >= 2:
+                    break
+
+        trend = build_governance_trend_summary(snapshots)
+    except Exception:
+        trend = None
+
+    if trend and trend.unavailable_reason is None:
+        lines.extend(
+            [
+                "",
+                "## 6f. Governance Quality Trends",
+                "",
+                "These trends compare governance quality metrics across recent runs. They are",
+                "descriptive only; no quality gates, thresholds, or pass/fail rules are applied.",
+                "",
+                "| Metric | Previous | Current | Change |",
+                "|---|---:|---:|---:|",
+                f"| Total governed signals | {trend.signal_count_delta.previous or 0} | {trend.signal_count_delta.current} | {format_count_delta(trend.signal_count_delta)} |",  # noqa: E501
+                f"| Finding evidence coverage | {(trend.finding_evidence_coverage_delta.previous or 1.0):.0%} | {trend.finding_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.finding_evidence_coverage_delta)} |",  # noqa: E501
+                f"| Advisory evidence/basis coverage | {(trend.advisory_evidence_coverage_delta.previous or 1.0):.0%} | {trend.advisory_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.advisory_evidence_coverage_delta)} |",  # noqa: E501
+                f"| Informational evidence coverage | {(trend.informational_evidence_coverage_delta.previous or 1.0):.0%} | {trend.informational_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.informational_evidence_coverage_delta)} |",  # noqa: E501
+                "",
+            ]
+        )
+
+        # Family breakdown if deltas exist
+        if trend.by_family_delta:
+            lines.extend(
+                [
+                    "| Family | Signals (prev) | Signals (curr) | Change |",
+                    "|---|---:|---:|---:|",
+                ]
+            )
+            for fam, delta in sorted(trend.by_family_delta.items()):
+                lines.append(
+                    f"| {fam.title()} | {delta.previous or 0} | {delta.current} | {format_count_delta(delta)} |"  # noqa: E501
+                )
+            lines.append("")
+
+        # Recurring diagnostics
+        if trend.recurring_diagnostics:
+            lines.extend(
+                [
+                    "| Diagnostic | Family | Runs | Latest severity |",
+                    "|---|---|---:|---|",
+                ]
+            )
+            for diag in trend.recurring_diagnostics:
+                lines.append(
+                    f"| {diag.code} | {diag.family or '-'} | {diag.occurrences} | {diag.latest_severity} |"  # noqa: E501
+                )
+            lines.append("")
+    elif trend and trend.unavailable_reason:
+        lines.extend(
+            [
+                "",
+                "## 6f. Governance Quality Trends",
+                "",
+                f"{trend.unavailable_reason}",
+                "",
+            ]
+        )

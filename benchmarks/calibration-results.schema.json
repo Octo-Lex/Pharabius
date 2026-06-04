@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Calibration Results",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "fixtures_tested",
+    "thresholds",
+    "severity_distribution",
+    "finding_quality_scores",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "fixtures_tested": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "thresholds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "original", "calibrated", "decision"],
+        "properties": {
+          "name": {"type": "string"},
+          "original": {"type": "number"},
+          "calibrated": {"type": "number"},
+          "decision": {"type": "string", "enum": ["keep", "lower", "raise", "defer"]},
+          "rationale": {"type": "string"}
+        }
+      }
+    },
+    "severity_distribution": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "critical": {"type": "integer"},
+          "high": {"type": "integer"},
+          "medium": {"type": "integer"},
+          "low": {"type": "integer"}
+        }
+      }
+    },
+    "finding_quality_scores": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "average": {"type": "number"},
+          "noise_rate": {"type": "number"}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {"type": "string"},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  }
+}

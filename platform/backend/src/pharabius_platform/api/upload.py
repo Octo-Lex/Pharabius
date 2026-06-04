@@ -29,6 +29,8 @@ from pharabius_platform.models import (
     Organization,
     Repository,
     Run,
+    WorkPackage,
+    WorkPackageFinding,
 )
 from pharabius_platform.services.parser import parse_bundle
 from pharabius_platform.services.storage import store_bundle
@@ -164,14 +166,24 @@ async def upload_bundle(
         medium = sum(1 for f in findings_list if f.severity == "Medium")
         low = sum(1 for f in findings_list if f.severity == "Low")
 
-        run_id_str = f"RUN-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+        # Extract run metadata from parsed bundle if available
+        run_meta = parsed.runs[0] if parsed.runs else None
+        run_id_str = (
+            run_meta.run_id if run_meta else f"RUN-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+        )
+        tool_version = (
+            run_meta.tool_version
+            if run_meta and run_meta.tool_version
+            else parsed.debt_register.schema_version
+            if hasattr(parsed.debt_register, "schema_version")
+            else "unknown"
+        )
+
         run_record = Run(
             bundle_id=bundle.id,
             repository_id=repo.id,
             run_id=run_id_str,
-            pharabius_version=parsed.debt_register.schema_version
-            if hasattr(parsed.debt_register, "schema_version")
-            else "2.2.1",
+            pharabius_version=tool_version,
             total_findings=total,
             critical=critical,
             high=high,
@@ -179,6 +191,9 @@ async def upload_bundle(
             low=low,
             readiness_status="unknown",
             gate_result="unknown",
+            commit_sha=run_meta.commit if run_meta else "",
+            branch_name=run_meta.branch if run_meta else "",
+            analysis_mode=run_meta.analysis_mode if run_meta else "baseline",
         )
         session.add(run_record)
         await session.flush()
@@ -256,13 +271,100 @@ async def upload_bundle(
             )
             session.add(evidence_record)
 
+        # Create Work Package records
+        finding_by_finding_id: dict[str, Finding] = {}
+        if run_record is not None:
+            finding_rows = await session.execute(
+                select(Finding).where(Finding.run_id == run_record.id)
+            )
+            for fr in finding_rows.scalars():
+                finding_by_finding_id[fr.finding_id] = fr
+
+        for wp_data in parsed.work_packages if parsed else []:
+            wp_record = WorkPackage(
+                repository_id=repo.id,
+                run_id=run_record.id,
+                package_id=str(wp_data.get("package_id", "")),
+                title=str(wp_data.get("title", "")),
+                objective=str(wp_data.get("objective", "")),
+                current_risk=str(wp_data.get("current_risk", "")),
+                recommended_engineering_approach=wp_data.get(
+                    "recommended_engineering_approach", []
+                ),
+                expected_affected_areas=wp_data.get("expected_affected_areas", []),
+                preconditions=wp_data.get("preconditions", []),
+                verification_recommendations=wp_data.get("verification_recommendations", []),
+                risks_and_cautions=wp_data.get("risks_and_cautions", []),
+                definition_of_done=wp_data.get("definition_of_done", []),
+                estimated_effort=str(wp_data.get("estimated_effort", "")),
+                expected_risk_reduction=str(wp_data.get("expected_risk_reduction", "")),
+                suggested_owner_area=str(wp_data.get("suggested_owner_area", "")),
+                status=str(wp_data.get("status", "")),
+                declared_evidence_ids=wp_data.get("declared_evidence_ids", []),
+                raw_payload=wp_data,
+            )
+            session.add(wp_record)
+            await session.flush()  # Get wp_record.id
+
+            # Create finding links
+            linked_items = wp_data.get("linked_debt_items", [])
+            for idx, debt_item in enumerate(linked_items):
+                if not isinstance(debt_item, str) or not debt_item.strip():
+                    # Malformed reference
+                    wp_link = WorkPackageFinding(
+                        work_package_id=wp_record.id,
+                        finding_id=None,
+                        debt_item_id=f"__malformed__:{idx}",
+                        resolution_status="malformed_reference",
+                        reason=f"Empty or invalid linked debt item: {debt_item!r}",
+                    )
+                    session.add(wp_link)
+                    continue
+
+                debt_item_stripped = debt_item.strip()
+                matched_finding = finding_by_finding_id.get(debt_item_stripped)
+                if matched_finding is not None:
+                    wp_link = WorkPackageFinding(
+                        work_package_id=wp_record.id,
+                        finding_id=matched_finding.id,
+                        debt_item_id=debt_item_stripped,
+                        resolution_status="resolved",
+                    )
+                else:
+                    wp_link = WorkPackageFinding(
+                        work_package_id=wp_record.id,
+                        finding_id=None,
+                        debt_item_id=debt_item_stripped,
+                        resolution_status="missing",
+                        reason=(
+                            "Work package references a finding that was not found in this upload."
+                        ),
+                    )
+                session.add(wp_link)
+
         await session.flush()
 
     await session.commit()
 
+    # Compute is_latest deterministically
+    is_latest = False
+    if run_record is not None:
+        latest_stmt = (
+            select(Run.id)
+            .where(Run.repository_id == repo.id)
+            .order_by(Run.run_timestamp.desc(), Run.id.desc())
+            .limit(1)
+        )
+        latest_result = await session.execute(latest_stmt)
+        latest_id = latest_result.scalar_one_or_none()
+        is_latest = latest_id == run_record.id
+
     return {
         "bundle_id": str(bundle.id),
         "repository_id": str(repo.id),
+        "run_id": str(run_record.id) if run_record else None,
+        "created_at": run_record.run_timestamp.isoformat() if run_record else None,
+        "is_latest": is_latest,
         "content_hash": sha256,
         "storage_path": storage_path,
         "file_size_bytes": len(data),
@@ -271,8 +373,13 @@ async def upload_bundle(
         "parse_errors": parse_errors,
         "evidence_warnings": parsed.evidence_warnings if parsed else [],
         "evidence_count": len(parsed.evidence_items) if parsed else 0,
-        "parser_version": "2.5.0",
+        "parser_version": "3.0.0",
         "findings_count": run_record.total_findings if run_record else 0,
+        "work_package_count": len(parsed.work_packages) if parsed else 0,
+        "work_package_warnings": parsed.work_package_warnings if parsed else [],
+        "warnings": parse_errors
+        + [w.get("message", "") for w in (parsed.evidence_warnings if parsed else [])]
+        + [w.get("message", "") for w in (parsed.work_package_warnings if parsed else [])],
     }
 
 

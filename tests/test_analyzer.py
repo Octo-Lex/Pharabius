@@ -125,7 +125,10 @@ def test_node_lockfile_present_no_dep_finding(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    # v3.3.0: Missing runtime pin now generates TD-DEP too
+    dep_findings = _td_dep_findings(register)
+    non_runtime = [f for f in dep_findings if "runtime" not in f.title.lower()]
+    assert non_runtime == []
 
 
 def test_python_manifest_missing_lockfile_produces_dep(tmp_path: Path) -> None:
@@ -141,7 +144,7 @@ def test_python_manifest_missing_lockfile_produces_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep_findings = _td_dep_findings(register)
+    dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep_findings) == 1
     assert "Python" in dep_findings[0].title
 
@@ -161,7 +164,7 @@ def test_multi_ecosystem_only_missing_flagged(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep_findings = _td_dep_findings(register)
+    dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep_findings) == 1
     assert "Python" in dep_findings[0].title
     assert "Node" not in dep_findings[0].title
@@ -182,7 +185,7 @@ def test_nested_manifest_missing_lock(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep_findings = _td_dep_findings(register)
+    dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep_findings) == 1
     assert "Python" in dep_findings[0].title
 
@@ -203,7 +206,7 @@ def test_nested_manifest_with_same_root_lock_no_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_nested_manifest_root_lock_still_produces_dep(tmp_path: Path) -> None:
@@ -222,7 +225,7 @@ def test_nested_manifest_root_lock_still_produces_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep_findings = _td_dep_findings(register)
+    dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep_findings) == 1
     assert "Python" in dep_findings[0].title
 
@@ -245,7 +248,7 @@ def test_nested_manifest_different_service_lock_still_dep(tmp_path: Path) -> Non
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep_findings = _td_dep_findings(register)
+    dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep_findings) == 1
 
 
@@ -263,7 +266,7 @@ def test_bun_lock_satisfies_node(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_bun_lockb_satisfies_node(tmp_path: Path) -> None:
@@ -280,7 +283,7 @@ def test_bun_lockb_satisfies_node(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_rust_cargo_no_lock_cautious(tmp_path: Path) -> None:
@@ -298,10 +301,11 @@ def test_rust_cargo_no_lock_cautious(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep_findings = _td_dep_findings(register)
+    dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep_findings) == 1
     f = dep_findings[0]
-    assert f.severity == "Medium"
+    assert f.severity == "Low"  # Advisory: capped at Low (v3.7.0)
+    assert f.issue_type == "advisory"
     assert f.confidence == "Medium"
     assert "Rust" in f.title
     # Rust caution in description, risks_and_cautions, and verification
@@ -324,12 +328,19 @@ def test_python_dual_manifests_grouped_as_one_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep_findings = _td_dep_findings(register)
-    assert len(dep_findings) == 1
-    f = dep_findings[0]
-    assert "Python" in f.title
+    dep_findings = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
+    assert len(dep_findings) == 2  # v3.2.0: no-lockfile + unpinned deps
+    lockfile_f = next(
+        (
+            f
+            for f in dep_findings
+            if "lockfile" in f.title.lower() or "lockfile" in f.description.lower()
+        ),
+        dep_findings[0],
+    )
+    assert "Python" in lockfile_f.title
     # Both manifest evidence IDs included
-    assert len(f.evidence_ids) >= 2
+    assert len(lockfile_f.evidence_ids) >= 2
 
 
 def test_root_manifest_with_root_lock_no_dep(tmp_path: Path) -> None:
@@ -346,7 +357,7 @@ def test_root_manifest_with_root_lock_no_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 # --- Step 7.5: Node workspace lockfile policy tests ---
@@ -371,7 +382,7 @@ def test_workspace_root_pkgjson_plus_root_lock_no_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_workspace_nested_plus_root_workspaces_plus_root_lock(tmp_path: Path) -> None:
@@ -386,7 +397,7 @@ def test_workspace_nested_plus_root_workspaces_plus_root_lock(tmp_path: Path) ->
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_workspace_nested_plus_pnpm_workspace_plus_root_lock(tmp_path: Path) -> None:
@@ -401,7 +412,7 @@ def test_workspace_nested_plus_pnpm_workspace_plus_root_lock(tmp_path: Path) -> 
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_workspace_nested_plus_turbo_plus_root_yarn(tmp_path: Path) -> None:
@@ -416,7 +427,7 @@ def test_workspace_nested_plus_turbo_plus_root_yarn(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_workspace_nested_no_marker_plus_root_lock_still_dep(tmp_path: Path) -> None:
@@ -431,7 +442,7 @@ def test_workspace_nested_no_marker_plus_root_lock_still_dep(tmp_path: Path) -> 
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep = _td_dep_findings(register)
+    dep = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep) == 1
     assert "Node" in dep[0].title
 
@@ -447,7 +458,7 @@ def test_workspace_nested_same_root_lock_no_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_workspace_root_bun_lock_no_dep(tmp_path: Path) -> None:
@@ -459,7 +470,7 @@ def test_workspace_root_bun_lock_no_dep(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_workspace_nested_plus_root_workspaces_plus_bun_lockb(tmp_path: Path) -> None:
@@ -476,7 +487,7 @@ def test_workspace_nested_plus_root_workspaces_plus_bun_lockb(tmp_path: Path) ->
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    assert _td_dep_findings(register) == []
+    assert [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()] == []
 
 
 def test_workspace_python_nested_unaffected_by_node_workspace(tmp_path: Path) -> None:
@@ -493,7 +504,7 @@ def test_workspace_python_nested_unaffected_by_node_workspace(tmp_path: Path) ->
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep = _td_dep_findings(register)
+    dep = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep) == 1
     assert "Python" in dep[0].title
 
@@ -512,7 +523,7 @@ def test_workspace_node_satisfied_python_missing_only_python_dep(tmp_path: Path)
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep = _td_dep_findings(register)
+    dep = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep) == 1
     assert "Python" in dep[0].title
 
@@ -529,6 +540,6 @@ def test_workspace_nested_pkgjson_workspaces_not_root(tmp_path: Path) -> None:
     write_evidence_store(tmp_path)
     register = analyze_evidence(tmp_path)
 
-    dep = _td_dep_findings(register)
+    dep = [f for f in _td_dep_findings(register) if "runtime" not in f.title.lower()]
     assert len(dep) == 1
     assert "Node" in dep[0].title

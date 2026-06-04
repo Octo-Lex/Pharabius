@@ -34,6 +34,21 @@ class MockAIAdapter(AIAdapter):
     def model(self) -> str:
         return "mock-v0.7.0"
 
+    @staticmethod
+    def _severity_to_confidence(severity: str) -> str:
+        """Map severity to valid confidence value (High/Medium/Low only).
+
+        Critical/High severity → High confidence.
+        Medium severity → Medium confidence.
+        Low severity → Low confidence.
+        Never returns 'Critical' (not a valid confidence value).
+        """
+        if severity in ("Critical", "High"):
+            return "High"
+        if severity == "Medium":
+            return "Medium"
+        return "Low"
+
     def generate_json(
         self,
         prompt: str,
@@ -73,7 +88,7 @@ class MockAIAdapter(AIAdapter):
             enrichment: dict[str, Any] = {
                 "finding_id": fid,
                 "evidence_ids": list(ev_ids),
-                "confidence": severity,
+                "confidence": self._severity_to_confidence(severity),
                 "limitations": [
                     "AI-generated enrichment — validate before acting",
                     f"Based on {len(ev_ids)} evidence item(s)",

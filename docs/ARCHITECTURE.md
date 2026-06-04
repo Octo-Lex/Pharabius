@@ -303,3 +303,114 @@ evolve independently. Sidecar output is never read by canonical commands.
 
 **Derived/export schemas** (SARIF, CSV, JSONL) follow their respective external standards.
 SARIF uses the SARIF 2.1.0 schema; JSONL and CSV are flat projections of finding data.
+
+## Scanner Module Structure (v3.4.0)
+
+The scanner was refactored in v3.4.0 from a monolithic 2048-line file into focused modules:
+
+| Module | Responsibility | Public API |
+|---|---|---|
+| `core/scanner.py` | File iteration, evidence orchestration, file-level analysis | `scan_repository()`, `write_evidence_store()` |
+| `core/io_helpers.py` | Shared `read_text()` and `read_json()` with error handling | `read_text()`, `read_json()` |
+| `core/coverage_parsers.py` | Istanbul, Python coverage, LCOV, Cobertura, JaCoCo parsing | `scan_coverage_artifact()` |
+| `core/dependency_parsers.py` | Manifest parsing, unpinned deps, lockfile consistency | `scan_dependency_manifest()`, `scan_repository_dependency_consistency()` |
+| `core/runtime_parsers.py` | Runtime version pin detection (Python + Node.js) | `detect_runtime_version_pins()` |
+| `core/constants.py` | Evidence types, thresholds, quality metadata constants | Constants only |
+| `core/path_utils.py` | Path normalization and pattern matching utilities | `normalize_repo_path()`, `relative_repo_path()`, etc. |
+| `core/dependency_utils.py` | PEP 508 / Poetry / Pipfile specifier classification | `classify_python_specifier()` |
+| `core/run_history.py` | Run history snapshots, index, trend computation, rendering | `build_current_run_snapshot()`, `build_run_history_summary()` |
+| `core/governance_export.py` | Machine-readable governance analytics export (JSON/JSONL) | `build_governance_export()`, `write_governance_export()`, schema versioning |
+| `core/signals/` | Platform-level signal governance (models, policy, adapters, dependency_adapters, security_adapters, architecture_adapters, configuration_adapters, observability_adapters, summary, quality, trends, validation, invariants) | `GovernedSignal`, `SignalDisposition`, `output_behavior()`, `validate_governed_signal()`, `build_governance_quality_metrics()`, `build_governance_trend_summary()`, invariant registry |
+| `schemas/evidence.py` | `EvidenceStore`, `EvidenceItem`, `EvidenceLocation`, `EvidenceBuilder` | Data models + builder |
+
+### Module dependency graph
+
+```text
+scanner.py
+  ├── io_helpers.py
+  ├── coverage_parsers.py ── io_helpers.py, schemas/evidence.py
+  ├── dependency_parsers.py ── io_helpers.py, dependency_utils.py, schemas/evidence.py
+  ├── runtime_parsers.py ── io_helpers.py, schemas/evidence.py
+  ├── constants.py
+  └── path_utils.py
+```
+
+---
+
+## Implementation Status (v3.9.0)
+
+| Capability | Status |
+|---|---|
+| Evidence-backed debt register | ✅ Implemented |
+| TD-CODE detection (large files + debt markers) | ✅ Implemented (v3.1.0 repair) |
+| TD-CODE detection (long functions + broad exceptions) | ✅ Implemented (v3.2.0) |
+| Finding deduplication | ✅ Minimal deterministic (v3.1.0) |
+| Work-package grouping | ✅ Conservative grouping (v3.1.0) |
+| Operational claims with gap tracking | ✅ Implemented |
+| Claims pipeline wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
+| Traceability matrices wired into `ai-debt run` | ✅ Implemented (v3.1.0) |
+| Traceability quality metrics + grading | ✅ Implemented (v3.2.0) |
+| Traceability quality trend (historical) | ✅ Implemented (v3.3.0) |
+| Quality gate thresholds | ✅ Implemented |
+| Review decision sidecar | ✅ Implemented |
+| Trend trajectory analysis | ✅ Heuristic (not scientific) |
+| AI enrichment (optional) | ✅ OpenAI-compatible adapter |
+| Mock AI provider confidence fix | ✅ Fixed (v3.1.0) |
+| Shared constants module | ✅ Implemented (v3.2.0) |
+| Shared path normalization | ✅ Implemented (v3.3.0) |
+| Shared I/O helpers | ✅ Implemented (v3.4.0) |
+| `max_file_size_kb` enforcement | ✅ Implemented (v3.2.0) |
+| Coverage ingestion (Istanbul/Python/LCOV) | ✅ Implemented (v3.2.0) |
+| Coverage ingestion (Cobertura/JaCoCo) | ✅ Implemented (v3.3.0) |
+| Coverage parser module | ✅ Extracted (v3.4.0) |
+| Dependency health signals (unpinned + lockfile conflict) | ✅ Partial (v3.2.0: Node + Python req) |
+| Dependency health signals (pyproject/Poetry/Pipfile) | ✅ Implemented (v3.3.0) |
+| Dependency parser module | ✅ Extracted (v3.4.0) |
+| Runtime version pinning (Python + Node) | ✅ Implemented (v3.3.0) |
+| Runtime parser module | ✅ Extracted (v3.4.0) |
+| Evidence system documentation | ✅ Implemented (v3.4.0) |
+| TD-TEST low-coverage finding | ✅ Implemented (v3.2.0) |
+| Scanner modularization (2048→1045 lines) | ✅ Complete (v3.4.0) |
+| Run history intelligence (snapshots + trends) | ✅ Implemented (v3.5.0) |
+| Finding trend by category | ✅ Implemented (v3.5.0) |
+| Risk trend by category | ✅ Implemented (v3.5.0) |
+| Evidence coverage trend | ✅ Implemented (v3.5.0) |
+| Work-package readiness trend | ✅ Implemented (v3.5.0) |
+| Run history documentation | ✅ Implemented (v3.5.0) |
+| Benchmark validation & calibration | ✅ Implemented (v3.6.0) |
+| Executable finding-quality rubric | ✅ Implemented (v3.6.0) |
+| Threshold calibration (all kept) | ✅ Implemented (v3.6.0) |
+| Validation documentation | ✅ Implemented (v3.6.0) |
+| Advisory classification for structural signals | ✅ Implemented (v3.7.0) |
+| OSS benchmark lane (3 pinned repos) | ✅ Implemented (v3.7.0) |
+| Advisory severity cap (Low, risk ≤ 10) | ✅ Implemented (v3.7.0) |
+| Planner/claims advisory exclusion | ✅ Implemented (v3.7.0) |
+| Run history advisory tracking | ✅ Implemented (v3.7.0) |
+| Classification-boundary warning | ✅ Implemented (v3.7.0) |
+| Performance smoke test (1000-file repo) | ✅ Implemented (v3.7.0) |
+| Runtime conflict detection (Python/Node) | ✅ Implemented (v3.8.0) |
+| Ruby runtime pin evidence | ✅ Implemented (v3.8.0) |
+| Java runtime pin evidence | ✅ Implemented (v3.8.0) |
+| Dockerfile runtime evidence | ✅ Implemented (v3.8.0) |
+| GitHub Actions runtime evidence | ✅ Implemented (v3.8.0) |
+| Constraint kind model (exact/range/partial) | ✅ Implemented (v3.8.0) |
+| Runtime reproducibility documentation | ✅ Implemented (v3.8.0) |
+| Runtime package split (8 modules) | ✅ Implemented (v3.9.0) |
+| RuntimeEvidence IR model | ✅ Implemented (v3.9.0) |
+| RuntimeConstraint model (5 kinds) | ✅ Implemented (v3.9.0) |
+| RuntimeConflictGroup model | ✅ Implemented (v3.9.0) |
+| Centralized signal policy | ✅ Implemented (v3.9.0) |
+| Runtime summary in history snapshot | ✅ Implemented (v3.9.0) |
+| Go runtime evidence | ✅ Implemented (v3.10.0) |
+| Rust runtime evidence | ✅ Implemented (v3.10.0) |
+| .NET runtime evidence | ✅ Implemented (v3.10.0) |
+| PHP runtime evidence | ✅ Implemented (v3.10.0) |
+| Pin-quality predicate (is_runtime_pin) | ✅ Implemented (v3.10.0) |
+| UNKNOWN evidence semantics | ✅ Implemented (v3.10.0) |
+| Benchmark fixture matrix (20 fixtures) | ✅ Implemented (v3.10.0) |
+| Schema-Budget Coupling | 📋 Design only |
+| AST-based analysis | 🔜 Deferred |
+| Dependency vulnerability scanning | 🔜 Deferred |
+| Long-function detection for non-Python | 🔜 Deferred (JS/Go/Swift) |
+| Runtime version conflict detection | 🔜 Deferred |
+| Ruby/Java runtime pinning | ✅ Implemented (v3.8.0) |

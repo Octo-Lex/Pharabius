@@ -37,7 +37,7 @@ def test_write_plan_generates_roadmap_handoff_and_work_packages(
 
     assert "# Remediation Roadmap" in roadmap_text
     assert "# AI Technical Debt Handoff Summary" in handoff_text
-    assert "TD-DEP" in roadmap_text
+    assert "TD-TEST" in roadmap_text
 
     for package_path in result.work_package_paths:
         path = Path(package_path)

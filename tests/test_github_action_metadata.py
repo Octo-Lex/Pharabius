@@ -65,7 +65,8 @@ class TestActionMetadata:
 
     def test_install_step_uses_version_input(self) -> None:
         content = ACTION_YML.read_text(encoding="utf-8")
-        assert "pharabius==${{ inputs.pharabius-version }}" in content
+        # Installs from local source (editable) rather than PyPI
+        assert 'pip install -e ".[openai-compatible]"' in content
 
 
 class TestActionSafety:

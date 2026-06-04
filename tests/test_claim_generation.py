@@ -117,8 +117,10 @@ class TestClaimTraceability:
 
     def test_work_packages_linked(self) -> None:
         f = _finding(evidence_ids=["EVD-001"])
-        f["related_findings"] = ["WP-001"]
-        claims = generate_claims_from_findings([f])
+        claims = generate_claims_from_findings(
+            [f],
+            finding_to_wp_map={f["id"]: ["WP-001"]},
+        )
         assert "WP-001" in claims[0].linked_work_packages
 
 

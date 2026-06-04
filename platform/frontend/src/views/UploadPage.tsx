@@ -186,12 +186,21 @@ export default function UploadPage() {
             )}
 
             <div className="mt-3 pt-3 border-t border-green-200 flex items-center gap-4">
-              <Link
-                to="/"
-                className="text-primary hover:underline text-sm font-medium"
-              >
-                → View repositories
-              </Link>
+              {result.run_id && result.repository_id ? (
+                <Link
+                  to={`/repositories/${result.repository_id}?run_id=${result.run_id}`}
+                  className="text-primary hover:underline text-sm font-medium"
+                >
+                  → View uploaded run
+                </Link>
+              ) : (
+                <Link
+                  to="/"
+                  className="text-primary hover:underline text-sm font-medium"
+                >
+                  → View repositories
+                </Link>
+              )}
               <button
                 onClick={resetForm}
                 className="text-muted hover:text-gray-700 text-sm"

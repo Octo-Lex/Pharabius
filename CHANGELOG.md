@@ -2,6 +2,748 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.0.0] - 2026-06-04
+
+### Public Catch-Up Release
+
+This release brings the public GitHub repository from the v2.5.0 baseline to the current v3.0.0 public baseline.
+
+It consolidates internal development waves from v3.0.0 through v3.26.0 into one public release line. The internal wave records are preserved below for auditability but are not being published as separate GitHub releases.
+
+See `docs/PUBLIC_SYNC_NOTES.md` for the full sync narrative and `docs/RELEASE_STATE.md` for tag policy.
+
+### Major Capabilities Added Since v2.5.0
+
+#### Signal Governance Model
+- 10 signal families: Runtime, Test, Code, Documentation, Dependency, Security, Architecture, Configuration, Observability, Coverage
+- 29 adapters mapping raw evidence to governed signals
+- 4 dispositions: Finding, Advisory, Informational, Suppressed
+- 8 invariants and 5 diagnostics
+- `spec.kind` metadata-based routing (not title text)
+
+#### Governance Arc (v3.16.0–v3.26.0)
+- **v3.16.0** Dependency Health: 7 adapters, 50 tests
+- **v3.17.0** Security Exposure: 3 adapters, 49 tests
+- **v3.18.0** Architecture Risk: 2 adapters, kind-based routing, 43 tests
+- **v3.19.0** Configuration/Environment: 1 adapter, SignalFamily.CONFIGURATION, 59 tests
+- **v3.20.0** Observability: 1 adapter, all 10 families governed, 63 tests
+- **v3.21.0** Governance Audit: cross-family inventory, 57 tests
+- **v3.22.0** Reporter UX: governance notes, boundary reference table, 32 tests
+- **v3.23.0** Quality Metrics: GQM-001–005, report section 6e, 29 tests
+- **v3.24.0** Trend Metrics: GovernanceTrendSummary, report section 6f, 33 tests
+- **v3.25.0** Governance Export: schema v1.0, JSON + JSONL, forbidden field validation, 36 tests
+- **v3.26.0** Contract Freeze: GOVERNANCE_CONTRACT.md, V4_READINESS.md, 52 tests
+
+#### Platform Surface
+- FastAPI backend with 30 API endpoints
+- PostgreSQL with 6 Alembic migrations
+- React frontend with 8 views (FindingsTable, PortfolioSummary, RepositoryDashboard, RepositoryList, ReviewSummary, RunComparison, UploadPage, WorkPackages)
+- Docker Compose deployment
+
+#### Additional Capabilities
+- Run comparison and traceability delta
+- Evidence traceability scoring
+- Benchmark regression suite (6 fixture types)
+- OSS field validation framework
+- Runtime version normalization and conflict detection
+- AI enrichment layer (mock + openai-compatible, disabled by default)
+- Verification engine (632 lines)
+- Scoring system (604 lines)
+- Operational claims (257 lines)
+- Quality gate engine
+- 5 governance presets
+- GitHub Action (`action.yml`)
+
+### Validation
+
+- CLI tests: 2,970 passed, 7 skipped
+- Platform backend tests: 276 passed, 5 skipped
+- Platform frontend tests: 28 passed, 5 TypeScript mock errors (pre-existing)
+- Frontend build: succeeds (5 pre-existing TS errors in test mocks)
+- Source formatting: ruff format applied to all governance arc files
+- Public CI: pending at PR time
+
+### Known Gaps
+
+- External scanner connectors not implemented (zero connectors)
+- Live ticket sync not implemented (no Jira/Linear/GitHub Issues integration)
+- Runtime Schema-Budget Coupling not implemented beyond context budgeting
+- Portfolio orchestration and governance workflows remain future work
+- Platform frontend not CI-validated in this release
+- No standalone platform documentation guide
+
+---
+
+## Internal Wave Archive
+
+> The entries below are internal development records, preserved for auditability. They were never published as separate GitHub releases.
+
+## [3.26.0] - Unreleased
+
+### Added
+- `docs/GOVERNANCE_CONTRACT.md` — complete v3 governance contract inventory
+- `docs/V4_READINESS.md` — v4 direction memo (documents options without implementing them)
+- 52 contract-freeze tests in `tests/test_v326_contract_freeze.py`
+- Schema version escalation rule documented
+- Non-policy boundary audit tests
+- Documentation consistency audit tests
+- No-runtime-registry assertion tests
+
+### Unchanged
+- All 2918 pre-existing tests pass
+- No new signal families (still 10)
+- No new adapters (still 29)
+- No new detection, analyzer, policy, dashboard, or enforcement behavior
+- No findings, advisories, risk scores, signal dispositions, or work packages changed
+
+## [3.25.0] - Unreleased
+
+### Added
+- `src/pharabius/core/governance_export.py` — machine-readable governance analytics export
+  (`build_governance_export()`, `write_governance_export()`, `write_governance_export_jsonl()`)
+- `governance` format in `export_findings()` — writes `governance-summary.json` and `.jsonl`
+- Export schema version 1.0 with `schema_version`, `export_type`, `run_id`, `generated_at`
+- Governance export includes signal_summary, governance_quality, governance_trends, diagnostics
+- Recurring diagnostics included in export
+- Forbidden field validation (`_validate_no_forbidden_fields()`)
+- 36 new export tests
+
+### Unchanged
+- All 2882 pre-existing tests pass
+- No findings, advisories, risk scores, signal dispositions, or work-package behavior changed
+- No quality gates, pass/fail thresholds, or policy decisions introduced
+- No dashboard, CI gate, external integration, or persistent SignalStore
+
+## [3.24.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/trends.py` — governance quality trend model
+  (`GovernanceTrendSummary`, `GovernanceMetricDelta`, `GovernanceDiagnosticTrend`)
+- `build_governance_trend_summary()` — read-only trend computation across runs
+- `extract_governance_quality_snapshots()` — extracts runs with governance_quality
+- `governance_trend_to_dict()` — JSON serialization
+- `format_coverage_delta()` / `format_count_delta()` — percentage-point formatting
+- Foundation report section "6f. Governance Quality Trends" (when history exists)
+- Run-history summary includes `governance_trends` (additive)
+- `compute_governance_quality_trend()` in run_history.py
+- `_reconstruct_signals_from_snapshot()` shared between summary and quality functions
+- 33 new trend tests + 27 no-behavior-change tests
+
+### Changed
+- `_build_signal_summary` in run_history.py uses `_reconstruct_signals_from_snapshot`
+
+### Unchanged
+- All 2849 pre-existing tests pass
+- No findings, advisories, risk scores, signal dispositions, or work-package behavior changed
+- No quality gates, pass/fail thresholds, or policy decisions introduced
+
+## [3.23.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/quality.py` — governance quality metrics model
+  (`GovernanceQualityMetrics`, `GovernanceQualityDiagnostic`)
+- `build_governance_quality_metrics()` — read-only quality metrics from governed signals
+- `governance_quality_metrics_to_dict()` — JSON serialization
+- Threshold-free diagnostics: GQM-001 through GQM-005
+- Foundation report section "6e. Governance Quality Metrics"
+- Run-history snapshot includes `governance_quality` (additive alongside `signal_summary`)
+- 29 new tests for quality metrics, coverage, diagnostics, serialization
+
+### Changed
+- `_build_signal_summary` in run_history.py refactored to share signal reconstruction
+  with `_build_governance_quality` via `_reconstruct_signals_from_snapshot`
+
+### Unchanged
+- All 2820 pre-existing tests pass
+- No findings, advisories, risk scores, signal dispositions, or work-package behavior changed
+- No quality gates, pass/fail thresholds, or promotion/demotion rules introduced
+
+## [3.22.0] - Unreleased
+
+### Changed
+- Foundation report Signal Governance Summary: improved disposition explanations
+- Foundation report: added category/family distinction note
+- `docs/SIGNAL_GOVERNANCE.md`: added family boundary reference table, signal examples catalog, category/family distinction section
+- Fixed runtime category in inventory: TD-DEP (not TD-RUNTIME)
+
+### Unchanged
+- All 2788 pre-existing tests pass
+- No analyzer, adapter, detection, promotion, risk-score, or work-package behavior changes
+- No new signal adapters, families, or dispositions
+
+## [3.21.0] - Unreleased
+
+### Added
+- `tests/fixtures/signal_governance/governed_family_inventory.py` — machine-checkable governance inventory
+- `tests/test_v321_governance_audit.py` — 47 cross-family audit tests
+- `tests/test_v321_signal_family_boundaries.py` — 10 boundary regression tests
+- `docs/SIGNAL_GOVERNANCE_AUDIT.md` — completion audit document
+- Category-to-family mapping with known exceptions (TD-COMP→SECURITY, TD-SEC→TEST)
+- Evidence cap audit (architecture: 20, observability: 5)
+- Metadata minimum contract for uniform families
+- Static analyzer audit: no unlisted direct-promotion paths
+
+### Changed
+- Nothing — this is an audit release
+
+### Unchanged
+- All 2694 pre-existing tests pass unchanged
+- No new detection or promotion behavior
+- No new signal families or adapters
+
+## [3.20.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/observability_adapters.py` — 1 observability signal adapter
+  (`observability_missing_to_signal`)
+- Observability family in signal governance conformance suite (parameterized)
+- Observability family boundary and summary tests
+- `docs/OBSERVABILITY_SIGNALS.md` — scope statement
+- 63 new tests: 25 characterization, 22 fixture/regression, 16 conformance/boundary
+
+### Changed
+- `_analyze_missing_observability()` uses `output_behavior()` for promotion
+- Observability signals flow through `GovernedSignal` contract with `SignalFamily.OBSERVABILITY`
+
+### Unchanged
+- All TD-OBS findings produce identical output
+- CI-only deployment evidence remains excluded
+- Observability keyword detection is existing only — no new keyword scanning
+- Evidence cap at 5 preserved with existing ordering
+- Existing report section grouping unchanged
+
+### Milestone
+- **v3.20.0 completes first-pass signal governance adoption across all 10 families.**
+
+## [3.19.0] - Unreleased
+
+### Added
+- `SignalFamily.CONFIGURATION` — new enum value for configuration/environment signals
+- `src/pharabius/core/signals/configuration_adapters.py` — 1 configuration signal adapter
+  (`configuration_env_without_example_to_signal`)
+- Configuration family in signal governance conformance suite (parameterized)
+- Configuration family boundary and summary tests
+- `docs/CONFIGURATION_SIGNALS.md` — scope statement
+- 59 new tests: 24 characterization, 23 fixture/regression, 12 conformance/boundary
+
+### Changed
+- `_analyze_env_without_example()` uses `output_behavior()` for promotion
+- Configuration signals flow through `GovernedSignal` contract with `SignalFamily.CONFIGURATION`
+- Signal family enum count: 9 → 10
+
+### Unchanged
+- All TD-CONFIG findings produce identical output
+- Existing reporter section grouping is unchanged
+- No new secret scanning, credential validation, config hardening, or policy-as-code
+- `.env.example` alone remains a skip/no-signal condition
+- Existing caution text about credentials is byte-for-byte preserved
+
+## [3.18.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/architecture_adapters.py` — 2 architecture signal adapters
+  (`architecture_cycle_to_signal`, `architecture_boundary_violation_to_signal`)
+- `kind` field on `ArchFindingSpec` for stable governance routing (not title-based)
+- Architecture family in signal governance conformance suite (parameterized)
+- Architecture family boundary and summary tests
+- `docs/ARCHITECTURE_SIGNALS.md` — scope statement
+- 43 new tests: 14 characterization, 17 fixture/regression, 12 conformance/boundary
+
+### Changed
+- `_add_architecture_findings()` uses `output_behavior()` and `spec.kind` for promotion
+- Architecture signals flow through `GovernedSignal` contract with `SignalFamily.ARCHITECTURE`
+
+### Unchanged
+- All architecture findings produce identical output
+- `architecture_analyzer.py` unchanged except `kind` field on `ArchFindingSpec`
+- High-coupling metrics, unresolved imports, external imports still produce no findings
+- Cap behavior (20 per type) preserved byte-for-byte
+- Graph-absent behavior remains graceful skip
+- `SignalFamily.ARCHITECTURE` was already present; reused (not re-added)
+
+## [3.17.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/security_adapters.py` — 3 security signal adapters
+  (`security_compliance_exposure_to_signal`, `security_sensitive_path_to_signal`,
+  `security_sensitive_keyword_to_signal`)
+- Security family in signal governance conformance suite (parameterized)
+- Security family boundary tests (security vs test family separation)
+- Security signal summary tests
+- `docs/SECURITY_EXPOSURE.md` — strict scope statement
+- 49 new tests: 18 characterization, 18 fixture/regression, 13 conformance/boundary
+
+### Changed
+- `_analyze_compliance_keywords()` uses `output_behavior()` instead of hardcoded builder.add()
+- Compliance signals flow through `GovernedSignal` contract with `SignalFamily.SECURITY`
+- Category `TD-COMP` is preserved while governed under `SignalFamily.SECURITY`
+
+### Unchanged
+- All compliance findings produce identical output (field-by-field verified)
+- `_analyze_risk_sensitive_without_tests` stays under `SignalFamily.TEST` (not migrated)
+- `_analyze_env_without_example` stays as `TD-CONFIG` (out of scope)
+- No vulnerability, CVE, exploitability, SAST, DAST, taint analysis, or secret validation added
+- Compliance keyword set `{"pii", "gdpr", "hipaa", "pci", "retention", "patient"}` is unchanged
+- `SignalFamily.SECURITY` was already present; reused (not re-added)
+
+## [3.16.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/dependency_adapters.py` — 7 dependency signal adapters
+  (`dependency_unpinned_to_signal`, `dependency_lockfile_conflict_to_signal`,
+  `dependency_missing_lockfile_to_signal`, `dependency_manifest_without_lockfile_to_signal`,
+  `dependency_orphan_lockfile_to_signal`, `dependency_parse_failure_to_signal`,
+  `dependency_manifest_detected_to_signal`)
+- Dependency family in signal governance conformance suite (parameterized)
+- Dependency family boundary tests (runtime vs dependency separation)
+- Dependency signal summary tests
+- 50 new tests: 19 characterization, 17 fixture/regression, 14 conformance/boundary
+
+### Changed
+- `_analyze_dependency_signals()` uses `output_behavior()` instead of hardcoded branching
+- `_emit_lockfile_finding()` uses governed signal disposition via `output_behavior()`
+- Dependency signals flow through `GovernedSignal` contract with `SignalFamily.DEPENDENCY`
+
+### Unchanged
+- All dependency findings, advisories, and observations produce identical output
+- No new vulnerability scanning, SBOM, license, or freshness capabilities
+- `SignalFamily.DEPENDENCY` was already present; reused (not re-added)
+
+## [3.15.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/invariants.py` — 8 named governance invariants (INV_001–INV_008)
+- `SignalValidationSeverity` — fixed enum (CRITICAL, WARNING, INFO) for validation/diagnostics
+- `src/pharabius/core/signals/validation.py` — `validate_governed_signal()` and `diagnose_signal()`
+- `SignalValidationViolation` — structured violations with invariant codes
+- `SignalDiagnostic` — structured diagnostics for test-facing analysis
+- `output_behavior()` in policy.py — complete output mapping per disposition
+- `SignalOutputBehavior` frozen dataclass (creates_finding, creates_advisory, creates_work_package, etc.)
+- `build_signal_summary(include_diagnostics=False)` — SUPPRESSED excluded from normal summaries
+- 84 new governance conformance, validation, boundary, and diagnostic tests
+
+### Changed
+- SUPPRESSED signals excluded from normal signal summaries by default (include_diagnostics=True to include)
+- Signal validation uses structured `SignalValidationViolation` with invariant codes
+
+### Migration checklist added to docs/SIGNAL_GOVERNANCE.md
+
+## [3.14.0] - Unreleased
+
+### Added
+- Test signal adapters: `scan_test_missing_to_signal` (FINDING),
+  `scan_test_risk_sensitive_without_tests_to_signal` (FINDING),
+  `scan_test_coverage_gap_to_signal` (FINDING),
+  `scan_test_evidence_to_signal` (INFORMATIONAL),
+  `scan_test_coverage_evidence_to_signal` (INFORMATIONAL)
+- `_analyze_missing_tests()` uses governed signal disposition (`should_create_finding`)
+- `_analyze_risk_sensitive_without_tests()` uses governed signal disposition
+- `_analyze_coverage_gaps()` uses governed signal disposition
+- Signal summary includes `test` family (test files, coverage reports, test findings)
+- Report signal section (6d) shows test family alongside runtime/docs/build/process
+- `docs/SIGNAL_GOVERNANCE.md` updated with test family
+- 51 new contract tests
+
+### Changed
+- Run-history signal summary includes test health signals
+- Report signal section groups test findings with existing families
+
+## [3.13.0] - Unreleased
+
+### Added
+- `SignalFamily.PROCESS` — governance/process signal family (distinct from BUILD)
+- Documentation signal adapters: `docs_missing_to_signal` (ADVISORY), `docs_evidence_to_signal` (INFORMATIONAL)
+- Build signal adapters: `build_missing_ci_to_signal` (ADVISORY), `build_ci_evidence_to_signal` (INFORMATIONAL)
+- Process signal adapter: `process_missing_artifacts_to_signal` (ADVISORY)
+- `_analyze_missing_docs()` uses governed signal disposition (`should_create_advisory`)
+- `_analyze_missing_ci()` uses governed signal disposition (`should_create_advisory`)
+- `_analyze_missing_process_artifacts()` uses governed signal disposition (`should_create_advisory`)
+- Signal summary is signal-driven: built from GovernedSignal instances, not raw evidence heuristics
+- Signal governance report section (6d) now shows runtime, documentation, build, and process families
+- `docs/SIGNAL_GOVERNANCE.md` updated with documentation/build/process reference families
+- 62 new contract tests (S01-S08)
+
+### Changed
+- Run-history signal summary built from GovernedSignal instances (was raw evidence type heuristics)
+- Report signal section groups by family (was runtime-only)
+
+## [3.12.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/` package — platform-level signal governance foundation
+- `SignalDisposition` enum (FINDING, ADVISORY, INFORMATIONAL, SUPPRESSED)
+- `SignalFamily` enum (RUNTIME, DEPENDENCY, TEST, SECURITY, ARCHITECTURE, DOCUMENTATION, BUILD, OBSERVABILITY)
+- `GovernedSignal` frozen dataclass — policy result after evidence interpretation
+- `should_create_advisory()` policy predicate — explicit advisory branching
+- `should_create_finding()`, `should_create_work_package()`, `is_reportable()`, `is_informational()` predicates
+- Runtime signal adapters: conflict→FINDING, missing pin→ADVISORY, evidence→INFORMATIONAL
+- Evidence-based adapters for analyzer consumption
+- `_analyze_runtime_version_signals()` uses explicit disposition branching
+- `SignalSummary` and `build_signal_summary()` for run-history integration
+- Signal governance summary in foundation audit report (section 6d)
+- `signal_summary` field in run-history snapshots
+- `docs/SIGNAL_GOVERNANCE.md` — signal lifecycle, disposition rules, promotion rules
+- 38 new contract tests (S01-S07)
+
+### Changed
+- Analyzer runtime signal analysis uses `should_create_finding()` and `should_create_advisory()` (no catch-all fallback)
+- No behavior changes — identical finding/advisory output to v3.11.0
+
+## [3.11.0] - Unreleased
+
+### Added
+- `RuntimeSourceGrade` enum (LOCKFILE, TOOL_PIN, VERSION_FILE, MANIFEST_PIN, MANIFEST_RANGE, CONTAINER, CI, UNKNOWN)
+- `source_grade` field on `RuntimeEvidence` (mandatory, no default)
+- `PIN_VIOLATES_MANIFEST_RANGE` conflict kind — deterministic pin vs manifest range
+- `INCOMPATIBLE_RANGES` conflict kind — definitely disjoint range sources
+- `is_deterministic_project_pin()` and `is_manifest_compatibility_range()` policy predicates
+- `ranges_are_disjoint()` constraint helper
+- Go directive now sets `lower_bound` on RANGE constraint for conflict detection
+- .NET TargetFramework now sets `lower_bound`/`upper_bound` on RANGE constraint
+- 5 semantic conflict benchmark fixtures (Go, Rust, .NET, PHP)
+- Contract test enforces `source_grade != UNKNOWN` (parsers must set explicitly)
+- 29 new tests (S01: 19, S02-S04: 9, S06: 10)
+
+### Changed
+- Conflict precedence: PIN_VIOLATES_MANIFEST_RANGE before EXACT_EXACT_MISMATCH
+- Go directive grade: MANIFEST_RANGE (was incorrectly MANIFEST_PIN from script)
+- Conflict explanations now include source_grade labels
+
+## [3.10.0] - Unreleased
+
+### Added
+- **Go runtime evidence**: `go.mod` go directive (RANGE baseline) and toolchain directive (EXACT pin), Docker FROM golang, GitHub Actions setup-go, .tool-versions golang.
+- **Rust runtime evidence**: `rust-toolchain` file, `rust-toolchain.toml` channel (exact or named), `Cargo.toml` rust-version (RANGE minimum), Docker FROM rust, .tool-versions rust. Named channels (stable/beta/nightly) → UNKNOWN.
+- **.NET runtime evidence**: `global.json` SDK pin (EXACT), `.csproj` TargetFramework(s) (RANGE), bounded recursive csproj scanning, Docker FROM dotnet, GitHub Actions setup-dotnet, .tool-versions dotnet.
+- **PHP runtime evidence**: `composer.json` require.php (EXACT or RANGE), Docker FROM php (with variant suffix handling), GitHub Actions shivammathur/setup-php, .tool-versions php.
+- **Pin-quality predicate**: `is_runtime_pin()` in policy.py distinguishes reproducibility pins from compatibility baselines.
+- **UNKNOWN evidence semantics**: UNKNOWN evidence proves detection but not reproducibility; coexists with missing-pin advisory.
+- **Shared parser contract tests**: `assert_runtime_parser_contract()` validates all required fields on RuntimeEvidence.
+- **Deterministic ID tests**: Stability across repeated scans, source_detail distinction.
+- **Benchmark fixture matrix**: 20 fixtures across Go/Rust/.NET/PHP × 5 scenarios (clean_pinned, missing_pin, conflict_ci, conflict_docker, unknown_dynamic).
+- **79 new tests** across 8 test files.
+
+### Changed
+- `RuntimeEcosystem` enum expanded: +GO, RUST, DOTNET, PHP (now 8 values).
+- `is_runtime_pin()` replaces constraint-kind-only check in `_emit_missing_pins()`. Compatibility baselines no longer suppress missing-pin advisories.
+- `constraints.py`: `.*` wildcard pattern now correctly produces RANGE constraint.
+- Docker, GitHub Actions, and .tool-versions parsers updated with new ecosystem mappings.
+
+### Non-goals
+- No configurable governance policy engine.
+- No lockfile-vs-manifest conflict detection.
+- No range-vs-range conflict detection.
+- No runtime risk-score redesign.
+
+## [3.9.0] - Unreleased
+
+### Added
+- **Runtime package split**: `src/pharabius/core/runtime/` package with 8 modules replacing the monolithic `runtime_parsers.py`.
+- **RuntimeEvidence IR**: canonical internal representation for runtime evidence with deterministic IDs.
+- **RuntimeConstraint model**: EXACT, RANGE, UNPINNED, MISSING, UNKNOWN constraint kinds.
+- **RuntimeConflictGroup model**: explicit conflict kinds (EXACT_EXACT_MISMATCH, RANGE_EXCLUDES_EXACT, DOCKERFILE_DIFFERS, CI_DIFFERS).
+- **Policy module**: centralized classify_conflict/classify_missing_pin/classify_evidence decisions.
+- **Runtime summary in enriched snapshot**: ecosystems detected/pinned/missing, conflict/advisory counts.
+- **Runtime section in foundation audit report**: pinned runtimes, missing pins, conflict alerts.
+- **22 new tests** in `test_v390_runtime_normalization.py`.
+
+### Changed
+- `runtime_parsers.py` reduced to backward-compatibility re-export shim (976 → 5 lines).
+- All runtime parsing logic moved to `runtime/` package modules.
+- Reporter gains runtime reproducibility section (6c).
+- Run history enriched snapshot gains `runtime_evidence_summary`.
+
+### Removed
+- No features removed. All v3.8.0 behavior preserved.
+
+## [3.8.0] - Unreleased
+
+### Added
+- **Runtime conflict detection** for Python and Node.js: flags when multiple runtime declarations disagree (`.python-version` vs `.tool-versions`, `.nvmrc` vs `.node-version`, etc.).
+- **Constraint kind model**: sources classified as `exact`, `range`, `partial`, or `unknown`. Only `exact vs exact` or `range excludes exact` produce conflicts.
+- **Python source expansion**: `runtime.txt` (Heroku) and `pyproject.toml` `requires-python` now detected as runtime sources.
+- **Ruby runtime pin evidence**: `.ruby-version`, `.tool-versions` ruby, and `Gemfile` ruby declarations.
+- **Java runtime pin evidence**: `.java-version`, `.tool-versions` java, `pom.xml` maven.compiler.release/source, `build.gradle` sourceCompatibility/toolchain.
+- **Dockerfile runtime evidence**: FROM line extraction for Python, Node, Ruby, Java base images. ARG-driven images produce partial evidence. Multi-stage Dockerfiles handled correctly.
+- **GitHub Actions runtime evidence**: `setup-python`, `setup-node`, `setup-ruby`, `setup-java` action detection with version extraction. Matrix/env expressions produce partial evidence.
+- **Missing runtime pin reclassified as advisory** (`issue_type="advisory"`): does not generate work packages or claims.
+- **Runtime conflict finding**: `issue_type="technical_debt"`, generates work packages and claims.
+- **Per-ecosystem version normalization**: Python/Ruby by major.minor, Node/Java by major.
+- **6 runtime signal constants** in `constants.py`: `RUNTIME_SIGNAL_PINNED`, `RUNTIME_SIGNAL_MISSING`, `RUNTIME_SIGNAL_CONFLICT`, `RUNTIME_SIGNAL_FROM_CONTAINER`, `RUNTIME_SIGNAL_FROM_CI`, `RUNTIME_SIGNAL_PARTIAL`.
+- **Standardized runtime evidence metadata**: `constraint_kind`, `source_kind`, `normalized`, `sources[]` for conflicts.
+- **New benchmark fixture methods**: `add_tool_versions`, `add_ruby_version`, `add_gemfile`, `add_java_version`, `add_pom_xml`, `add_gradle_build`, `add_dockerfile`, `add_github_workflow`, `add_runtime_txt`, `add_pyproject_toml`.
+- **docs/RUNTIME_REPRODUCIBILITY.md**: full documentation of supported sources, conflict policy, and limitations.
+- **25 new tests** in `test_v380_runtime_reproducibility.py`.
+
+### Changed
+- **runtime_parsers.py** expanded from 156 → ~630 lines: Ruby, Java, Dockerfile, CI, conflict detection, constraint model.
+- **Missing runtime pin** now classified as advisory (was technical_debt finding).
+- **v3.3.0 test**: `.tool-versions` Ruby/Java now detected (was deferred in v3.3.0).
+- **v3.2.0 tests**: Maven/CSProj lockfile tests updated to account for advisory classification.
+
+## [3.7.0] - Unreleased
+
+### Added
+- **Advisory classification** for structural hygiene signals: TD-BUILD, TD-DOC, TD-PROCESS, and missing-lockfile (TD-DEP) are now `issue_type="advisory"` instead of `technical_debt`.
+- **Severity cap for advisories**: All advisories are capped at severity "Low" with risk_score ≤ 10.
+- **`technical_debt_count` and `advisory_count`** in `DebtRegisterSummary` for clean count separation.
+- **Advisory Signals section** in the foundation audit report.
+- **OSS benchmark lane**: 3 pinned public repositories (pallets/click, uuidjs/uuid, YousefED/typescript-json-schema) with SHA-256 verified snapshots.
+- **OSS validation harness** (`benchmarks/oss_validation.py`) with safe tar extraction.
+- **Run history advisory tracking**: enriched snapshots include `advisory_count`, `advisories_by_category`.
+- **Finding trend uses `technical_debt_count`**: trend excludes advisories to prevent classification-boundary distortion.
+- **Classification-boundary warning**: emitted when comparing pre-v3.7.0 vs v3.7.0+ runs.
+- **Performance smoke test**: 1000-file synthetic repo completes in <10s.
+
+### Changed
+- **Planner**: excludes advisories from work package generation by default.
+- **Claims**: excludes advisories from operational claims by default.
+- **Reporter**: summary shows "(technical debt: N, advisories: M)".
+- **FindingBuilder.add()**: accepts `issue_type` parameter (default `"technical_debt"`).
+- **v3.6.0 severity calibration test**: updated to exclude advisories from distribution check.
+
+### Removed
+- No features removed. Advisory classification is additive.
+
+## [3.6.0] - Unreleased
+
+### Added
+- **S01 — Benchmark fixture builder** (`benchmarks/fixture_builder.py`): 8 synthetic fixtures covering Python, Node, mixed, coverage-heavy, poor-hygiene, and clean-baseline scenarios.
+- **S02 — Golden snapshot generator** (`benchmarks/generate_golden.py`): Captures expected output bounds for each fixture with volatile field normalization.
+- **S03 — Executable finding-quality rubric** (`benchmarks/rubric.py`): 5 weighted criteria with callable evaluators. Quality score 0–1.0 per finding, noise rate < 25% target.
+- **S04 — Threshold calibration**: All 6 thresholds tested against all fixtures. Default policy: observe/document/keep. No changes needed.
+- **S05 — Severity/confidence calibration**: Severity distribution and confidence honesty validated across all fixtures.
+- **S06 — Report readability calibration**: Section presence, heuristic disclaimers, and JSON-blob checks validated.
+- **S07 — Manual assessment artifact** (`benchmarks/manual_assessment.yaml`): Auditable human judgment per fixture/finding pattern.
+- **S08 — Calibration results schema** (`benchmarks/calibration-results.schema.json`): JSON schema validation for calibration output.
+- **S09 — 27 benchmark regression tests** in `test_v360_benchmark_regression.py`.
+- **S10 — `docs/VALIDATION.md`**: Full methodology, results, and recommendations.
+- `benchmarks/generate_calibration.py` for generating calibration-results.json.
+
+### Changed
+- No source code changes — all thresholds held after calibration.
+
+## [3.5.0] - Unreleased
+
+### Added
+- **S01 — Per-run enriched history snapshots** (`runs/RUN-*-history-snapshot.json`): Captures category counts, risk scores, evidence type counts, work-package readiness, and traceability grade at run time. Enables full historical trend comparison for future runs.
+- **S02 — Run history index** (`runs/run-history-index.json`): Queryable index of all runs with enriched data when available. Excludes itself and snapshot files from scanning.
+- **S03 — Finding trend by category**: Category-level finding count deltas with `complete`/`partial`/`insufficient_data` status.
+- **S04 — Risk trend by category**: Total, average, and max risk score deltas across runs.
+- **S05 — Evidence coverage trend**: Evidence type count deltas, limitation evidence tracking, orphan/broken-reference trends.
+- **S06 — Work-package readiness trend**: WP count, grouping ratio, linked-finding completeness deltas.
+- **S07 — Traceability trend surfacing**: Existing traceability quality trend included in run history summary.
+- **S08 — Run history summary artifacts** (`reports/run-history-summary.json` + `.md`): Reviewer-facing JSON and Markdown with overall trajectory, confidence level, and all trend sections.
+- **`docs/RUN_HISTORY.md`**: Documentation on trend interpretation, status levels, and known limitations.
+- Structured warning schema with 7 codes (`malformed_run_metadata`, `missing_enriched_snapshot`, etc.).
+- 36 new regression tests in `test_v350_run_history_intelligence.py`.
+
+### Changed
+- `execute_run()` now writes enriched snapshot, index, and summary at the end of each run.
+- `test_cli.py` updated to exclude history snapshot files from run metadata glob.
+
+## [3.4.0] - Unreleased
+
+### Added
+- **S01 — Evidence documentation** (`docs/EVIDENCE.md`): Complete evidence type catalog with metadata field reference.
+- **S02 — Coverage ingestion documentation** (`docs/COVERAGE_INGESTION.md`): Coverage format matrix, parser behavior, and configuration guide.
+- **S03 — Dependency signals documentation** (`docs/DEPENDENCY_SIGNALS.md`): Signal taxonomy, ecosystem coverage, and manifest format reference.
+- **S04 — `io_helpers.py`**: Shared `read_text()` and `read_json()` with consistent error handling. Replaces duplicated I/O helpers across modules.
+- **S04 — `coverage_parsers.py`**: Extracted all 6 coverage format parsers from scanner.py. Public API: `scan_coverage_artifact()`.
+- **S05 — `dependency_parsers.py`**: Extracted all manifest parsers and lockfile consistency checks. Public APIs: `scan_dependency_manifest()`, `scan_repository_dependency_consistency()`.
+- **S06 — `runtime_parsers.py`**: Extracted runtime version pin detection. Public API: `detect_runtime_version_pins()`.
+- `EvidenceBuilder` moved from scanner.py to `schemas/evidence.py` alongside `EvidenceStore`, `EvidenceItem`, and `EvidenceLocation`.
+- 29 new regression tests in `test_v340_modularization.py`.
+
+### Changed
+- **scanner.py reduced from 2048 to 1045 lines** — parser logic extracted into focused modules.
+- scanner retains thin `_read_text`/`_read_json` wrappers that delegate to `io_helpers`.
+- All 1916 pre-existing tests continue to pass unchanged.
+
+## [3.3.0] - Unreleased
+
+### Added
+- **S01 — Path normalization utility** (`core/path_utils.py`): `normalize_repo_path`, `relative_repo_path`, `path_matches_exact_or_suffix` (coverage artifacts), `path_matches_root_pattern` (manifests). Eliminates all ad-hoc `replace("\\", "/")` calls.
+- **S02 — Cobertura XML coverage ingestion**: Parses `line-rate` and `branch-rate` from Cobertura XML reports. Supports `coverage.xml`, `coverage/cobertura.xml`, `coverage/cobertura-coverage.xml`, `target/site/cobertura/coverage.xml`.
+- **S03 — JaCoCo XML coverage ingestion**: Parses LINE/BRANCH/METHOD counters from JaCoCo XML. Prefers report-level counters to avoid double-counting. Falls back to package-level when report-level absent.
+- **S04 — `pyproject.toml` dependency parsing** (`core/dependency_utils.py`): Centralized `classify_python_specifier()` handles full PEP 508 strings + Poetry/Pipfile version fragments. Parses `[project].dependencies`, `[project.optional-dependencies]`, Poetry dependency sections. Malformed TOML emits `dependency_manifest_parse_failure` limitation evidence.
+- **S05 — Poetry/Pipfile lockfile signals**: Poetry manifest-without-lockfile and lockfile-without-manifest detection. Pipfile-without-lockfile and Pipfile.lock-without-Pipfile detection. Pipfile dependency parsing.
+- **S06 — Runtime version pinning**: Detects `.python-version`, `.nvmrc`, `.node-version`, `.tool-versions`, `package.json.engines.node`. Missing runtime pins emit conservative TD-DEP findings. Python + Node.js only (Ruby/Java deferred). Conflict detection deferred.
+- **S07 — Traceability quality trend**: Append-only `traceability-quality-history.json`. `compute_traceability_quality_trend()` with heuristic trajectory (improving/stable/worsening/insufficient_data).
+- **S01 — Single authoritative `COVERAGE_PATTERNS` map** in `constants.py`: All 12 coverage patterns consolidated.
+- 47 new regression tests in `test_v330_connectors_formats.py` (33 functions + 14 parametrized cases).
+
+### Changed
+- Existing test assertions updated to filter runtime-version findings from TD-DEP checks.
+
+## [3.2.0] - Unreleased
+
+### Added
+- **S01 — Shared Constants Module** (`src/pharabius/core/constants.py`): Centralizes evidence type names, thresholds, and quality metadata values. Eliminates hardcoded strings across scanner and analyzer.
+- **S02 — max_file_size_kb enforcement**: Scanner skips source files exceeding `max_file_size_kb` with `source_file_skipped` evidence containing limitation metadata. `None` means no limit.
+- **S04 — Deeper TD-CODE Analyzers**: Long Python function detection (indentation-based, threshold configurable) and broad exception handler detection (Python/JS/Java patterns). Both produce `TD-CODE` findings with honest confidence levels.
+- **S05 — Dependency Health Signals**: Unpinned dependency detection for Node.js `package.json` and Python `requirements.txt`. Multiple Node.js lockfile conflict detection at repository level.
+- **S06 — Coverage-Report Ingestion**: Parses Istanbul JSON, Python coverage.json, and LCOV reports. Emits `coverage_metric` evidence. Low coverage (< 70%) generates `TD-TEST` findings. Malformed reports emit limitation evidence, never crash.
+- **S07 — Traceability Quality**: `compute_traceability_quality()` generates orphan/broken-reference metrics with grade (complete/usable/partial/weak). Writes `traceability-quality.json` and `.md` to traceability directory.
+- 22 new regression tests in `test_v320_evidence_quality.py`.
+
+### Changed
+- Updated `test_analyzer.py::test_python_dual_manifests_grouped_as_one_dep` to expect 2 TD-DEP findings (no-lockfile + unpinned).
+
+## [3.1.0] - Unreleased
+
+### Fixed
+- `ai-debt run` no longer overwrites customized `config.yaml` or `governance.yaml` (S01).
+- TD-CODE analyzer for large files now receives correct evidence from scanner (S02).
+- TD-CODE analyzer for debt markers (TODO/FIXME/HACK/XXX) now receives correct evidence from scanner (S02).
+- Debt markers are counted by occurrence (not unique names) in scanner metadata (S02).
+- Large-file detection uses a single shared threshold constant between scanner and analyzer (S02).
+- Finding deduplication prevents duplicate entries in debt register (S03).
+- Deduplicated findings preserve both highest severity and highest risk score even when they disagree (S03).
+- Work packages now group related findings instead of 1:1 mapping (S04).
+- Mock AI provider emits valid confidence values (High/Medium/Low) instead of copying severity (S05).
+- Claims now link to actual work package IDs instead of related finding IDs (S06).
+- Claims generation and traceability matrix generation are now wired into `execute_run` (S06).
+
+### Added
+- `debt_marker_detected` evidence type for TODO/FIXME/HACK/XXX detection with occurrence counting.
+- `large_file_detected` evidence type for source files exceeding 1000 lines.
+- `LARGE_FILE_LINE_THRESHOLD` shared constant in scanner (importable by analyzer).
+- `_debt_markers_in_text()` scanner helper returning occurrence-counted marker dictionary.
+- `_deduplicate_findings()` analyzer function with normalized dedupe key and severity guarantee.
+- `_group_findings()` and `_should_group()` planner functions for conservative work-package grouping.
+- `_make_grouped_work_package()` planner function for multi-finding work packages.
+- `finding_to_wp_map` keyword parameter in `generate_claims_from_findings()` and `build_claims_register()`.
+- Claims and traceability matrices are now generated during `ai-debt run`.
+- Self-audit regression tests (`tests/test_v310_self_audit.py`) — 21 tests.
+- Implementation status matrix in architecture docs.
+
+### Tests
+- Self-audit regression tests: 21 tests covering all 8 repair slices.
+- No `...` placeholders in any test.
+
+## [3.0.0] - Unreleased
+
+### Added
+- Run Comparison & Traceability Delta API endpoint (`GET /api/v1/repositories/{repo_id}/runs/compare`).
+- Finding delta engine: detects added, removed, changed, and unchanged findings between two runs with field-level change tracking.
+- Work-package delta engine: detects added, removed, changed, and unchanged work packages with linked-finding and evidence delta.
+- Traceability delta engine: computes evidence coverage and work-package link resolution deltas between runs.
+- Same-run comparison returns all-unchanged (not rejected).
+- Order-insensitive comparison for `evidence_ids`, `locations`, and `declared_evidence_ids` arrays.
+- `RunComparison.tsx` frontend view with run selectors, summary cards, findings delta table, work-packages delta table, and traceability status.
+- `FIELD_LABELS` mapping for human-readable delta field names in the comparison view.
+- "Compare Runs" action link in Repository Dashboard.
+- `compareRuns()` API client function with full TypeScript types.
+- 12 backend tests for comparison validation, finding delta, work-package delta, traceability delta, same-run comparison, route ordering, and cross-repository protection.
+- 8 frontend tests for RunComparison view states and API integration.
+- Mock factories for `FindingDelta`, `WorkPackageDelta`, `TraceabilityDelta`, and `RunComparisonResponse` in test fixtures.
+
+### Changed
+- `run_comparison` router registered before `repositories_router` to prevent `/runs/compare` route conflicts with `/runs/{run_id}`.
+- Traceability counts use `unique_*` prefix for clarity (`unique_total`, `unique_resolved`, `unique_unresolved`).
+
+## [2.9.0] - Unreleased
+
+### Added
+- Frontend test harness using Vitest, React Testing Library, and jsdom.
+- Frontend regression tests for selected-run navigation (6 tests).
+- Frontend regression tests for Work Packages view states (7 tests).
+- Frontend tests for EvidenceChip component covering all degraded states (6 tests).
+- Frontend test fixture factories (`api-mocks.ts`) for DTO construction.
+- Shared `EvidenceChip` component in `components/`.
+- Frontend validation documentation (`platform/frontend/README.md`).
+
+### Changed
+- Findings and Work Packages views now import shared EvidenceChip from components.
+- Removed duplicated evidence chip logic from FindingsTable and WorkPackages.
+
+### Fixed
+- Cleaned pre-existing ruff lint issues in backend test files (import style, line length).
+
+### Tests
+- Frontend: 20 tests (new).
+- Backend: 264 platform, 1,823 CLI (unchanged).
+- Ruff: clean on all backend code.
+
+## [2.8.0] - Unreleased
+
+### Added
+- Work Packages frontend view scoped to the selected audit run.
+- Expandable work-package detail panels with full remediation content.
+- Linked finding cards with resolved/missing/malformed states.
+- Evidence reference chips inside work-package review.
+- Dashboard navigation to work packages preserving selected run.
+- Upload success now includes "View uploaded run" link using database run UUID.
+- `declared_evidence_count` added to work-package list and detail responses.
+
+### Changed
+- Work-package list endpoint returns `declared_evidence_count` (collapsed card data).
+- Upload success shows "View uploaded run" link instead of only "View repositories".
+
+### Tests
+- Existing backend work-package tests remain green (264 platform, 1,823 CLI).
+- Frontend validation: TypeScript build + Vite build.
+- Frontend test harness deferred to a future infrastructure wave.
+
+## [2.7.0] - Unreleased
+
+### Added
+- Run detail API with artifact counts and capability flags (`GET /repositories/{id}/runs/{run_id}`).
+- Run list enriched with evidence/work-package counts, `is_latest`, `commit_sha`,
+  `branch_name`, `analysis_mode`.
+- Batched aggregate enrichment for run list (no N+1 queries).
+- Selected-run scoping for findings list and detail (`?run_id=` parameter).
+- Evidence lookup and work package endpoints already supported `?run_id=`.
+- Upload parses and stores run metadata from `.ai-debt/runs/RUN-*.json`.
+- Upload response includes `created_at`, `is_latest` (computed), `warnings`.
+- Repository dashboard run selector with URL-driven state (`?run_id=`).
+- FindingsTable passes selected `run_id` to API calls.
+- Frontend API client updated with run types and functions.
+- Migration 006: `commit_sha`, `branch_name`, `analysis_mode` columns on runs.
+- 24 new run-history navigation tests.
+
+### Fixed
+- Latest-run selection deterministic (microsecond-precision timestamps + `Run.id` tie-breaker).
+- All run-ordering queries use deterministic secondary sort.
+- Findings list and detail accept optional `run_id` parameter.
+- Upload uses `tool_version` from run metadata instead of `debt_register.schema_version`.
+
+### Changed
+- `_utcnow()` now preserves microseconds.
+- `_resolve_run` helper centralizes run-scoping logic.
+- `warning_count` on runs reflects persisted traceability degradation
+  (unresolved work-package links), not transient upload warnings.
+
+## [2.6.0] - Unreleased
+
+### Added
+
+- **Work package persistence**: `.ai-debt/work-packages/WP-*.md` files from
+  uploaded bundles are parsed and stored as `work_packages` + `work_package_findings`
+  in the database. Malformed packages are skipped with warnings.
+- **Work package finding linkage**: Each work package's `Linked Debt Items` are
+  resolved against uploaded findings with 3-way status: `resolved`, `missing`,
+  `malformed_reference`. Missing/malformed links are preserved as first-class rows.
+- **Work package list API**: `GET /repositories/{id}/work-packages` returns
+  summary list with finding link counts and resolution stats.
+- **Work package detail API**: `GET /repositories/{id}/work-packages/{package_id}`
+  with optional `?include_findings=true` and `?include_evidence=true` expansion.
+- **Evidence-backed resolution**: `include_evidence=true` traces from work package
+  → linked finding → evidence records, with per-reference resolution status.
+- **Upload response enrichment**: Upload now returns `run_id`, `work_package_count`,
+  and `work_package_warnings`.
+- **Alembic migration 005**: Creates `work_packages` and `work_package_findings`
+  tables with composite unique indexes.
+- **22 work package tests**: Upload parsing, API list/detail, cross-run isolation,
+  degraded states, malformed references, evidence resolution.
+
+### Changed
+
+- Upload response now includes `run_id` for precise run identification.
+- Parser version bumped from `2.5.0` to `2.6.0`.
+- Alembic table count updated from 12 to 14.
+
 ## [2.5.0] - Unreleased
 
 ### Added
