@@ -8,12 +8,9 @@ RuntimeSourceGrade). These adapters are thin translation layers.
 from __future__ import annotations
 
 from pharabius.core.runtime.models import (
-    Confidence,
     RuntimeConflictGroup,
     RuntimeEcosystem,
     RuntimeEvidence,
-    RuntimeSignalAction,
-    RuntimeSignalClassification,
 )
 from pharabius.core.signals.models import (
     GovernedSignal,
@@ -206,9 +203,7 @@ def runtime_missing_pin_to_signal_from_evidence(
             f"Dependency manifests exist for {', '.join(runtimes)} but no runtime "
             "version pinning file detected."
         ),
-        explanation=(
-            f"{', '.join(runtimes)} manifests detected but no reproducibility pin found."
-        ),
+        explanation=(f"{', '.join(runtimes)} manifests detected but no reproducibility pin found."),
         metadata={
             "runtimes": runtimes,
         },

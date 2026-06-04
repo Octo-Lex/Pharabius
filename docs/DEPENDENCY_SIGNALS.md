@@ -79,6 +79,17 @@ exists. This is framed as **reproducibility evidence**, not a security finding.
 - Does not claim a dependency is vulnerable
 - Does not treat missing runtime pins as security vulnerabilities
 
+## Signal governance (v3.16.0)
+
+Dependency signals are now governed through `SignalFamily.DEPENDENCY`.
+Adapters in `dependency_adapters.py` convert dependency evidence into
+`GovernedSignal` instances with deterministic dispositions.
+
+The analyzer uses `output_behavior()` for promotion decisions instead of
+hardcoded branching. Output before and after migration is identical.
+
+See `docs/SIGNAL_GOVERNANCE.md` for the full governance model.
+
 ## Deferred formats
 
 These are not yet supported:

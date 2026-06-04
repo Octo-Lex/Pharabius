@@ -735,6 +735,11 @@ def _emit_lockfile_finding(
     manifest_items: list[EvidenceItem],
     package_root: str,
 ) -> None:
+    from pharabius.core.signals.dependency_adapters import (
+        dependency_missing_lockfile_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
+
     evidence_ids = _evidence_ids(manifest_items)
     locations = _locations(manifest_items)
 
@@ -744,6 +749,14 @@ def _emit_lockfile_finding(
     reproducibility_term = "dependency reproducibility evidence" if is_java else "lockfile evidence"
 
     is_rust = ecosystem.rust_library_exempt
+
+    # Build governed signal
+    sig = dependency_missing_lockfile_to_signal(
+        manifest_items,
+        ecosystem=ecosystem.name,
+        package_root=package_root,
+    )
+    behav = output_behavior(sig)
 
     title = f"{ecosystem.name} dependency manifest detected without {reproducibility_term}"
 
@@ -805,29 +818,60 @@ def _emit_lockfile_finding(
             " For binary crates, run `cargo generate-lockfile` and commit the resulting Cargo.lock."
         )
 
-    builder.add(
-        category="TD-DEP",
-        title=title,
-        description=description,
-        evidence_ids=evidence_ids,
-        locations=locations,
-        technical_impact=technical_impact,
-        business_impact=(
-            "Release and environment reproducibility risk is inferred "
-            "from dependency manifest evidence."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Small",
-        recommended_action=recommended_action,
-        verification_recommendations=verification,
-        risks_and_cautions=risks_and_cautions,
-        confidence=confidence,
-        suggested_owner_area="Product Engineering / Platform",
-        issue_type="advisory",
-    )
+    if behav.creates_advisory:
+        builder.add(
+            category=sig.category,
+            title=title,
+            description=description,
+            evidence_ids=evidence_ids,
+            locations=locations,
+            technical_impact=technical_impact,
+            business_impact=(
+                "Release and environment reproducibility risk is inferred "
+                "from dependency manifest evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=recommended_action,
+            verification_recommendations=verification,
+            risks_and_cautions=risks_and_cautions,
+            confidence=confidence,
+            suggested_owner_area="Product Engineering / Platform",
+            issue_type="advisory",
+        )
+    elif behav.creates_finding:
+        builder.add(
+            category=sig.category,
+            title=title,
+            description=description,
+            evidence_ids=evidence_ids,
+            locations=locations,
+            technical_impact=technical_impact,
+            business_impact=(
+                "Release and environment reproducibility risk is inferred "
+                "from dependency manifest evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=recommended_action,
+            verification_recommendations=verification,
+            risks_and_cautions=risks_and_cautions,
+            confidence=confidence,
+            suggested_owner_area="Product Engineering / Platform",
+        )
+    # INFORMATIONAL / SUPPRESSED: record signal only
 
 
 def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) -> None:
+    """Detect .env without .env.example and emit TD-CONFIG finding.
+
+    v3.19.0: Uses governed signal disposition controls promotion.
+    """
+    from pharabius.core.signals.configuration_adapters import (
+        configuration_env_without_example_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
+
     config_items = _evidence_by_type(store, "configuration_file_detected")
     config_locations = {item.location.file for item in config_items}
 
@@ -839,6 +883,9 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
 
     env_items = [item for item in config_items if item.location.file in {".env", ".env.local"}]
 
+    sig = configuration_env_without_example_to_signal(env_items)
+    behav = output_behavior(sig)
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 3,
@@ -848,35 +895,67 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
         "remediation_simplicity": -2,
     }
 
-    builder.add(
-        category="TD-CONFIG",
-        title="Environment configuration detected without example file",
-        description=(
-            "An environment configuration file was detected, but no `.env.example` file was found."
-        ),
-        evidence_ids=_evidence_ids(env_items),
-        locations=_locations(env_items),
-        technical_impact=(
-            "Missing environment examples make setup, onboarding, and environment parity harder "
-            "to verify."
-        ),
-        business_impact=(
-            "Operational setup risk is inferred from environment configuration evidence."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Small",
-        recommended_action=(
-            "Add a sanitized `.env.example` documenting required variables without secrets."
-        ),
-        verification_recommendations=[
-            "Verify `.env.example` contains no real secrets.",
-            "Confirm local setup works from documented environment variables.",
-        ],
-        risks_and_cautions=[
-            "Never commit real credentials or production secrets.",
-        ],
-        suggested_owner_area="Platform / Product Engineering",
-    )
+    if behav.creates_finding:
+        builder.add(
+            category="TD-CONFIG",
+            title="Environment configuration detected without example file",
+            description=(
+                "An environment configuration file was detected, but no `.env.example` file was found."
+            ),
+            evidence_ids=_evidence_ids(env_items),
+            locations=_locations(env_items),
+            technical_impact=(
+                "Missing environment examples make setup, onboarding, and environment parity harder "
+                "to verify."
+            ),
+            business_impact=(
+                "Operational setup risk is inferred from environment configuration evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                "Add a sanitized `.env.example` documenting required variables without secrets."
+            ),
+            verification_recommendations=[
+                "Verify `.env.example` contains no real secrets.",
+                "Confirm local setup works from documented environment variables.",
+            ],
+            risks_and_cautions=[
+                "Never commit real credentials or production secrets.",
+            ],
+            suggested_owner_area="Platform / Product Engineering",
+        )
+    elif behav.creates_advisory:
+        builder.add(
+            category="TD-CONFIG",
+            title="Environment configuration detected without example file",
+            description=(
+                "An environment configuration file was detected, but no `.env.example` file was found."
+            ),
+            evidence_ids=_evidence_ids(env_items),
+            locations=_locations(env_items),
+            technical_impact=(
+                "Missing environment examples make setup, onboarding, and environment parity harder "
+                "to verify."
+            ),
+            business_impact=(
+                "Operational setup risk is inferred from environment configuration evidence."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Small",
+            recommended_action=(
+                "Add a sanitized `.env.example` documenting required variables without secrets."
+            ),
+            verification_recommendations=[
+                "Verify `.env.example` contains no real secrets.",
+                "Confirm local setup works from documented environment variables.",
+            ],
+            risks_and_cautions=[
+                "Never commit real credentials or production secrets.",
+            ],
+            suggested_owner_area="Platform / Product Engineering",
+            issue_type="advisory",
+        )
 
 
 # ── TD-CODE: Code-level debt ───────────────────────────────────────────────
@@ -1349,8 +1428,23 @@ def _analyze_runtime_version_signals(store: EvidenceStore, builder: FindingBuild
 
 
 def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -> None:
-    """TD-DEP: Generate findings from dependency health signals."""
+    """TD-DEP: Generate findings from dependency health signals.
+
+    v3.16.0: Uses governed signal disposition controls promotion.
+    Adapters in dependency_adapters.py produce GovernedSignal instances.
+    output_behavior() controls what gets created.
+    """
     from pharabius.core.constants import EVIDENCE_DEPENDENCY_SIGNAL
+    from pharabius.core.signals.dependency_adapters import (
+        dependency_unpinned_to_signal,
+        dependency_lockfile_conflict_to_signal,
+        dependency_manifest_without_lockfile_to_signal,
+        dependency_orphan_lockfile_to_signal,
+        dependency_parse_failure_to_signal,
+    )
+    from pharabius.core.signals.policy import (
+        output_behavior,
+    )
 
     dep_signals = [e for e in store.evidence if e.type == EVIDENCE_DEPENDENCY_SIGNAL]
     if not dep_signals:
@@ -1373,101 +1467,256 @@ def _analyze_dependency_signals(store: EvidenceStore, builder: FindingBuilder) -
                 total_count = sum(
                     item.metadata.get("count", 0) for item in eco_items
                 )
-                breakdown = {
-                    **RISK_SCORE_TEMPLATE,
-                    "technical_severity": 3,
-                    "blast_radius": 3,
-                    "remediation_simplicity": -1,
-                }
-                builder.add(
-                    category="TD-DEP",
-                    title=(
-                        f"Unpinned {eco} dependencies detected "
-                        f"({total_count} unpinned)"
-                    ),
-                    description=(
-                        f"{total_count} {eco} dependencies use unpinned or broad "
-                        "version ranges. This reduces build reproducibility "
-                        "and makes dependency audits harder."
-                    ),
-                    evidence_ids=_evidence_ids(eco_items),
-                    locations=_locations(eco_items),
-                    technical_impact=(
-                        "Unpinned dependencies can change without warning, "
-                        "breaking builds or introducing vulnerabilities."
-                    ),
-                    business_impact=(
-                        "Reproducibility risk is inferred from manifest evidence. "
-                        "Validate with the Product Engineering Team."
-                    ),
-                    risk_breakdown=breakdown,
-                    remediation_effort="Small",
-                    recommended_action=(
-                        "Pin dependency versions using lockfiles or exact version specifiers."
-                    ),
-                    verification_recommendations=[
-                        "Verify pinned dependencies install correctly in CI.",
-                        "Run full test suite after dependency pinning.",
-                    ],
-                    risks_and_cautions=[
-                        "Some broad ranges are intentional (monorepo shared deps).",
-                    ],
-                    confidence="Medium",
-                    suggested_owner_area="Product Engineering",
+                sig = dependency_unpinned_to_signal(
+                    eco_items, ecosystem=eco, count=total_count,
                 )
+                behav = output_behavior(sig)
+
+                if behav.creates_finding:
+                    breakdown = {
+                        **RISK_SCORE_TEMPLATE,
+                        "technical_severity": 3,
+                        "blast_radius": 3,
+                        "remediation_simplicity": -1,
+                    }
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(eco_items),
+                        locations=_locations(eco_items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Reproducibility risk is inferred from manifest evidence. "
+                            "Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown=breakdown,
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Pin dependency versions using lockfiles or exact version specifiers."
+                        ),
+                        verification_recommendations=[
+                            "Verify pinned dependencies install correctly in CI.",
+                            "Run full test suite after dependency pinning.",
+                        ],
+                        risks_and_cautions=[
+                            "Some broad ranges are intentional (monorepo shared deps).",
+                        ],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                    )
+                elif behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(eco_items),
+                        locations=_locations(eco_items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Reproducibility risk is inferred from manifest evidence. "
+                            "Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 3, "blast_radius": 3},
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Pin dependency versions using lockfiles or exact version specifiers."
+                        ),
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
+                elif behav.appears_in_summary:
+                    # INFORMATIONAL — record signal only, no finding/advisory
+                    pass
+
         elif signal_type == "lockfile_conflict":
             for item in items:
                 lockfiles = item.metadata.get("lockfiles", []) if item.metadata else []
-                breakdown = {
-                    **RISK_SCORE_TEMPLATE,
-                    "technical_severity": 2,
-                    "blast_radius": 2,
-                }
-                builder.add(
-                    category="TD-DEP",
-                    title=(
-                        f"Multiple Node.js lockfiles detected: {', '.join(lockfiles)}"
-                    ),
-                    description=(
-                        "Multiple lockfiles for the same ecosystem can cause "
-                        "inconsistent dependency resolution across environments."
-                    ),
-                    evidence_ids=_evidence_ids(items),
-                    locations=_locations(items),
-                    technical_impact=(
-                        "Different developers may get different dependency trees "
-                        "depending on which package manager they use."
-                    ),
-                    business_impact=(
-                        "Build consistency risk. "
-                        "Validate with the Product Engineering Team."
-                    ),
-                    risk_breakdown=breakdown,
-                    remediation_effort="Small",
-                    recommended_action=(
-                        "Standardize on one package manager and remove other lockfiles. "
-                        "Add the unused lockfile to .gitignore."
-                    ),
-                    verification_recommendations=[
-                        "Verify CI uses the chosen package manager exclusively.",
-                    ],
-                    risks_and_cautions=[
-                        "Some monorepos intentionally use multiple package managers.",
-                    ],
-                    confidence="Medium",
-                    suggested_owner_area="Product Engineering",
+                sig = dependency_lockfile_conflict_to_signal(
+                    items, lockfiles=lockfiles,
                 )
+                behav = output_behavior(sig)
+
+                if behav.creates_finding:
+                    breakdown = {
+                        **RISK_SCORE_TEMPLATE,
+                        "technical_severity": 2,
+                        "blast_radius": 2,
+                    }
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Build consistency risk. "
+                            "Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown=breakdown,
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Standardize on one package manager and remove other lockfiles. "
+                            "Add the unused lockfile to .gitignore."
+                        ),
+                        verification_recommendations=[
+                            "Verify CI uses the chosen package manager exclusively.",
+                        ],
+                        risks_and_cautions=[
+                            "Some monorepos intentionally use multiple package managers.",
+                        ],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                    )
+                elif behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Build consistency risk. "
+                            "Validate with the Product Engineering Team."
+                        ),
+                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2},
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Standardize on one package manager and remove other lockfiles. "
+                            "Add the unused lockfile to .gitignore."
+                        ),
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="Medium",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
+
+        elif signal_type in (
+            "poetry_manifest_without_lockfile",
+            "pipfile_without_lockfile",
+        ):
+            for item in items:
+                sig = dependency_manifest_without_lockfile_to_signal(item)
+                behav = output_behavior(sig)
+
+                if behav.creates_advisory:
+                    breakdown = {
+                        **RISK_SCORE_TEMPLATE,
+                        "technical_severity": 3,
+                        "dependency_risk": 5,
+                        "operational_exposure": 3,
+                        "business_critical_proxy": 3,
+                        "remediation_simplicity": -2,
+                    }
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Release and environment reproducibility risk is inferred "
+                            "from dependency manifest evidence."
+                        ),
+                        risk_breakdown=breakdown,
+                        remediation_effort="Small",
+                        recommended_action=(
+                            "Adopt the appropriate lockfile strategy and document "
+                            "whether applications or libraries are expected to commit lockfiles."
+                        ),
+                        verification_recommendations=[
+                            "Generate or confirm the appropriate lockfile.",
+                            "Run dependency installation in a clean environment.",
+                            "Ensure CI uses deterministic dependency installation where supported.",
+                        ],
+                        risks_and_cautions=[
+                            "Some library repositories intentionally avoid committed "
+                            "lockfiles; validate project policy.",
+                        ],
+                        confidence="High",
+                        suggested_owner_area="Product Engineering / Platform",
+                        issue_type="advisory",
+                    )
+
+        elif signal_type in (
+            "poetry_lockfile_without_manifest",
+            "pipfile_lock_without_manifest",
+        ):
+            for item in items:
+                sig = dependency_orphan_lockfile_to_signal(item)
+                behav = output_behavior(sig)
+
+                if behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact=(
+                            "Lockfile without manifest may indicate incomplete repository contents."
+                        ),
+                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 2},
+                        remediation_effort="Small",
+                        recommended_action="Verify manifest file is present and committed.",
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="High",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
+
+        elif signal_type == "dependency_manifest_parse_failure":
+            for item in items:
+                sig = dependency_parse_failure_to_signal(item)
+                behav = output_behavior(sig)
+
+                if behav.creates_advisory:
+                    builder.add(
+                        category=sig.category,
+                        title=sig.title,
+                        description=sig.summary,
+                        evidence_ids=_evidence_ids(items),
+                        locations=_locations(items),
+                        technical_impact=sig.explanation,
+                        business_impact="Parse failure limits dependency analysis coverage.",
+                        risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 2, "blast_radius": 1},
+                        remediation_effort="Small",
+                        recommended_action="Fix the manifest syntax and re-run the scan.",
+                        verification_recommendations=[],
+                        risks_and_cautions=[],
+                        confidence="Low",
+                        suggested_owner_area="Product Engineering",
+                        issue_type="advisory",
+                    )
 
 
 def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) -> None:
     """TD-COMP: Flag potential compliance-sensitive areas without supporting controls.
 
-    Detects compliance-related keywords (PII, GDPR, HIPAA, PCI, audit, retention)
+    Detects compliance-related keywords (PII, GDPR, HIPAA, PCI, retention, patient)
     in application/domain source code. Creates a finding only when compliance-sensitive
     evidence exists in application code — NOT in scanner logic, test fixtures, docs,
     or keyword-list definitions.
     Does NOT claim legal non-compliance.
+
+    v3.17.0: Uses governed signal disposition controls promotion.
+    Adapters in security_adapters.py produce GovernedSignal instances.
+    output_behavior() controls what gets created.
     """
+    from pharabius.core.signals.security_adapters import (
+        security_compliance_exposure_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
+
     COMPLIANCE_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}
 
     # Paths that indicate tooling/infrastructure rather than application logic
@@ -1502,54 +1751,78 @@ def _analyze_compliance_keywords(store: EvidenceStore, builder: FindingBuilder) 
     if not comp_items:
         return
 
-    breakdown = {
-        **RISK_SCORE_TEMPLATE,
-        "technical_severity": 3,
-        "security_exposure": 3,
-        "compliance_exposure": 6,
-        "blast_radius": 3,
-        "business_critical_proxy": 5,
-        "remediation_simplicity": -1,
-    }
+    sig = security_compliance_exposure_to_signal(comp_items)
+    behav = output_behavior(sig)
 
-    builder.add(
-        category="TD-COMP",
-        title="Potential compliance exposure detected",
-        description=(
-            f"Compliance-related keywords detected in {len(comp_items)} location(s). "
-            "Areas handling PII, healthcare, financial, or regulatory data may require "
-            "additional controls, audit logging, or policy documentation."
-        ),
-        evidence_ids=_evidence_ids(comp_items),
-        locations=_locations(comp_items),
-        technical_impact=(
-            "Compliance-sensitive code areas may lack explicit data handling policies, "
-            "audit trails, or retention controls. "
-            "This is a potential exposure, not a confirmed violation."
-        ),
-        business_impact=(
-            "Compliance impact is inferred from keyword evidence. "
-            "Validate with legal/compliance teams before acting."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Medium",
-        recommended_action=(
-            "Review compliance-sensitive code areas for data handling policies, "
-            "audit logging, and retention controls. Document compliance requirements."
-        ),
-        verification_recommendations=[
-            "Verify data handling policies exist for sensitive areas.",
-            "Confirm audit logging covers compliance-relevant operations.",
-            "Review with legal/compliance team.",
-        ],
-        risks_and_cautions=[
-            "This is a potential exposure based on keyword evidence, "
-            "not a confirmed compliance gap.",
-            "Do not assume legal non-compliance without legal review.",
-        ],
-        confidence="Low",
-        suggested_owner_area="Product Engineering / Compliance",
-    )
+    if behav.creates_finding:
+        breakdown = {
+            **RISK_SCORE_TEMPLATE,
+            "technical_severity": 3,
+            "security_exposure": 3,
+            "compliance_exposure": 6,
+            "blast_radius": 3,
+            "business_critical_proxy": 5,
+            "remediation_simplicity": -1,
+        }
+
+        builder.add(
+            category=sig.category,
+            title=sig.title,
+            description=sig.summary,
+            evidence_ids=_evidence_ids(comp_items),
+            locations=_locations(comp_items),
+            technical_impact=sig.explanation,
+            business_impact=(
+                "Compliance impact is inferred from keyword evidence. "
+                "Validate with legal/compliance teams before acting."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Review compliance-sensitive code areas for data handling policies, "
+                "audit logging, and retention controls. Document compliance requirements."
+            ),
+            verification_recommendations=[
+                "Verify data handling policies exist for sensitive areas.",
+                "Confirm audit logging covers compliance-relevant operations.",
+                "Review with legal/compliance team.",
+            ],
+            risks_and_cautions=[
+                "This is a potential exposure based on keyword evidence, "
+                "not a confirmed compliance gap.",
+                "Do not assume legal non-compliance without legal review.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering / Compliance",
+        )
+    elif behav.creates_advisory:
+        builder.add(
+            category=sig.category,
+            title=sig.title,
+            description=sig.summary,
+            evidence_ids=_evidence_ids(comp_items),
+            locations=_locations(comp_items),
+            technical_impact=sig.explanation,
+            business_impact=(
+                "Compliance impact is inferred from keyword evidence. "
+                "Validate with legal/compliance teams before acting."
+            ),
+            risk_breakdown={**RISK_SCORE_TEMPLATE, "technical_severity": 3, "compliance_exposure": 6},
+            remediation_effort="Medium",
+            recommended_action=(
+                "Review compliance-sensitive code areas for data handling policies, "
+                "audit logging, and retention controls."
+            ),
+            verification_recommendations=[],
+            risks_and_cautions=[
+                "This is a potential exposure based on keyword evidence, "
+                "not a confirmed compliance gap.",
+            ],
+            confidence="Low",
+            suggested_owner_area="Product Engineering / Compliance",
+            issue_type="advisory",
+        )
+    # INFORMATIONAL / SUPPRESSED: record signal only
 
 
 # ── TD-OPS: Operational / DevOps debt ───────────────────────────────────────
@@ -1837,7 +2110,14 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
     Only triggers when deployment/service evidence exists but no
     observability keywords are found. Conservative to avoid noise on
     libraries or simple projects.
+
+    v3.20.0: Uses governed signal disposition controls promotion.
     """
+    from pharabius.core.signals.observability_adapters import (
+        observability_missing_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
+
     OBS_KEYWORDS = {"logging", "monitoring", "tracing", "alert", "metrics"}
 
     # Need deployment/infra evidence to be relevant
@@ -1857,7 +2137,7 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
     if not deploy_artifacts and not infra_items:
         return
 
-    # Check if any observability keywords exist
+    # Check if any observability keywords exist in existing evidence
     obs_items: list[EvidenceItem] = []
     for item in store.evidence:
         if item.type != "risk_sensitive_keyword_detected":
@@ -1871,6 +2151,9 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
 
     ops_evidence = (deploy_artifacts + infra_items)[:5]
 
+    sig = observability_missing_to_signal(ops_evidence)
+    behav = output_behavior(sig)
+
     breakdown = {
         **RISK_SCORE_TEMPLATE,
         "technical_severity": 3,
@@ -1880,39 +2163,75 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
         "remediation_simplicity": -2,
     }
 
-    builder.add(
-        category="TD-OBS",
-        title="Deployment without observability evidence",
-        description=(
-            "Deployment/infrastructure files detected but no logging, monitoring, "
-            "tracing, or alerting keywords found. Operational visibility may be insufficient."
-        ),
-        evidence_ids=_evidence_ids(ops_evidence),
-        locations=_locations(ops_evidence),
-        technical_impact=(
-            "Without observability, incidents are harder to detect, diagnose, and resolve. "
-            "This is inferred from missing evidence, not confirmed absence."
-        ),
-        business_impact=(
-            "Operational risk is inferred from deployment evidence. "
-            "Validate with the SRE/Platform team."
-        ),
-        risk_breakdown=breakdown,
-        remediation_effort="Medium",
-        recommended_action=(
-            "Add structured logging, health metrics, and alerting to deployment configurations. "
-            "Consider distributed tracing for service-oriented architectures."
-        ),
-        verification_recommendations=[
-            "Verify logging covers critical operations.",
-            "Confirm alerts fire for known failure modes.",
-        ],
-        risks_and_cautions=[
-            "Observability may exist outside repository files (managed services, SaaS tools).",
-        ],
-        confidence="Low",
-        suggested_owner_area="Platform / SRE",
-    )
+    if behav.creates_finding:
+        builder.add(
+            category="TD-OBS",
+            title="Deployment without observability evidence",
+            description=(
+                "Deployment/infrastructure files detected but no logging, monitoring, "
+                "tracing, or alerting keywords found. Operational visibility may be insufficient."
+            ),
+            evidence_ids=_evidence_ids(ops_evidence),
+            locations=_locations(ops_evidence),
+            technical_impact=(
+                "Without observability, incidents are harder to detect, diagnose, and resolve. "
+                "This is inferred from missing evidence, not confirmed absence."
+            ),
+            business_impact=(
+                "Operational risk is inferred from deployment evidence. "
+                "Validate with the SRE/Platform team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Add structured logging, health metrics, and alerting to deployment configurations. "
+                "Consider distributed tracing for service-oriented architectures."
+            ),
+            verification_recommendations=[
+                "Verify logging covers critical operations.",
+                "Confirm alerts fire for known failure modes.",
+            ],
+            risks_and_cautions=[
+                "Observability may exist outside repository files (managed services, SaaS tools).",
+            ],
+            confidence="Low",
+            suggested_owner_area="Platform / SRE",
+        )
+    elif behav.creates_advisory:
+        builder.add(
+            category="TD-OBS",
+            title="Deployment without observability evidence",
+            description=(
+                "Deployment/infrastructure files detected but no logging, monitoring, "
+                "tracing, or alerting keywords found. Operational visibility may be insufficient."
+            ),
+            evidence_ids=_evidence_ids(ops_evidence),
+            locations=_locations(ops_evidence),
+            technical_impact=(
+                "Without observability, incidents are harder to detect, diagnose, and resolve. "
+                "This is inferred from missing evidence, not confirmed absence."
+            ),
+            business_impact=(
+                "Operational risk is inferred from deployment evidence. "
+                "Validate with the SRE/Platform team."
+            ),
+            risk_breakdown=breakdown,
+            remediation_effort="Medium",
+            recommended_action=(
+                "Add structured logging, health metrics, and alerting to deployment configurations. "
+                "Consider distributed tracing for service-oriented architectures."
+            ),
+            verification_recommendations=[
+                "Verify logging covers critical operations.",
+                "Confirm alerts fire for known failure modes.",
+            ],
+            risks_and_cautions=[
+                "Observability may exist outside repository files (managed services, SaaS tools).",
+            ],
+            confidence="Low",
+            suggested_owner_area="Platform / SRE",
+            issue_type="advisory",
+        )
 
 
 # ── TD-PROCESS: Repository process debt ─────────────────────────────────────
@@ -2057,26 +2376,82 @@ def _add_architecture_findings(
     repository_root: Path,
     builder: FindingBuilder,
 ) -> None:
-    """Convert architecture graph specs into DebtFinding entries."""
+    """Convert architecture graph specs into DebtFinding entries.
+
+    v3.18.0: Uses governed signal disposition controls promotion.
+    Routing uses spec.kind, not title text.
+    """
+    from pharabius.core.signals.architecture_adapters import (
+        architecture_cycle_to_signal,
+        architecture_boundary_violation_to_signal,
+    )
+    from pharabius.core.signals.policy import output_behavior
 
     specs = _analyze_architecture_graph(repository_root)
     for spec in specs:
-        builder.add(
-            category=spec.category,
-            title=spec.title,
-            description=spec.description,
-            evidence_ids=spec.evidence_ids,
-            locations=spec.locations,
-            technical_impact=spec.technical_impact,
-            business_impact=spec.business_impact,
-            risk_breakdown=spec.risk_breakdown,
-            remediation_effort=spec.remediation_effort,
-            recommended_action=spec.recommended_action,
-            verification_recommendations=spec.verification_recommendations,
-            risks_and_cautions=spec.risks_and_cautions,
-            confidence=spec.confidence,
-            suggested_owner_area=spec.suggested_owner_area,
-        )
+        kind = spec.kind
+
+        if kind == "cycle":
+            sig = architecture_cycle_to_signal(spec)
+        elif kind == "boundary_violation":
+            sig = architecture_boundary_violation_to_signal(spec)
+        else:
+            # Unknown spec kind — fall back to direct path for safety
+            builder.add(
+                category=spec.category,
+                title=spec.title,
+                description=spec.description,
+                evidence_ids=spec.evidence_ids,
+                locations=spec.locations,
+                technical_impact=spec.technical_impact,
+                business_impact=spec.business_impact,
+                risk_breakdown=spec.risk_breakdown,
+                remediation_effort=spec.remediation_effort,
+                recommended_action=spec.recommended_action,
+                verification_recommendations=spec.verification_recommendations,
+                risks_and_cautions=spec.risks_and_cautions,
+                confidence=spec.confidence,
+                suggested_owner_area=spec.suggested_owner_area,
+            )
+            continue
+
+        behav = output_behavior(sig)
+
+        if behav.creates_finding:
+            builder.add(
+                category=sig.category,
+                title=spec.title,
+                description=spec.description,
+                evidence_ids=spec.evidence_ids,
+                locations=spec.locations,
+                technical_impact=spec.technical_impact,
+                business_impact=spec.business_impact,
+                risk_breakdown=spec.risk_breakdown,
+                remediation_effort=spec.remediation_effort,
+                recommended_action=spec.recommended_action,
+                verification_recommendations=spec.verification_recommendations,
+                risks_and_cautions=spec.risks_and_cautions,
+                confidence=spec.confidence,
+                suggested_owner_area=spec.suggested_owner_area,
+            )
+        elif behav.creates_advisory:
+            builder.add(
+                category=sig.category,
+                title=spec.title,
+                description=spec.description,
+                evidence_ids=spec.evidence_ids,
+                locations=spec.locations,
+                technical_impact=spec.technical_impact,
+                business_impact=spec.business_impact,
+                risk_breakdown=spec.risk_breakdown,
+                remediation_effort=spec.remediation_effort,
+                recommended_action=spec.recommended_action,
+                verification_recommendations=spec.verification_recommendations,
+                risks_and_cautions=spec.risks_and_cautions,
+                confidence=spec.confidence,
+                suggested_owner_area=spec.suggested_owner_area,
+                issue_type="advisory",
+            )
 
 
 def _apply_enhanced_scoring(root: Path, findings: list[DebtFinding]) -> None:

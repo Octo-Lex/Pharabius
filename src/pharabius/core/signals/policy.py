@@ -25,6 +25,7 @@ class SignalOutputBehavior:
     Derived from the canonical predicate functions. Use this to avoid
     repeated branching in analyzers and tests.
     """
+
     creates_finding: bool
     creates_advisory: bool
     creates_work_package: bool

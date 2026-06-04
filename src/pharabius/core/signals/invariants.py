@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 class SignalValidationSeverity:
     """Severity levels for invariant violations and diagnostics."""
+
     CRITICAL = "critical"
     WARNING = "warning"
     INFO = "info"
@@ -19,6 +20,7 @@ class SignalValidationSeverity:
 @dataclass(frozen=True)
 class SignalInvariant:
     """A named governance invariant."""
+
     code: str
     title: str
     description: str

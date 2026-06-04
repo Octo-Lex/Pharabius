@@ -59,8 +59,8 @@ class TestSignalModels:
             SignalDisposition.SUPPRESSED,
         }
 
-    def test_family_has_exactly_nine_values(self) -> None:
-        assert len(SignalFamily) == 9
+    def test_family_has_exactly_ten_values(self) -> None:
+        assert len(SignalFamily) == 10
         assert SignalFamily.RUNTIME in SignalFamily
         assert SignalFamily.DEPENDENCY in SignalFamily
 

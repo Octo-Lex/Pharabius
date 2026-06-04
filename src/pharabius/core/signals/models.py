@@ -14,6 +14,7 @@ from typing import Any
 
 class SignalDisposition(str, Enum):
     """What should the platform do with this signal?"""
+
     FINDING = "finding"
     ADVISORY = "advisory"
     INFORMATIONAL = "informational"
@@ -22,6 +23,7 @@ class SignalDisposition(str, Enum):
 
 class SignalFamily(str, Enum):
     """Which evidence domain produced this signal?"""
+
     RUNTIME = "runtime"
     DEPENDENCY = "dependency"
     TEST = "test"
@@ -30,6 +32,7 @@ class SignalFamily(str, Enum):
     DOCUMENTATION = "documentation"
     BUILD = "build"
     OBSERVABILITY = "observability"
+    CONFIGURATION = "configuration"
     PROCESS = "process"
 
 
@@ -64,6 +67,7 @@ class GovernedSignal:
 def make_signal_id(family: str, kind: str, evidence_ids: list[str]) -> str:
     """Deterministic signal ID from family, kind, and evidence IDs."""
     import hashlib
+
     payload = f"{family}:{kind}:{':'.join(sorted(evidence_ids))}"
     digest = hashlib.sha256(payload.encode()).hexdigest()[:12]
     return f"SIG-{family.upper()}-{digest}"

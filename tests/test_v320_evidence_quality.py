@@ -10,23 +10,18 @@ import json
 from pathlib import Path
 
 from pharabius.core.constants import (
-    BROAD_EXCEPTION_PER_FILE_THRESHOLD,
     EVIDENCE_BROAD_EXCEPTION,
     EVIDENCE_COVERAGE_METRIC,
     EVIDENCE_COVERAGE_REPORT,
-    EVIDENCE_DEBT_MARKER,
     EVIDENCE_DEPENDENCY_SIGNAL,
-    EVIDENCE_LARGE_FILE,
     EVIDENCE_LONG_FUNCTION,
     EVIDENCE_SOURCE_FILE_SKIPPED,
-    LARGE_FILE_LINE_THRESHOLD,
     LONG_FUNCTION_LINE_THRESHOLD,
 )
 from pharabius.core.run_metadata import execute_run
 from pharabius.core.scanner import scan_repository
 from pharabius.core.traceability import compute_traceability_quality
 from pharabius.schemas.claims import OperationalClaim
-
 
 # ---------------------------------------------------------------------------
 # S01: Shared constants module
@@ -37,8 +32,7 @@ class TestS01Constants:
     def test_constants_module_no_circular_imports(self) -> None:
         """Importing constants must not create circular dependencies."""
         from pharabius.core.constants import LARGE_FILE_LINE_THRESHOLD
-        from pharabius.core.scanner import scan_repository
-        from pharabius.core.analyzer import _deduplicate_findings
+
         assert LARGE_FILE_LINE_THRESHOLD == 1000
 
 
@@ -101,9 +95,7 @@ class TestS04LongFunctions:
         src.write_text("\n".join(lines))
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         td_code = [
             f
             for f in register["findings"]
@@ -140,15 +132,11 @@ class TestS04BroadExceptions:
         src = tmp_path / "many_exceptions.py"
         lines: list[str] = []
         for i in range(4):
-            lines.extend(
-                [f"try:", f"    x = {i}", f"except:", f"    pass", ""]
-            )
+            lines.extend(["try:", f"    x = {i}", "except:", "    pass", ""])
         src.write_text("\n".join(lines))
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         td_code = [
             f
             for f in register["findings"]
@@ -156,17 +144,13 @@ class TestS04BroadExceptions:
         ]
         assert len(td_code) >= 1
 
-    def test_broad_exception_below_threshold_no_finding(
-        self, tmp_path: Path
-    ) -> None:
+    def test_broad_exception_below_threshold_no_finding(self, tmp_path: Path) -> None:
         """< 3 broad exceptions should not produce TD-CODE finding."""
         src = tmp_path / "few_exceptions.py"
         src.write_text("try:\n    pass\nexcept:\n    pass\n")
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         td_code = [
             f
             for f in register["findings"]
@@ -305,9 +289,7 @@ class TestS06CoverageIngestion:
         func_m = next(m for m in metrics if m.metadata["metric"] == "functions")
         assert func_m.metadata["percent"] == 80.0
 
-    def test_malformed_coverage_emits_limitation_not_crash(
-        self, tmp_path: Path
-    ) -> None:
+    def test_malformed_coverage_emits_limitation_not_crash(self, tmp_path: Path) -> None:
         cov_dir = tmp_path / "coverage"
         cov_dir.mkdir()
         (cov_dir / "coverage-summary.json").write_text("NOT VALID JSON{{{")
@@ -320,9 +302,7 @@ class TestS06CoverageIngestion:
         (tmp_path / "main.py").write_text("print('hello')")
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         low_cov = [
             f
             for f in register["findings"]
@@ -338,9 +318,7 @@ class TestS06CoverageIngestion:
         )
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        register = json.loads(
-            (tmp_path / ".ai-debt" / "debt-register.json").read_text()
-        )
+        register = json.loads((tmp_path / ".ai-debt" / "debt-register.json").read_text())
         td_test = [
             f
             for f in register["findings"]
@@ -355,15 +333,11 @@ class TestS06CoverageIngestion:
 
 
 class TestS07TraceabilityQuality:
-    def test_traceability_quality_summary_generated(
-        self, tmp_path: Path
-    ) -> None:
+    def test_traceability_quality_summary_generated(self, tmp_path: Path) -> None:
         (tmp_path / "main.py").write_text("print('hello')")
         (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
         execute_run(tmp_path)
-        quality_path = (
-            tmp_path / ".ai-debt" / "traceability" / "traceability-quality.json"
-        )
+        quality_path = tmp_path / ".ai-debt" / "traceability" / "traceability-quality.json"
         assert quality_path.exists()
         quality = json.loads(quality_path.read_text())
         assert "traceability_grade" in quality

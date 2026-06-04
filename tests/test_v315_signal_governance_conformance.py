@@ -340,6 +340,115 @@ _FAMILY_ADAPTER_FACTORIES = {
             explanation="Missing tests", metadata={},
         ),
     ],
+    "dependency": lambda: [
+        GovernedSignal(
+            signal_id=make_signal_id("dependency", "unpinned_dependency", ["ev1"]),
+            family=SignalFamily.DEPENDENCY, kind="unpinned_dependency",
+            disposition=SignalDisposition.FINDING, category="TD-DEP",
+            severity="Medium", confidence="Medium", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Unpinned Node.js dependencies detected (3 unpinned)",
+            summary="3 Node.js dependencies use unpinned or broad version ranges.",
+            explanation="Unpinned dependencies can change without warning.",
+            metadata={"ecosystem": "Node.js", "count": 3},
+        ),
+        GovernedSignal(
+            signal_id=make_signal_id("dependency", "missing_lockfile", ["ev1"]),
+            family=SignalFamily.DEPENDENCY, kind="missing_lockfile",
+            disposition=SignalDisposition.ADVISORY, category="TD-DEP",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Node.js dependency manifest detected without lockfile evidence",
+            summary="Missing lockfile evidence for package root.",
+            explanation="Missing lockfile may reduce dependency reproducibility.",
+            metadata={"ecosystem": "Node.js", "package_root": "."},
+        ),
+        GovernedSignal(
+            signal_id=make_signal_id("dependency", "manifest_detected", ["ev1"]),
+            family=SignalFamily.DEPENDENCY, kind="manifest_detected",
+            disposition=SignalDisposition.INFORMATIONAL, category="TD-DEP",
+            severity="Low", confidence="Medium", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Dependency manifest detected: package.json",
+            summary="Dependency manifest found at package.json.",
+            explanation="Detected manifest provides dependency coverage context.",
+            metadata={"source_file": "package.json", "ecosystem": "Node.js"},
+        ),
+    ],
+    "security": lambda: [
+        GovernedSignal(
+            signal_id=make_signal_id("security", "compliance_exposure", ["ev1"]),
+            family=SignalFamily.SECURITY, kind="compliance_exposure",
+            disposition=SignalDisposition.FINDING, category="TD-COMP",
+            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Potential compliance exposure detected",
+            summary="Compliance-related keywords detected in application code.",
+            explanation="This is a potential exposure, not a confirmed violation.",
+            metadata={"keywords": ["hipaa"], "locations": ["src/handler.py"], "item_count": 1},
+        ),
+        GovernedSignal(
+            signal_id=make_signal_id("security", "sensitive_path", ["ev1"]),
+            family=SignalFamily.SECURITY, kind="sensitive_path",
+            disposition=SignalDisposition.INFORMATIONAL, category="risk_signal",
+            severity="Low", confidence="Medium", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Risk-sensitive path detected: src/auth.py",
+            summary="Path-based risk signal found at src/auth.py.",
+            explanation="Risk-sensitive path provides security coverage context.",
+            metadata={"source_file": "src/auth.py", "keywords": ["auth"]},
+        ),
+    ],
+    "architecture": lambda: [
+        GovernedSignal(
+            signal_id=make_signal_id("architecture", "cycle", ["ev1"]),
+            family=SignalFamily.ARCHITECTURE, kind="cycle",
+            disposition=SignalDisposition.FINDING, category="TD-ARCH",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Confirmed circular dependency detected between architecture nodes",
+            summary="Confirmed circular dependency detected (cycle: ARCH-CYCLE-TEST).",
+            explanation="Circular dependencies increase coupling and complicate refactoring.",
+            metadata={"spec_kind": "cycle", "analysis_unit_ids": []},
+        ),
+        GovernedSignal(
+            signal_id=make_signal_id("architecture", "boundary_violation", ["ev1"]),
+            family=SignalFamily.ARCHITECTURE, kind="boundary_violation",
+            disposition=SignalDisposition.FINDING, category="TD-ARCH",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Architecture boundary policy violation detected",
+            summary="Architecture boundary policy violation (violation: ARCH-VIOL-TEST).",
+            explanation="Layer boundary violations erode architecture separation.",
+            metadata={"spec_kind": "boundary_violation", "analysis_unit_ids": []},
+        ),
+    ],
+    "configuration": lambda: [
+        GovernedSignal(
+            signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
+            family=SignalFamily.CONFIGURATION, kind="env_without_example",
+            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Environment configuration detected without example file",
+            summary="An environment configuration file was detected, but no .env.example file was found.",
+            explanation="Missing environment examples make setup, onboarding, and environment parity harder to verify.",
+            metadata={"spec_kind": "env_without_example", "env_files": [".env"]},
+        ),
+    ],
+    "observability": lambda: [
+        GovernedSignal(
+            signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
+            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
+            disposition=SignalDisposition.FINDING, category="TD-OBS",
+            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            source_signal_ids=[],
+            title="Deployment without observability evidence",
+            summary="Deployment/infrastructure files detected but no logging, monitoring, tracing, or alerting keywords found.",
+            explanation="Without observability, incidents are harder to detect, diagnose, and resolve.",
+            metadata={"spec_kind": "missing_observability", "evidence_count": 1},
+        ),
+    ],
 }
 
 
@@ -447,6 +556,20 @@ class TestAnalyzerBoundaries:
         source = inspect.getsource(analyzer._analyze_missing_tests)
         assert "should_create_finding" in source
 
+    def test_dependency_signals_uses_policy(self) -> None:
+        """v3.16.0: _analyze_dependency_signals uses output_behavior."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_dependency_signals)
+        assert "output_behavior" in source
+
+    def test_missing_lockfile_uses_policy(self) -> None:
+        """v3.16.0: _emit_lockfile_finding uses output_behavior."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._emit_lockfile_finding)
+        assert "output_behavior" in source
+
     def test_risk_sensitive_uses_policy(self) -> None:
         import inspect
         from pharabius.core import analyzer
@@ -473,6 +596,216 @@ class TestAnalyzerBoundaries:
             assert "should_create_work_package" not in source, \
                 f"{func.__name__} uses should_create_work_package as proxy"
 
+    def test_dependency_analyzer_uses_output_behavior(self) -> None:
+        """v3.16.0/INV_007: Dependency analyzer uses output_behavior, not hardcoded branching."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_dependency_signals)
+        assert "output_behavior" in source
+        assert "dependency_adapters" in source
+
+    def test_dependency_no_work_package_proxy(self) -> None:
+        """v3.16.0/INV_007: Dependency analyzer does not use should_create_work_package."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_dependency_signals)
+        assert "should_create_work_package" not in source
+
+    def test_compliance_uses_output_behavior(self) -> None:
+        """v3.17.0/INV_007: Compliance analyzer uses output_behavior."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_compliance_keywords)
+        assert "output_behavior" in source
+        assert "security_adapters" in source
+
+    def test_compliance_no_work_package_proxy(self) -> None:
+        """v3.17.0/INV_007: Compliance analyzer does not use should_create_work_package."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_compliance_keywords)
+        assert "should_create_work_package" not in source
+
+    def test_risk_sensitive_without_tests_not_security_family(self) -> None:
+        """v3.17.0: _analyze_risk_sensitive_without_tests stays under TEST family."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_risk_sensitive_without_tests)
+        # Must use TEST family adapter, not SECURITY
+        assert "scan_test_risk_sensitive_without_tests_to_signal" in source
+        assert "security_adapters" not in source
+
+    def test_architecture_uses_output_behavior(self) -> None:
+        """v3.18.0/INV_007: Architecture findings use output_behavior."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._add_architecture_findings)
+        assert "output_behavior" in source
+        assert "architecture_adapters" in source
+
+    def test_architecture_uses_spec_kind_not_title(self) -> None:
+        """v3.18.0: Architecture routing uses spec.kind, not title text."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._add_architecture_findings)
+        assert "spec.kind" in source
+        # Title-based routing is forbidden
+        assert '"circular dependency" in spec.title' not in source
+        assert '"boundary" in spec.title' not in source
+
+    def test_architecture_no_work_package_proxy(self) -> None:
+        """v3.18.0/INV_007: Architecture analyzer does not use should_create_work_package."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._add_architecture_findings)
+        assert "should_create_work_package" not in source
+
+    def test_configuration_uses_output_behavior(self) -> None:
+        """v3.19.0/INV_008: Configuration analyzer uses output_behavior."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_env_without_example)
+        assert "output_behavior" in source
+        assert "configuration_adapters" in source
+
+    def test_configuration_not_security(self) -> None:
+        """v3.19.0: Configuration family is distinct from security."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
+            family=SignalFamily.CONFIGURATION, kind="env_without_example",
+            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Config", summary="Config",
+            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+        )
+        assert sig.family == SignalFamily.CONFIGURATION
+        assert sig.family != SignalFamily.SECURITY
+        assert sig.category == "TD-CONFIG"
+        assert sig.category != "TD-SEC"
+
+    def test_configuration_not_build(self) -> None:
+        """v3.19.0: Configuration family is distinct from build."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
+            family=SignalFamily.CONFIGURATION, kind="env_without_example",
+            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Config", summary="Config",
+            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+        )
+        assert sig.family != SignalFamily.BUILD
+
+    def test_configuration_finding_only_in_v319(self) -> None:
+        """v3.19.0: Configuration family emits FINDING only."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
+            family=SignalFamily.CONFIGURATION, kind="env_without_example",
+            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Config", summary="Config",
+            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+        )
+        assert sig.disposition == SignalDisposition.FINDING
+
+    def test_configuration_summary_includes_family(self) -> None:
+        """v3.19.0: Signal Governance Summary includes Configuration family."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("configuration", "env_without_example", ["ev1"]),
+            family=SignalFamily.CONFIGURATION, kind="env_without_example",
+            disposition=SignalDisposition.FINDING, category="TD-CONFIG",
+            severity="Medium", confidence="High", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Config", summary="Config",
+            explanation="Config hygiene", metadata={"spec_kind": "env_without_example"},
+        )
+        summary = build_signal_summary([sig])
+        assert "configuration" in summary.by_family
+        assert summary.by_family["configuration"] == 1
+
+    def test_observability_uses_output_behavior(self) -> None:
+        """v3.20.0/INV_009: Observability analyzer uses output_behavior."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_missing_observability)
+        assert "output_behavior" in source
+        assert "observability_adapters" in source
+
+    def test_observability_not_build(self) -> None:
+        """v3.20.0: Observability family is distinct from build."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
+            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
+            disposition=SignalDisposition.FINDING, category="TD-OBS",
+            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Obs", summary="Obs",
+            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+        )
+        assert sig.family == SignalFamily.OBSERVABILITY
+        assert sig.family != SignalFamily.BUILD
+        assert sig.category == "TD-OBS"
+
+    def test_observability_not_configuration(self) -> None:
+        """v3.20.0: Observability family is distinct from configuration."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
+            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
+            disposition=SignalDisposition.FINDING, category="TD-OBS",
+            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Obs", summary="Obs",
+            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+        )
+        assert sig.family != SignalFamily.CONFIGURATION
+
+    def test_observability_not_security(self) -> None:
+        """v3.20.0: Observability family is distinct from security."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
+            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
+            disposition=SignalDisposition.FINDING, category="TD-OBS",
+            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Obs", summary="Obs",
+            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+        )
+        assert sig.family != SignalFamily.SECURITY
+
+    def test_observability_finding_only_in_v320(self) -> None:
+        """v3.20.0: Observability family emits FINDING only."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
+            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
+            disposition=SignalDisposition.FINDING, category="TD-OBS",
+            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Obs", summary="Obs",
+            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+        )
+        assert sig.disposition == SignalDisposition.FINDING
+
+    def test_observability_summary_includes_family(self) -> None:
+        """v3.20.0: Signal Governance Summary includes Observability family."""
+        sig = GovernedSignal(
+            signal_id=make_signal_id("observability", "missing_observability", ["ev1"]),
+            family=SignalFamily.OBSERVABILITY, kind="missing_observability",
+            disposition=SignalDisposition.FINDING, category="TD-OBS",
+            severity="Medium", confidence="Low", evidence_ids=["ev1"],
+            source_signal_ids=[], title="Obs", summary="Obs",
+            explanation="Missing obs", metadata={"spec_kind": "missing_observability"},
+        )
+        summary = build_signal_summary([sig])
+        assert "observability" in summary.by_family
+        assert summary.by_family["observability"] == 1
+
+    def test_all_ten_families_governed(self) -> None:
+        """v3.20.0: All 10 SignalFamily values are in the conformance suite."""
+        governed = set(_FAMILY_ADAPTER_FACTORIES.keys())
+        all_families = set(f.value for f in SignalFamily)
+        assert governed == all_families, f"Missing: {all_families - governed}"
+
+    def test_no_work_package_proxy_observability(self) -> None:
+        """v3.20.0: Observability analyzer does not use should_create_work_package."""
+        import inspect
+        from pharabius.core import analyzer
+        source = inspect.getsource(analyzer._analyze_missing_observability)
+        assert "should_create_work_package" not in source
+
 
 # ── S06: Summary consistency ──────────────────────────────────────────
 
@@ -498,6 +831,111 @@ class TestSummaryConsistency:
         ]
         summary = build_signal_summary(signals)
         assert summary.by_family == {"runtime": 1, "test": 1, "documentation": 1}
+
+    def test_dependency_family_in_summary(self) -> None:
+        """v3.16.0: Dependency family appears in signal summary."""
+        signals = [
+            GovernedSignal(
+                signal_id=make_signal_id("dependency", "unpinned_dependency", ["ev1"]),
+                family=SignalFamily.DEPENDENCY, kind="unpinned_dependency",
+                disposition=SignalDisposition.FINDING, category="TD-DEP",
+                severity="Medium", confidence="Medium", evidence_ids=["ev1"],
+                source_signal_ids=[], title="Unpinned deps", summary="Unpinned",
+                explanation="Unpinned", metadata={"ecosystem": "Node.js"},
+            ),
+            _signal(SignalDisposition.ADVISORY, family=SignalFamily.RUNTIME),
+        ]
+        summary = build_signal_summary(signals)
+        assert "dependency" in summary.by_family
+        assert summary.by_family["dependency"] == 1
+        assert summary.by_family["runtime"] == 1
+
+    def test_dependency_and_runtime_distinct(self) -> None:
+        """v3.16.0: Dependency and runtime families are counted separately."""
+        signals = [
+            GovernedSignal(
+                signal_id=make_signal_id("dependency", "missing_lockfile", ["ev1"]),
+                family=SignalFamily.DEPENDENCY, kind="missing_lockfile",
+                disposition=SignalDisposition.ADVISORY, category="TD-DEP",
+                severity="Medium", confidence="High", evidence_ids=["ev1"],
+                source_signal_ids=[], title="Missing lockfile", summary="No lock",
+                explanation="No lockfile", metadata={"ecosystem": "Node.js"},
+            ),
+            GovernedSignal(
+                signal_id=make_signal_id("runtime", "missing_runtime_pin", ["ev2"]),
+                family=SignalFamily.RUNTIME, kind="missing_runtime_pin",
+                disposition=SignalDisposition.ADVISORY, category="TD-DEP",
+                severity="Low", confidence="Low", evidence_ids=["ev2"],
+                source_signal_ids=[], title="Missing pin", summary="No pin",
+                explanation="No runtime pin", metadata={"runtime_name": "node"},
+            ),
+        ]
+        summary = build_signal_summary(signals)
+        assert summary.by_family["dependency"] == 1
+        assert summary.by_family["runtime"] == 1
+        assert summary.total == 2
+        assert summary.by_disposition == {"advisory": 2}
+
+    def test_security_family_in_summary(self) -> None:
+        """v3.17.0: Security family appears in signal summary."""
+        signals = [
+            GovernedSignal(
+                signal_id=make_signal_id("security", "compliance_exposure", ["ev1"]),
+                family=SignalFamily.SECURITY, kind="compliance_exposure",
+                disposition=SignalDisposition.FINDING, category="TD-COMP",
+                severity="Medium", confidence="Low", evidence_ids=["ev1"],
+                source_signal_ids=[], title="Compliance exposure", summary="Compliance",
+                explanation="Exposure", metadata={"keywords": ["hipaa"]},
+            ),
+            _signal(SignalDisposition.ADVISORY, family=SignalFamily.RUNTIME),
+        ]
+        summary = build_signal_summary(signals)
+        assert "security" in summary.by_family
+        assert summary.by_family["security"] == 1
+        assert summary.by_family["runtime"] == 1
+
+    def test_security_not_double_counting_test(self) -> None:
+        """v3.17.0: Security and test families are distinct."""
+        signals = [
+            GovernedSignal(
+                signal_id=make_signal_id("security", "compliance_exposure", ["ev1"]),
+                family=SignalFamily.SECURITY, kind="compliance_exposure",
+                disposition=SignalDisposition.FINDING, category="TD-COMP",
+                severity="Medium", confidence="Low", evidence_ids=["ev1"],
+                source_signal_ids=[], title="Compliance", summary="Compliance",
+                explanation="Exposure", metadata={},
+            ),
+            GovernedSignal(
+                signal_id=make_signal_id("test", "risk_sensitive_without_tests", ["ev2"]),
+                family=SignalFamily.TEST, kind="risk_sensitive_without_tests",
+                disposition=SignalDisposition.FINDING, category="TD-SEC",
+                severity="High", confidence="Medium", evidence_ids=["ev2"],
+                source_signal_ids=[], title="Risk-sensitive without tests", summary="No tests",
+                explanation="Missing tests", metadata={"risk_sensitive": True},
+            ),
+        ]
+        summary = build_signal_summary(signals)
+        assert summary.by_family["security"] == 1
+        assert summary.by_family["test"] == 1
+        assert summary.total == 2
+
+    def test_architecture_family_in_summary(self) -> None:
+        """v3.18.0: Architecture family appears in signal summary."""
+        signals = [
+            GovernedSignal(
+                signal_id=make_signal_id("architecture", "cycle", ["ev1"]),
+                family=SignalFamily.ARCHITECTURE, kind="cycle",
+                disposition=SignalDisposition.FINDING, category="TD-ARCH",
+                severity="Medium", confidence="High", evidence_ids=["ev1"],
+                source_signal_ids=[], title="Cycle", summary="Circular dep",
+                explanation="Coupling", metadata={"spec_kind": "cycle"},
+            ),
+            _signal(SignalDisposition.ADVISORY, family=SignalFamily.RUNTIME),
+        ]
+        summary = build_signal_summary(signals)
+        assert "architecture" in summary.by_family
+        assert summary.by_family["architecture"] == 1
+        assert summary.by_family["runtime"] == 1
 
     def test_all_finding_disposition_count(self) -> None:
         signals = [

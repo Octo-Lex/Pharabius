@@ -2,6 +2,237 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.26.0] - Unreleased
+
+### Added
+- `docs/GOVERNANCE_CONTRACT.md` — complete v3 governance contract inventory
+- `docs/V4_READINESS.md` — v4 direction memo (documents options without implementing them)
+- 52 contract-freeze tests in `tests/test_v326_contract_freeze.py`
+- Schema version escalation rule documented
+- Non-policy boundary audit tests
+- Documentation consistency audit tests
+- No-runtime-registry assertion tests
+
+### Unchanged
+- All 2918 pre-existing tests pass
+- No new signal families (still 10)
+- No new adapters (still 29)
+- No new detection, analyzer, policy, dashboard, or enforcement behavior
+- No findings, advisories, risk scores, signal dispositions, or work packages changed
+
+## [3.25.0] - Unreleased
+
+### Added
+- `src/pharabius/core/governance_export.py` — machine-readable governance analytics export
+  (`build_governance_export()`, `write_governance_export()`, `write_governance_export_jsonl()`)
+- `governance` format in `export_findings()` — writes `governance-summary.json` and `.jsonl`
+- Export schema version 1.0 with `schema_version`, `export_type`, `run_id`, `generated_at`
+- Governance export includes signal_summary, governance_quality, governance_trends, diagnostics
+- Recurring diagnostics included in export
+- Forbidden field validation (`_validate_no_forbidden_fields()`)
+- 36 new export tests
+
+### Unchanged
+- All 2882 pre-existing tests pass
+- No findings, advisories, risk scores, signal dispositions, or work-package behavior changed
+- No quality gates, pass/fail thresholds, or policy decisions introduced
+- No dashboard, CI gate, external integration, or persistent SignalStore
+
+## [3.24.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/trends.py` — governance quality trend model
+  (`GovernanceTrendSummary`, `GovernanceMetricDelta`, `GovernanceDiagnosticTrend`)
+- `build_governance_trend_summary()` — read-only trend computation across runs
+- `extract_governance_quality_snapshots()` — extracts runs with governance_quality
+- `governance_trend_to_dict()` — JSON serialization
+- `format_coverage_delta()` / `format_count_delta()` — percentage-point formatting
+- Foundation report section "6f. Governance Quality Trends" (when history exists)
+- Run-history summary includes `governance_trends` (additive)
+- `compute_governance_quality_trend()` in run_history.py
+- `_reconstruct_signals_from_snapshot()` shared between summary and quality functions
+- 33 new trend tests + 27 no-behavior-change tests
+
+### Changed
+- `_build_signal_summary` in run_history.py uses `_reconstruct_signals_from_snapshot`
+
+### Unchanged
+- All 2849 pre-existing tests pass
+- No findings, advisories, risk scores, signal dispositions, or work-package behavior changed
+- No quality gates, pass/fail thresholds, or policy decisions introduced
+
+## [3.23.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/quality.py` — governance quality metrics model
+  (`GovernanceQualityMetrics`, `GovernanceQualityDiagnostic`)
+- `build_governance_quality_metrics()` — read-only quality metrics from governed signals
+- `governance_quality_metrics_to_dict()` — JSON serialization
+- Threshold-free diagnostics: GQM-001 through GQM-005
+- Foundation report section "6e. Governance Quality Metrics"
+- Run-history snapshot includes `governance_quality` (additive alongside `signal_summary`)
+- 29 new tests for quality metrics, coverage, diagnostics, serialization
+
+### Changed
+- `_build_signal_summary` in run_history.py refactored to share signal reconstruction
+  with `_build_governance_quality` via `_reconstruct_signals_from_snapshot`
+
+### Unchanged
+- All 2820 pre-existing tests pass
+- No findings, advisories, risk scores, signal dispositions, or work-package behavior changed
+- No quality gates, pass/fail thresholds, or promotion/demotion rules introduced
+
+## [3.22.0] - Unreleased
+
+### Changed
+- Foundation report Signal Governance Summary: improved disposition explanations
+- Foundation report: added category/family distinction note
+- `docs/SIGNAL_GOVERNANCE.md`: added family boundary reference table, signal examples catalog, category/family distinction section
+- Fixed runtime category in inventory: TD-DEP (not TD-RUNTIME)
+
+### Unchanged
+- All 2788 pre-existing tests pass
+- No analyzer, adapter, detection, promotion, risk-score, or work-package behavior changes
+- No new signal adapters, families, or dispositions
+
+## [3.21.0] - Unreleased
+
+### Added
+- `tests/fixtures/signal_governance/governed_family_inventory.py` — machine-checkable governance inventory
+- `tests/test_v321_governance_audit.py` — 47 cross-family audit tests
+- `tests/test_v321_signal_family_boundaries.py` — 10 boundary regression tests
+- `docs/SIGNAL_GOVERNANCE_AUDIT.md` — completion audit document
+- Category-to-family mapping with known exceptions (TD-COMP→SECURITY, TD-SEC→TEST)
+- Evidence cap audit (architecture: 20, observability: 5)
+- Metadata minimum contract for uniform families
+- Static analyzer audit: no unlisted direct-promotion paths
+
+### Changed
+- Nothing — this is an audit release
+
+### Unchanged
+- All 2694 pre-existing tests pass unchanged
+- No new detection or promotion behavior
+- No new signal families or adapters
+
+## [3.20.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/observability_adapters.py` — 1 observability signal adapter
+  (`observability_missing_to_signal`)
+- Observability family in signal governance conformance suite (parameterized)
+- Observability family boundary and summary tests
+- `docs/OBSERVABILITY_SIGNALS.md` — scope statement
+- 63 new tests: 25 characterization, 22 fixture/regression, 16 conformance/boundary
+
+### Changed
+- `_analyze_missing_observability()` uses `output_behavior()` for promotion
+- Observability signals flow through `GovernedSignal` contract with `SignalFamily.OBSERVABILITY`
+
+### Unchanged
+- All TD-OBS findings produce identical output
+- CI-only deployment evidence remains excluded
+- Observability keyword detection is existing only — no new keyword scanning
+- Evidence cap at 5 preserved with existing ordering
+- Existing report section grouping unchanged
+
+### Milestone
+- **v3.20.0 completes first-pass signal governance adoption across all 10 families.**
+
+## [3.19.0] - Unreleased
+
+### Added
+- `SignalFamily.CONFIGURATION` — new enum value for configuration/environment signals
+- `src/pharabius/core/signals/configuration_adapters.py` — 1 configuration signal adapter
+  (`configuration_env_without_example_to_signal`)
+- Configuration family in signal governance conformance suite (parameterized)
+- Configuration family boundary and summary tests
+- `docs/CONFIGURATION_SIGNALS.md` — scope statement
+- 59 new tests: 24 characterization, 23 fixture/regression, 12 conformance/boundary
+
+### Changed
+- `_analyze_env_without_example()` uses `output_behavior()` for promotion
+- Configuration signals flow through `GovernedSignal` contract with `SignalFamily.CONFIGURATION`
+- Signal family enum count: 9 → 10
+
+### Unchanged
+- All TD-CONFIG findings produce identical output
+- Existing reporter section grouping is unchanged
+- No new secret scanning, credential validation, config hardening, or policy-as-code
+- `.env.example` alone remains a skip/no-signal condition
+- Existing caution text about credentials is byte-for-byte preserved
+
+## [3.18.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/architecture_adapters.py` — 2 architecture signal adapters
+  (`architecture_cycle_to_signal`, `architecture_boundary_violation_to_signal`)
+- `kind` field on `ArchFindingSpec` for stable governance routing (not title-based)
+- Architecture family in signal governance conformance suite (parameterized)
+- Architecture family boundary and summary tests
+- `docs/ARCHITECTURE_SIGNALS.md` — scope statement
+- 43 new tests: 14 characterization, 17 fixture/regression, 12 conformance/boundary
+
+### Changed
+- `_add_architecture_findings()` uses `output_behavior()` and `spec.kind` for promotion
+- Architecture signals flow through `GovernedSignal` contract with `SignalFamily.ARCHITECTURE`
+
+### Unchanged
+- All architecture findings produce identical output
+- `architecture_analyzer.py` unchanged except `kind` field on `ArchFindingSpec`
+- High-coupling metrics, unresolved imports, external imports still produce no findings
+- Cap behavior (20 per type) preserved byte-for-byte
+- Graph-absent behavior remains graceful skip
+- `SignalFamily.ARCHITECTURE` was already present; reused (not re-added)
+
+## [3.17.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/security_adapters.py` — 3 security signal adapters
+  (`security_compliance_exposure_to_signal`, `security_sensitive_path_to_signal`,
+  `security_sensitive_keyword_to_signal`)
+- Security family in signal governance conformance suite (parameterized)
+- Security family boundary tests (security vs test family separation)
+- Security signal summary tests
+- `docs/SECURITY_EXPOSURE.md` — strict scope statement
+- 49 new tests: 18 characterization, 18 fixture/regression, 13 conformance/boundary
+
+### Changed
+- `_analyze_compliance_keywords()` uses `output_behavior()` instead of hardcoded builder.add()
+- Compliance signals flow through `GovernedSignal` contract with `SignalFamily.SECURITY`
+- Category `TD-COMP` is preserved while governed under `SignalFamily.SECURITY`
+
+### Unchanged
+- All compliance findings produce identical output (field-by-field verified)
+- `_analyze_risk_sensitive_without_tests` stays under `SignalFamily.TEST` (not migrated)
+- `_analyze_env_without_example` stays as `TD-CONFIG` (out of scope)
+- No vulnerability, CVE, exploitability, SAST, DAST, taint analysis, or secret validation added
+- Compliance keyword set `{"pii", "gdpr", "hipaa", "pci", "retention", "patient"}` is unchanged
+- `SignalFamily.SECURITY` was already present; reused (not re-added)
+
+## [3.16.0] - Unreleased
+
+### Added
+- `src/pharabius/core/signals/dependency_adapters.py` — 7 dependency signal adapters
+  (`dependency_unpinned_to_signal`, `dependency_lockfile_conflict_to_signal`,
+  `dependency_missing_lockfile_to_signal`, `dependency_manifest_without_lockfile_to_signal`,
+  `dependency_orphan_lockfile_to_signal`, `dependency_parse_failure_to_signal`,
+  `dependency_manifest_detected_to_signal`)
+- Dependency family in signal governance conformance suite (parameterized)
+- Dependency family boundary tests (runtime vs dependency separation)
+- Dependency signal summary tests
+- 50 new tests: 19 characterization, 17 fixture/regression, 14 conformance/boundary
+
+### Changed
+- `_analyze_dependency_signals()` uses `output_behavior()` instead of hardcoded branching
+- `_emit_lockfile_finding()` uses governed signal disposition via `output_behavior()`
+- Dependency signals flow through `GovernedSignal` contract with `SignalFamily.DEPENDENCY`
+
+### Unchanged
+- All dependency findings, advisories, and observations produce identical output
+- No new vulnerability scanning, SBOM, license, or freshness capabilities
+- `SignalFamily.DEPENDENCY` was already present; reused (not re-added)
+
 ## [3.15.0] - Unreleased
 
 ### Added
