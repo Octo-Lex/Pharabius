@@ -243,12 +243,6 @@ def build_current_run_snapshot(workspace: Path, run_id: str) -> dict[str, Any]:
         "runtime_evidence_summary": _build_runtime_summary(evidence_items, findings),
         # Signal governance summary (v3.12.0)
         "signal_summary": _build_signal_summary(evidence_items, findings),
-        # Governance quality metrics (v3.23.0)
-        "governance_quality": _build_governance_quality(evidence_items, findings),
-        # Governance quality trend (v3.24.0)
-        "governance_quality_trend": _build_governance_quality_trend(
-            evidence_items, findings, workspace,
-        ),
     }
 
 
@@ -305,10 +299,12 @@ def _build_runtime_summary(evidence_items: list[dict], findings: list[dict]) -> 
     }
 
 
-def _reconstruct_signals_from_snapshot(evidence_items: list[dict], findings: list[dict]) -> list:
-    """Reconstruct governed signals from snapshot data (v3.23.0).
+def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> dict[str, Any]:
+    """Build signal governance summary from governed signals (v3.13.0).
 
-    Shared between _build_signal_summary and _build_governance_quality.
+    Reconstructs governed signals from evidence, then builds summary
+    from the signal instances. This avoids raw-evidence-type heuristics
+    and keeps the summary signal-driven.
     """
     from pharabius.core.constants import (
         EVIDENCE_RUNTIME_VERSION_SIGNAL,
@@ -328,6 +324,7 @@ def _reconstruct_signals_from_snapshot(evidence_items: list[dict], findings: lis
         scan_test_missing_to_signal,
         scan_test_risk_sensitive_without_tests_to_signal,
     )
+    from pharabius.core.signals.summary import build_signal_summary, signal_summary_to_dict
 
     signals = []
 
@@ -348,6 +345,7 @@ def _reconstruct_signals_from_snapshot(evidence_items: list[dict], findings: lis
             runtime_info_items.append(ev)
 
     for ev in runtime_conflict_items:
+        # Dict-based adapter: construct signal directly from dict fields
         ev_id = ev.get("evidence_id", "unknown")
         meta = ev.get("metadata", {}) or {}
         runtime = meta.get("runtime", "unknown")
@@ -367,165 +365,6 @@ def _reconstruct_signals_from_snapshot(evidence_items: list[dict], findings: lis
             explanation=ev.get("summary", ""),
             metadata={"runtime_name": runtime, "conflict_kind": conflict_kind},
         ))
-
-    for ev in runtime_missing_items:
-        ev_id = ev.get("evidence_id", "unknown")
-        meta = ev.get("metadata", {}) or {}
-        runtime = meta.get("runtime", "unknown")
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("runtime", "missing_pin", [ev_id]),
-            family=SignalFamily.RUNTIME,
-            kind="runtime_missing_pin",
-            disposition=SignalDisposition.ADVISORY,
-            category="TD-DEP",
-            severity="Medium",
-            confidence="Medium",
-            evidence_ids=[ev_id],
-            source_signal_ids=[],
-            title=f"{runtime} runtime version not pinned",
-            summary=f"{runtime} runtime version declaration is not pinned to an exact version.",
-            explanation=ev.get("summary", ""),
-            metadata={"runtime_name": runtime},
-        ))
-
-    for ev in runtime_info_items:
-        ev_id = ev.get("evidence_id", "unknown")
-        meta = ev.get("metadata", {}) or {}
-        runtime = meta.get("runtime", "unknown")
-        signals.append(GovernedSignal(
-            signal_id=make_signal_id("runtime", "runtime_evidence", [ev_id]),
-            family=SignalFamily.RUNTIME,
-            kind="runtime_evidence",
-            disposition=SignalDisposition.INFORMATIONAL,
-            category="runtime_signal",
-            severity="Low",
-            confidence="High",
-            evidence_ids=[ev_id],
-            source_signal_ids=[],
-            title=f"{runtime} runtime evidence detected",
-            summary=f"Runtime evidence for {runtime} detected.",
-            explanation=ev.get("summary", ""),
-            metadata={"runtime_name": runtime},
-        ))
-
-    # ── Finding-based signals (documentation, build, process, test) ──
-    for f in findings:
-        cat = f.get("category", "")
-        ev_ids = f.get("evidence_ids", []) or []
-
-        if cat == "TD-DOC":
-            signals.append(docs_missing_to_signal(evidence_ids=ev_ids))
-        elif cat == "TD-BUILD":
-            signals.append(build_missing_ci_to_signal(evidence_ids=ev_ids))
-        elif cat == "TD-PROCESS":
-            missing = f.get("title", "")
-            signals.append(process_missing_artifacts_to_signal(
-                missing_artifacts=[missing],
-                evidence_ids=ev_ids,
-            ))
-        elif cat == "TD-TEST" and "test" in f.get("title", "").lower():
-            signals.append(scan_test_missing_to_signal(evidence_ids=ev_ids))
-        elif cat == "TD-SEC" and "test" in f.get("title", "").lower():
-            signals.append(scan_test_risk_sensitive_without_tests_to_signal(evidence_ids=ev_ids))
-
-    return signals
-
-
-def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> dict[str, Any]:
-    """Build signal governance summary from governed signals (v3.13.0).
-
-    Reconstructs governed signals from evidence, then builds summary
-    from the signal instances. This avoids raw-evidence-type heuristics
-    and keeps the summary signal-driven.
-    """
-    from pharabius.core.signals.summary import build_signal_summary, signal_summary_to_dict
-
-    signals = _reconstruct_signals_from_snapshot(evidence_items, findings)
-    summary = build_signal_summary(signals)
-    return signal_summary_to_dict(summary)
-
-
-def _build_governance_quality(evidence_items: list[dict], findings: list[dict]) -> dict[str, Any]:
-    """Build governance quality metrics from signals (v3.23.0).
-
-    Additive to signal_summary. Does not replace it.
-    """
-    from pharabius.core.signals.quality import (
-        build_governance_quality_metrics,
-        governance_quality_metrics_to_dict,
-    )
-
-    signals = _reconstruct_signals_from_snapshot(evidence_items, findings)
-    metrics = build_governance_quality_metrics(signals)
-    return governance_quality_metrics_to_dict(metrics)
-
-
-def _build_governance_quality_trend(
-    evidence_items: list[dict],
-    findings: list[dict],
-    workspace: Path,
-) -> dict[str, Any]:
-    """Build governance quality trend from current vs previous snapshot (v3.24.0).
-
-    Additive. Non-throwing. Descriptive only.
-    """
-    from pharabius.core.signals.quality import (
-        build_governance_quality_metrics,
-        build_governance_quality_trend,
-        governance_quality_trend_to_dict,
-    )
-
-    try:
-        current_metrics = build_governance_quality_metrics(
-            _reconstruct_signals_from_snapshot(evidence_items, findings),
-        )
-        previous_gq = _load_previous_governance_quality(workspace)
-        previous_metrics = None
-        if previous_gq is not None:
-            # Reconstruct signals from previous snapshot is not feasible;
-            # pass the serialized dict directly — builder handles it
-            previous_metrics = previous_gq
-
-        trend = build_governance_quality_trend(
-            current=current_metrics,
-            previous=previous_metrics,
-        )
-        return governance_quality_trend_to_dict(trend)
-    except Exception:
-        # Non-throwing: return minimal trend on any error
-        return {
-            "schema_version": "governance_quality_trend.v1",
-            "has_previous": False,
-            "total_signals_delta": 0,
-            "evidence_coverage_delta": 0.0,
-            "metadata_coverage_delta": 0.0,
-            "finding_evidence_coverage_delta": 0.0,
-            "advisory_basis_coverage_delta": 0.0,
-            "diagnostic_count_delta": 0,
-            "notes": ["Trend computation failed."],
-        }
-
-
-def _load_previous_governance_quality(workspace: Path) -> dict | None:
-    """Load governance_quality from the most recent previous snapshot."""
-    runs_dir = workspace / "runs"
-    if not runs_dir.exists():
-        return None
-
-    snapshots = sorted(runs_dir.glob("*-history-snapshot.json"))
-    if len(snapshots) < 2:
-        return None
-
-    # Load second-most-recent (the one before current)
-    try:
-        prev_data = json.loads(snapshots[-2].read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return None
-
-    gq = prev_data.get("governance_quality")
-    if gq is None:
-        return None
-    return gq
     if runtime_missing_items:
         ev_ids = [ev.get("evidence_id", "unknown") for ev in runtime_missing_items]
         runtimes = list({ev.get("metadata", {}).get("runtime", "unknown") for ev in runtime_missing_items})
@@ -1163,9 +1002,6 @@ def build_run_history_summary(workspace: Path) -> dict[str, Any]:
     wp_trend = compute_work_package_readiness_trend(index, latest_snapshot, previous_snapshot)
     trace_trend = _load_traceability_trend(workspace)
 
-    # Governance quality trend (v3.24.0)
-    governance_trend = compute_governance_quality_trend(latest_snapshot, previous_snapshot)
-
     # Determine confidence
     enriched_count = len(enriched_runs)
     if len(runs) < 2:
@@ -1198,7 +1034,6 @@ def build_run_history_summary(workspace: Path) -> dict[str, Any]:
         "evidence_coverage_trend": evidence_trend,
         "work_package_readiness_trend": wp_trend,
         "traceability_trend": trace_trend,
-        "governance_trends": governance_trend,
         "warnings": all_warnings,
     }
 
@@ -1266,31 +1101,6 @@ def write_run_history_summary(workspace: Path, summary: dict[str, Any]) -> list[
     paths.append(md_path)
 
     return paths
-
-
-def compute_governance_quality_trend(
-    latest_snapshot: dict[str, Any] | None,
-    previous_snapshot: dict[str, Any] | None,
-) -> dict[str, Any]:
-    """Compute governance quality trend across runs (v3.24.0).
-
-    Uses the latest two snapshots containing governance_quality,
-    not merely the latest two runs. Older snapshots without
-    governance_quality are skipped gracefully.
-    """
-    from pharabius.core.signals.trends import (
-        build_governance_trend_summary,
-        governance_trend_to_dict,
-    )
-
-    # Collect snapshots with governance_quality
-    snapshots = []
-    for snap in [previous_snapshot, latest_snapshot]:
-        if snap and snap.get("governance_quality") is not None:
-            snapshots.append(snap)
-
-    trend = build_governance_trend_summary(snapshots)
-    return governance_trend_to_dict(trend)
 
 
 def render_run_history_summary_markdown(summary: dict[str, Any]) -> str:
