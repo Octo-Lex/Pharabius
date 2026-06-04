@@ -127,7 +127,7 @@ def build_governance_quality_metrics(
             GovernanceQualityDiagnostic(
                 code="GQM-002",
                 severity="info",
-                message=f"{advisories_without_basis} advisory/advisories without evidence or metadata basis",
+                message=f"{advisories_without_basis} advisory/advisories without evidence or metadata basis",  # noqa: E501
             )
         )
 
@@ -138,7 +138,7 @@ def build_governance_quality_metrics(
             GovernanceQualityDiagnostic(
                 code="GQM-003",
                 severity="info",
-                message=f"{informational_without_evidence} informational signal(s) without evidence",
+                message=f"{informational_without_evidence} informational signal(s) without evidence",  # noqa: E501
             )
         )
 

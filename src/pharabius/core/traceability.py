@@ -262,7 +262,7 @@ def render_traceability_quality_markdown(quality: dict[str, object]) -> str:
     lines.append("## Grade")
     lines.append("")
     lines.append(
-        f"**{quality['traceability_grade'].toString().upper() if hasattr(quality['traceability_grade'], 'toString') else str(quality['traceability_grade']).upper()}**"
+        f"**{quality['traceability_grade'].toString().upper() if hasattr(quality['traceability_grade'], 'toString') else str(quality['traceability_grade']).upper()}**"  # noqa: E501
     )
     lines.append("")
 
@@ -408,8 +408,8 @@ def compute_traceability_quality_trend(
     deltas: dict[str, float] = {}
     for key in metric_keys:
         b = float(baseline.get(key, 0))
-        l = float(latest.get(key, 0))
-        deltas[key] = round(l - b, 2)
+        lat = float(latest.get(key, 0))
+        deltas[key] = round(lat - b, 2)
 
     grade_order = {"weak": 0, "partial": 1, "usable": 2, "complete": 3}
     bg = grade_order.get(str(baseline.get("traceability_grade", "")), 0)

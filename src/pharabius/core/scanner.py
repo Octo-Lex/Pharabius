@@ -216,8 +216,8 @@ _RUST_GROUPED_USE = re.compile(r"^\s*use\s+([\w:]+)::\{([^}]+)\}\s*;", re.MULTIL
 _RUST_LINE_COMMENT = re.compile(r"^\s*//")
 
 
-from pharabius.core.io_helpers import read_json, read_text
-from pharabius.core.path_utils import (
+from pharabius.core.io_helpers import read_json, read_text  # noqa: E402
+from pharabius.core.path_utils import (  # noqa: E402
     normalize_repo_path,
     path_matches_exact_or_suffix,
     relative_repo_path,
@@ -661,12 +661,12 @@ def _detect_broad_exceptions(
                 break  # one detection per line
 
 
-from pharabius.core.coverage_parsers import scan_coverage_artifact
-from pharabius.core.dependency_parsers import (
+from pharabius.core.coverage_parsers import scan_coverage_artifact  # noqa: E402
+from pharabius.core.dependency_parsers import (  # noqa: E402
     scan_dependency_manifest,
     scan_repository_dependency_consistency,
 )
-from pharabius.core.runtime_parsers import detect_runtime_version_pins
+from pharabius.core.runtime_parsers import detect_runtime_version_pins  # noqa: E402
 
 
 def scan_repository(

@@ -477,7 +477,7 @@ def scan_test_coverage_gap_to_signal(
     category: str = "TD-TEST",
     title: str = "",
     summary: str = "",
-    explanation: str = "Low test coverage means changes are more likely to introduce undetected regressions.",
+    explanation: str = "Low test coverage means changes are more likely to introduce undetected regressions.",  # noqa: E501
 ) -> GovernedSignal:
     """Adapt coverage gaps into a GovernedSignal (FINDING).
 

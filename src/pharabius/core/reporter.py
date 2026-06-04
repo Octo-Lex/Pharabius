@@ -1047,16 +1047,16 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
     for fam in sorted(family_rows.keys()):
         r = family_rows[fam]
         lines.append(
-            f"| {fam.title()} | {r['finding']} | {r['advisory']} | {r['informational']} | {r['suppressed']} |"
+            f"| {fam.title()} | {r['finding']} | {r['advisory']} | {r['informational']} | {r['suppressed']} |"  # noqa: E501
         )
 
     lines.extend(
         [
             "",
-            "> Findings are promoted into the technical debt register and may create work packages.",
+            "> Findings are promoted into the technical debt register and may create work packages.",  # noqa: E501
             "> Advisories are reportable but do not create work packages.",
             "> Informational signals provide context and coverage visibility.",
-            "> Suppressed signals are diagnostics-only and omitted from normal reports unless diagnostics are enabled.",
+            "> Suppressed signals are diagnostics-only and omitted from normal reports unless diagnostics are enabled.",  # noqa: E501
             "",
             "> Category describes the finding taxonomy (e.g., TD-DEP, TD-SEC).",
             "> Family describes the governance owner (e.g., dependency, security).",
@@ -1169,10 +1169,10 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
                 "",
                 "| Metric | Previous | Current | Change |",
                 "|---|---:|---:|---:|",
-                f"| Total governed signals | {trend.signal_count_delta.previous or 0} | {trend.signal_count_delta.current} | {format_count_delta(trend.signal_count_delta)} |",
-                f"| Finding evidence coverage | {(trend.finding_evidence_coverage_delta.previous or 1.0):.0%} | {trend.finding_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.finding_evidence_coverage_delta)} |",
-                f"| Advisory evidence/basis coverage | {(trend.advisory_evidence_coverage_delta.previous or 1.0):.0%} | {trend.advisory_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.advisory_evidence_coverage_delta)} |",
-                f"| Informational evidence coverage | {(trend.informational_evidence_coverage_delta.previous or 1.0):.0%} | {trend.informational_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.informational_evidence_coverage_delta)} |",
+                f"| Total governed signals | {trend.signal_count_delta.previous or 0} | {trend.signal_count_delta.current} | {format_count_delta(trend.signal_count_delta)} |",  # noqa: E501
+                f"| Finding evidence coverage | {(trend.finding_evidence_coverage_delta.previous or 1.0):.0%} | {trend.finding_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.finding_evidence_coverage_delta)} |",  # noqa: E501
+                f"| Advisory evidence/basis coverage | {(trend.advisory_evidence_coverage_delta.previous or 1.0):.0%} | {trend.advisory_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.advisory_evidence_coverage_delta)} |",  # noqa: E501
+                f"| Informational evidence coverage | {(trend.informational_evidence_coverage_delta.previous or 1.0):.0%} | {trend.informational_evidence_coverage_delta.current:.0%} | {format_coverage_delta(trend.informational_evidence_coverage_delta)} |",  # noqa: E501
                 "",
             ]
         )
@@ -1187,7 +1187,7 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
             )
             for fam, delta in sorted(trend.by_family_delta.items()):
                 lines.append(
-                    f"| {fam.title()} | {delta.previous or 0} | {delta.current} | {format_count_delta(delta)} |"
+                    f"| {fam.title()} | {delta.previous or 0} | {delta.current} | {format_count_delta(delta)} |"  # noqa: E501
                 )
             lines.append("")
 
@@ -1201,7 +1201,7 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
             )
             for diag in trend.recurring_diagnostics:
                 lines.append(
-                    f"| {diag.code} | {diag.family or '-'} | {diag.occurrences} | {diag.latest_severity} |"
+                    f"| {diag.code} | {diag.family or '-'} | {diag.occurrences} | {diag.latest_severity} |"  # noqa: E501
                 )
             lines.append("")
     elif trend and trend.unavailable_reason:

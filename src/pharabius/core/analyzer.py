@@ -900,12 +900,12 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
             category="TD-CONFIG",
             title="Environment configuration detected without example file",
             description=(
-                "An environment configuration file was detected, but no `.env.example` file was found."
+                "An environment configuration file was detected, but no `.env.example` file was found."  # noqa: E501
             ),
             evidence_ids=_evidence_ids(env_items),
             locations=_locations(env_items),
             technical_impact=(
-                "Missing environment examples make setup, onboarding, and environment parity harder "
+                "Missing environment examples make setup, onboarding, and environment parity harder "  # noqa: E501
                 "to verify."
             ),
             business_impact=(
@@ -930,12 +930,12 @@ def _analyze_env_without_example(store: EvidenceStore, builder: FindingBuilder) 
             category="TD-CONFIG",
             title="Environment configuration detected without example file",
             description=(
-                "An environment configuration file was detected, but no `.env.example` file was found."
+                "An environment configuration file was detected, but no `.env.example` file was found."  # noqa: E501
             ),
             evidence_ids=_evidence_ids(env_items),
             locations=_locations(env_items),
             technical_impact=(
-                "Missing environment examples make setup, onboarding, and environment parity harder "
+                "Missing environment examples make setup, onboarding, and environment parity harder "  # noqa: E501
                 "to verify."
             ),
             business_impact=(
@@ -2195,7 +2195,7 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
             risk_breakdown=breakdown,
             remediation_effort="Medium",
             recommended_action=(
-                "Add structured logging, health metrics, and alerting to deployment configurations. "
+                "Add structured logging, health metrics, and alerting to deployment configurations. "  # noqa: E501
                 "Consider distributed tracing for service-oriented architectures."
             ),
             verification_recommendations=[
@@ -2229,7 +2229,7 @@ def _analyze_missing_observability(store: EvidenceStore, builder: FindingBuilder
             risk_breakdown=breakdown,
             remediation_effort="Medium",
             recommended_action=(
-                "Add structured logging, health metrics, and alerting to deployment configurations. "
+                "Add structured logging, health metrics, and alerting to deployment configurations. "  # noqa: E501
                 "Consider distributed tracing for service-oriented architectures."
             ),
             verification_recommendations=[

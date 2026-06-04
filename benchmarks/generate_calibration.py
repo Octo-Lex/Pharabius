@@ -106,7 +106,7 @@ def generate_calibration() -> dict:
                 "original": tval,
                 "calibrated": tval,
                 "decision": "keep",
-                "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures.",
+                "rationale": "Default: no evidence of noise or under-detection from benchmark fixtures.",  # noqa: E501
             }
         )
 

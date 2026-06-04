@@ -231,7 +231,7 @@ class TestComplianceKeywordSet:
         register = _analyze_repo(tmp_path)
         comp = _comp_findings(register)
         # 'audit' triggers risk_sensitive_keyword_detected but NOT compliance
-        # because it's not in COMPLIANCE_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}
+        # because it's not in COMPLIANCE_KEYWORDS = {"pii", "gdpr", "hipaa", "pci", "retention", "patient"}  # noqa: E501
         assert len(comp) == 0, "'audit' should not create compliance finding"
 
 

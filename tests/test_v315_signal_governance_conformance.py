@@ -562,8 +562,8 @@ _FAMILY_ADAPTER_FACTORIES = {
             evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Environment configuration detected without example file",
-            summary="An environment configuration file was detected, but no .env.example file was found.",
-            explanation="Missing environment examples make setup, onboarding, and environment parity harder to verify.",
+            summary="An environment configuration file was detected, but no .env.example file was found.",  # noqa: E501
+            explanation="Missing environment examples make setup, onboarding, and environment parity harder to verify.",  # noqa: E501
             metadata={"spec_kind": "env_without_example", "env_files": [".env"]},
         ),
     ],
@@ -579,8 +579,8 @@ _FAMILY_ADAPTER_FACTORIES = {
             evidence_ids=["ev1"],
             source_signal_ids=[],
             title="Deployment without observability evidence",
-            summary="Deployment/infrastructure files detected but no logging, monitoring, tracing, or alerting keywords found.",
-            explanation="Without observability, incidents are harder to detect, diagnose, and resolve.",
+            summary="Deployment/infrastructure files detected but no logging, monitoring, tracing, or alerting keywords found.",  # noqa: E501
+            explanation="Without observability, incidents are harder to detect, diagnose, and resolve.",  # noqa: E501
             metadata={"spec_kind": "missing_observability", "evidence_count": 1},
         ),
     ],

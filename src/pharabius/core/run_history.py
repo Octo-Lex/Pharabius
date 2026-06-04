@@ -401,8 +401,8 @@ def _build_signal_summary(evidence_items: list[dict], findings: list[dict]) -> d
                 evidence_ids=ev_ids,
                 source_signal_ids=[],
                 title=f"Missing runtime version pins for: {', '.join(runtimes)}",
-                summary=f"Dependency manifests exist for {', '.join(runtimes)} but no runtime version pinning file detected.",
-                explanation=f"{', '.join(runtimes)} manifests detected but no reproducibility pin found.",
+                summary=f"Dependency manifests exist for {', '.join(runtimes)} but no runtime version pinning file detected.",  # noqa: E501
+                explanation=f"{', '.join(runtimes)} manifests detected but no reproducibility pin found.",  # noqa: E501
                 metadata={"runtimes": runtimes},
             )
         )
@@ -727,7 +727,7 @@ def compute_finding_trend(index: dict[str, Any]) -> dict[str, Any]:
                 {
                     "code": "partial_historical_data",
                     "path": "",
-                    "message": "Previous run lacks enriched category snapshot. Category breakdown unavailable.",
+                    "message": "Previous run lacks enriched category snapshot. Category breakdown unavailable.",  # noqa: E501
                 }
             ],
         }
@@ -1049,7 +1049,7 @@ def compute_work_package_readiness_trend(
             {
                 "code": "partial_historical_data",
                 "path": "",
-                "message": "Previous run lacks enriched snapshot. WP readiness comparison unavailable.",
+                "message": "Previous run lacks enriched snapshot. WP readiness comparison unavailable.",  # noqa: E501
             }
         )
 
@@ -1210,7 +1210,7 @@ def render_run_history_summary_markdown(summary: dict[str, Any]) -> str:
     trajectory = summary.get("overall_trajectory", "unknown")
 
     lines.append(
-        f"> Generated from {run_count} run(s) ({enriched_count} enriched). Confidence: **{confidence}**."
+        f"> Generated from {run_count} run(s) ({enriched_count} enriched). Confidence: **{confidence}**."  # noqa: E501
     )
     lines.append("")
 
@@ -1248,7 +1248,7 @@ def render_run_history_summary_markdown(summary: dict[str, Any]) -> str:
         limitation_delta = et.get("limitation_evidence_count_delta", 0)
         if limitation_delta and limitation_delta > 0:
             lines.append(
-                f"> ⚠ Limitation evidence changed by {limitation_delta:+d}. This may indicate improved scanner honesty (detecting more constraints) rather than worsening repository health. Correlate with coverage metric trends before drawing conclusions."
+                f"> ⚠ Limitation evidence changed by {limitation_delta:+d}. This may indicate improved scanner honesty (detecting more constraints) rather than worsening repository health. Correlate with coverage metric trends before drawing conclusions."  # noqa: E501
             )
             lines.append("")
 
