@@ -2,6 +2,82 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.0.0] - 2026-06-04
+
+### Public Catch-Up Release
+
+This release brings the public GitHub repository from the v2.5.0 baseline to the current v3.0.0 public baseline.
+
+It consolidates internal development waves from v3.0.0 through v3.26.0 into one public release line. The internal wave records are preserved below for auditability but are not being published as separate GitHub releases.
+
+See `docs/PUBLIC_SYNC_NOTES.md` for the full sync narrative and `docs/RELEASE_STATE.md` for tag policy.
+
+### Major Capabilities Added Since v2.5.0
+
+#### Signal Governance Model
+- 10 signal families: Runtime, Test, Code, Documentation, Dependency, Security, Architecture, Configuration, Observability, Coverage
+- 29 adapters mapping raw evidence to governed signals
+- 4 dispositions: Finding, Advisory, Informational, Suppressed
+- 8 invariants and 5 diagnostics
+- `spec.kind` metadata-based routing (not title text)
+
+#### Governance Arc (v3.16.0–v3.26.0)
+- **v3.16.0** Dependency Health: 7 adapters, 50 tests
+- **v3.17.0** Security Exposure: 3 adapters, 49 tests
+- **v3.18.0** Architecture Risk: 2 adapters, kind-based routing, 43 tests
+- **v3.19.0** Configuration/Environment: 1 adapter, SignalFamily.CONFIGURATION, 59 tests
+- **v3.20.0** Observability: 1 adapter, all 10 families governed, 63 tests
+- **v3.21.0** Governance Audit: cross-family inventory, 57 tests
+- **v3.22.0** Reporter UX: governance notes, boundary reference table, 32 tests
+- **v3.23.0** Quality Metrics: GQM-001–005, report section 6e, 29 tests
+- **v3.24.0** Trend Metrics: GovernanceTrendSummary, report section 6f, 33 tests
+- **v3.25.0** Governance Export: schema v1.0, JSON + JSONL, forbidden field validation, 36 tests
+- **v3.26.0** Contract Freeze: GOVERNANCE_CONTRACT.md, V4_READINESS.md, 52 tests
+
+#### Platform Surface
+- FastAPI backend with 30 API endpoints
+- PostgreSQL with 6 Alembic migrations
+- React frontend with 8 views (FindingsTable, PortfolioSummary, RepositoryDashboard, RepositoryList, ReviewSummary, RunComparison, UploadPage, WorkPackages)
+- Docker Compose deployment
+
+#### Additional Capabilities
+- Run comparison and traceability delta
+- Evidence traceability scoring
+- Benchmark regression suite (6 fixture types)
+- OSS field validation framework
+- Runtime version normalization and conflict detection
+- AI enrichment layer (mock + openai-compatible, disabled by default)
+- Verification engine (632 lines)
+- Scoring system (604 lines)
+- Operational claims (257 lines)
+- Quality gate engine
+- 5 governance presets
+- GitHub Action (`action.yml`)
+
+### Validation
+
+- CLI tests: 2,970 passed, 7 skipped
+- Platform backend tests: 276 passed, 5 skipped
+- Platform frontend tests: 28 passed, 5 TypeScript mock errors (pre-existing)
+- Frontend build: succeeds (5 pre-existing TS errors in test mocks)
+- Source formatting: ruff format applied to all governance arc files
+- Public CI: pending at PR time
+
+### Known Gaps
+
+- External scanner connectors not implemented (zero connectors)
+- Live ticket sync not implemented (no Jira/Linear/GitHub Issues integration)
+- Runtime Schema-Budget Coupling not implemented beyond context budgeting
+- Portfolio orchestration and governance workflows remain future work
+- Platform frontend not CI-validated in this release
+- No standalone platform documentation guide
+
+---
+
+## Internal Wave Archive
+
+> The entries below are internal development records, preserved for auditability. They were never published as separate GitHub releases.
+
 ## [3.26.0] - Unreleased
 
 ### Added
