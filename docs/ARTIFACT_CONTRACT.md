@@ -9,6 +9,8 @@ These artifacts are produced by the core analysis pipeline and serve as the sour
 | Artifact | Schema | Version | Producer | Consumers | Mutation | Stability |
 |---|---|---|---|---|---|---|
 | `.ai-debt/evidence.json` | `EvidenceStore` | 1.0 | `scan` | `analyze`, `verify`, `enrich`, `portfolio`, claims | Regenerated | Stable |
+| `.ai-debt/combined-evidence.json` | `EvidenceStore` | 1.0 | `combine-evidence` | `analyze --evidence` | Optional | Stable |
+| `.ai-debt/combined-evidence-manifest.json` | `CombinedEvidenceManifest` | 1.0 | `combine-evidence` | Audit/traceability | Optional | Stable |
 | `.ai-debt/debt-register.json` | `DebtRegister` | 1.0 | `analyze` | `report`, `plan`, `verify`, `status`, `tickets`, `export`, `portfolio`, claims | Regenerated | Stable |
 | `.ai-debt/project-profile.json` | `RepositoryProfile` | 1.0 | `profile` | `report`, `portfolio` | Regenerated | Stable |
 | `.ai-debt/analysis-units.json` | `AnalysisUnitStore` | 1.0 | `map-units` | `analyze`, `report` | Regenerated | Stable |

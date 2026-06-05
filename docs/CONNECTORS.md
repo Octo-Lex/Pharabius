@@ -140,3 +140,45 @@ Potential future additions (not committed):
 - Syft/Grype SBOM evidence
 - Coverage report ingestion (JUnit, Cobertura)
 - GitHub Advanced Security API integration
+
+## Evidence Intake (v3.2.0+)
+
+### Combine Workflow
+
+```bash
+# Step 1: Import external evidence (v3.1.0)
+ai-debt import-evidence --format sarif --input results.sarif.json
+
+# Step 2: Combine native + external evidence (v3.2.0)
+ai-debt combine-evidence
+
+# Step 3: Analyze with combined evidence (opt-in)
+ai-debt analyze --evidence .ai-debt/combined-evidence.json
+```
+
+Default behavior is unchanged: `ai-debt analyze` reads native evidence only.
+
+### Intake Policy
+
+| Control | Default | Description |
+|---|---|---|
+| `allow_external` | True | Accept external evidence |
+| `deduplicate` | True | Skip semantic duplicates |
+| `preserve_lineage` | True (immutable) | Always preserve provenance |
+| `max_external_items` | 1000 | Safety cap per source |
+
+### Duplicate Handling
+
+Duplicates are detected by semantic fingerprint (source + connector + rule + location + summary). First deterministic occurrence wins. Later duplicates are skipped and counted.
+
+No evidence is silently overwritten.
+
+### ID Namespacing
+
+External evidence IDs are namespaced during combination:
+
+```
+EXT-{CONNECTOR}-{PATH_HASH}-{SEQUENCE}
+```
+
+Original IDs are preserved in `metadata.intake.original_evidence_id`.
