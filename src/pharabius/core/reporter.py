@@ -864,6 +864,17 @@ def write_reports(repository_root: Path) -> ReportWriteResult:
         workspace / "reports" / "foundation-audit-report.md": render_foundation_audit_report(ctx),
     }
 
+    # External evidence review (v3.4.0)
+    from pharabius.core.connectors.review import (
+        build_external_evidence_summary,
+        render_external_evidence_report,
+    )
+
+    ext_summary = build_external_evidence_summary(root)
+    report_contents[workspace / "reports" / "external-evidence-report.md"] = (
+        render_external_evidence_report(ext_summary)
+    )
+
     files_written: list[Path] = []
 
     for path, content in report_contents.items():

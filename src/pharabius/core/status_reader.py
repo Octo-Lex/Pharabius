@@ -159,4 +159,49 @@ def read_status(repository_root: Path) -> str:
         for w in warnings:
             lines.append(f"Warning: {w}")
 
+    # External evidence (v3.4.0)
+    ext_dir = ai_debt / "external-evidence"
+    if ext_dir.exists():
+        ext_files = list(ext_dir.glob("*.json"))
+        readable = 0
+        malformed = 0
+        for ef in ext_files:
+            try:
+                data = json.loads(ef.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    readable += 1
+                else:
+                    malformed += 1
+            except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+                malformed += 1
+        if malformed:
+            lines.append(f"Ext. evidence: {readable} files ({malformed} malformed)")
+        else:
+            lines.append(f"Ext. evidence: {readable} files")
+    else:
+        lines.append("Ext. evidence: absent")
+
+    # Combined evidence (v3.4.0)
+    combined_path = ai_debt / "combined-evidence.json"
+    if combined_path.exists():
+        combined = _load_json_safe(combined_path)
+        if combined:
+            ev = combined.get("evidence", [])
+            if isinstance(ev, list):
+                native = sum(
+                    1 for e in ev if isinstance(e, dict) and e.get("source") != "external_connector"
+                )
+                external = sum(
+                    1 for e in ev if isinstance(e, dict) and e.get("source") == "external_connector"
+                )
+                lines.append(
+                    f"Combined:     {len(ev)} items ({native} native, {external} external)"
+                )
+            else:
+                lines.append("Combined:     unreadable")
+        else:
+            lines.append("Combined:     unreadable")
+    else:
+        lines.append("Combined:     absent")
+
     return "\n".join(lines)

@@ -35,6 +35,7 @@ def test_write_reports_generates_expected_markdown_files(tmp_path: Path) -> None
         tmp_path / ".ai-debt" / "security-exposure.md",
         tmp_path / ".ai-debt" / "business-risk-proxy.md",
         tmp_path / ".ai-debt" / "reports" / "foundation-audit-report.md",
+        tmp_path / ".ai-debt" / "reports" / "external-evidence-report.md",
     }
 
     assert set(result.files_written) == expected_files
