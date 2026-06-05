@@ -99,6 +99,7 @@ See `docs/PRESET_REFERENCE.md` for details.
 Pharabius is a mature CLI engine with an early-stage platform. Current limitations:
 
 - **No external scanner connectors** — No SAST/DAST/SBOM integration (Semgrep, CodeQL, Trivy, etc.)
+  - _v3.1.0 adds **connector foundation** with SARIF and Semgrep fixture import. Scanner execution is not included._
 - **No live ticket sync** — No Jira, Linear, or GitHub Issues integration
 - **Platform frontend is prototype-grade** — 28 tests pass, build succeeds, but 5 pre-existing TypeScript errors in test mocks
 - **No portfolio governance** — Multi-repo governance workflows not implemented
@@ -124,4 +125,5 @@ See `docs/PROJECT_STATUS.md` for the full maturity assessment.
 | [Architecture](docs/ARCHITECTURE.md) | Module structure and import contract |
 | [Known Limitations](docs/KNOWN_LIMITATIONS.md) | Honest constraints of current version |
 | [Operating Doctrine](docs/OPERATING_DOCTRINE.md) | Release process and wave execution rules |
+| [Connectors](docs/CONNECTORS.md) | External evidence connector foundation |
 | [Roadmap](docs/ROADMAP.md) | Release history and future work |

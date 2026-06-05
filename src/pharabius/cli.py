@@ -757,6 +757,97 @@ def export(
         console.print(f"  [dim]Warning: {w}[/dim]")
 
 
+@app.command(name="import-evidence")
+def import_evidence(
+    input_file: Annotated[
+        Path,
+        typer.Option(
+            "--input",
+            "-i",
+            help="Path to the external scanner output file to import.",
+        ),
+    ],
+    import_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Input format: sarif or semgrep.",
+        ),
+    ] = "sarif",
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output path for imported evidence. Defaults to timestamped file.",
+        ),
+    ] = None,
+) -> None:
+    """
+    Import external scanner output as normalized evidence.
+
+    Supported formats: sarif (SARIF v2.1.0), semgrep (Semgrep JSON).
+
+    Imported evidence is stored separately from native scan evidence.
+    It does not automatically feed into analysis.
+    """
+    from pharabius.core.connectors.sarif import SarifConnector
+    from pharabius.core.connectors.semgrep import SemgrepConnector
+    from pharabius.schemas.evidence import EvidenceStore
+
+    connectors = {"sarif": SarifConnector, "semgrep": SemgrepConnector}
+    if import_format not in connectors:
+        console.print(
+            f"[bold red]Error:[/bold red] Unknown format: {import_format}. "
+            f"Supported: {', '.join(connectors)}"
+        )
+        raise typer.Exit(code=1)
+
+    if not input_file.exists():
+        console.print(f"[bold red]Error:[/bold red] File not found: {input_file}")
+        raise typer.Exit(code=1)
+
+    connector = connectors[import_format]()
+    result = connector.parse(input_file)
+
+    if not result.ok:
+        console.print("[bold red]Import failed[/bold red]")
+        for error in result.errors:
+            console.print(f"  Error: {error}")
+        raise typer.Exit(code=1)
+
+    # Determine output path
+    if output is not None:
+        output_path = output
+    else:
+        from datetime import UTC, datetime
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        ext_dir = Path.cwd() / ".ai-debt" / "external-evidence"
+        ext_dir.mkdir(parents=True, exist_ok=True)
+        output_path = ext_dir / f"{import_format}-{timestamp}.json"
+
+    # Write as EvidenceStore
+    store = EvidenceStore(
+        repository="",
+        evidence=result.evidence,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        store.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    console.print("[bold green]Import complete[/bold green]")
+    console.print(f"  Format: {import_format}")
+    console.print(f"  Imported: {result.imported_count} evidence items")
+    console.print(f"  Skipped: {result.skipped_count} records")
+    console.print(f"  Written: {output_path}")
+    for w in result.warnings:
+        console.print(f"  [dim]Warning: {w}[/dim]")
+
+
 @app.command()
 def enrich(
     repository_root: Annotated[
