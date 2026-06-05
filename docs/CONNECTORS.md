@@ -209,3 +209,54 @@ EXT-{CONNECTOR}-{PATH_HASH}-{SEQUENCE}
 ```
 
 Original IDs are preserved in `metadata.intake.original_evidence_id`.
+
+## External Evidence Review (v3.4.0)
+
+Imported and combined external evidence is reviewable in reports.
+
+The `ai-debt report` command now generates:
+
+```text
+.ai-debt/reports/external-evidence-report.md
+```
+
+### What the review shows
+
+| Section | Content |
+|---|---|
+| External Evidence Files | File counts, readability, evidence item counts |
+| Evidence by Connector | Per-connector item counts |
+| Combined Evidence | Native/external/total counts, deduplication stats |
+| Combination Manifest | Imported, duplicates, skipped counts from manifest |
+| Top Rules | Most frequent rule IDs from structured metadata |
+| Top Packages | Most frequent package names from coordinates |
+| Confidence Distribution | High/Medium/Low counts |
+| Severity Distribution | Severity counts from depsec metadata (not mapped to confidence) |
+| Warnings | Malformed files and other issues |
+
+### What the review does NOT do
+
+```text
+No new connectors.
+No scanner execution.
+No vulnerability confirmation.
+No finding creation.
+```
+
+External evidence is observational. It is not confirmed as findings.
+
+### Status reader
+
+`ai-debt status` now shows:
+
+```text
+Ext. evidence: 3 files
+Combined:     12 items (8 native, 4 external)
+```
+
+When absent:
+
+```text
+Ext. evidence: absent
+Combined:     absent
+```

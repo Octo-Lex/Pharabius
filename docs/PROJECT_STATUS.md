@@ -20,7 +20,7 @@ Pharabius is a repository-first technical debt intelligence platform with two pr
 | CLI engine | **Production-ready** | 2,970 tests, deterministic analysis |
 | Platform backend | **Functional** | 276 tests, 30 API endpoints, 6 migrations |
 | Platform frontend | **Functional** | 28 tests, 5 TS mock errors (pre-existing), build succeeds |
-| External scanners | **Not started** | Zero scanner connectors implemented |
+| External scanners | **Connectors implemented** | SARIF, Semgrep, Trivy, Grype, Syft connectors; external evidence review in reports |
 | Live ticket sync | **Not started** | No Jira/Linear integration |
 | Runtime governance | **Low** | `AIBudget` is context-assembly only |
 
@@ -71,7 +71,7 @@ Pharabius is a repository-first technical debt intelligence platform with two pr
 
 ## Known Gaps
 
-1. **External scanner connectors** — Zero implemented. No SAST/DAST/SBOM integration.
+1. **External scanner connectors** — Five implemented (SARIF, Semgrep, Trivy, Grype, Syft). External evidence is reviewable in reports. Scanner execution and vulnerability confirmation not included.
 2. **Live ticket sync** — No Jira, Linear, or GitHub Issues integration.
 3. **Runtime Schema-Budget Coupling** — `AIBudget` handles context assembly only. No budget-schema coupling.
 4. **Portfolio orchestration** — No multi-repo governance workflows.
