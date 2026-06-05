@@ -1,0 +1,21 @@
+{
+  "version": "1.20.0",
+  "results": [
+    {
+      "check_id": "generic.secrets.security.detected",
+      "path": "",
+      "extra": {
+        "severity": "ERROR",
+        "message": "Secret detected but no file path"
+      }
+    },
+    {
+      "check_id": "",
+      "path": "src/main.py",
+      "start": { "line": 5 },
+      "extra": {
+        "message": "Finding without check_id"
+      }
+    }
+  ]
+}

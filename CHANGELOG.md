@@ -2,6 +2,43 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.1.0] - Unreleased
+
+### External Evidence Connector Foundation
+
+This release introduces the foundation for importing external scanner output into Pharabius as normalized evidence. External scanner output does not bypass Pharabius analysis. Imported records become evidence, not final findings.
+
+### Added
+
+- **Connector interface** (`src/pharabius/core/connectors/base.py`) — `ConnectorInterface` and `ConnectorResult` models
+- **SARIF import** (`src/pharabius/core/connectors/sarif.py`) — SARIF v2.1.0 fixture ingestion
+- **Semgrep import** (`src/pharabius/core/connectors/semgrep.py`) — Semgrep JSON fixture ingestion
+- **Provenance model** (`src/pharabius/core/connectors/provenance.py`) — `ConnectorProvenance` metadata
+- **Confidence model** (`src/pharabius/core/connectors/confidence.py`) — deterministic High/Medium/Low with reasons
+- **CLI command**: `ai-debt import-evidence --format sarif|semgrep --input <file>`
+- **Documentation**: `docs/CONNECTORS.md` — connector philosophy, provenance, confidence, limitations
+- **Fixtures**: 9 connector test fixtures in `tests/fixtures/connectors/`
+- **57 new tests** covering interface, provenance, confidence, SARIF, Semgrep, and negative bypass assertions
+
+### Design Rules
+
+- `EvidenceItem.source` is `"external_connector"` for all connector evidence
+- Scanner identity is in `metadata.connector_provenance.connector_name`
+- Connectors never create `DebtFinding` objects
+- `import-evidence` does not mutate `.ai-debt/evidence.json`
+- External evidence artifacts are optional, not required for valid workspace
+- Malformed input returns `ok=False` and writes no artifact
+
+### Non-Scope
+
+- No scanner execution (Semgrep, CodeQL, Trivy not run)
+- No automatic analysis merge
+- No live API integration
+- No SBOM generation
+- No autonomous remediation
+
+---
+
 ## [3.0.1] - Unreleased
 
 ### Stabilization
