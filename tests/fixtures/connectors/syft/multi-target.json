@@ -1,0 +1,40 @@
+{
+  "artifacts": [
+    {
+      "id": "pkg1",
+      "name": "musl",
+      "version": "1.2.5-r0",
+      "type": "apk",
+      "foundBy": "apkdb-cataloger",
+      "locations": [{"path": "lib/ld-musl-x86_64.so.1"}],
+      "licenses": ["MIT"],
+      "language": "",
+      "purl": "pkg:apk/alpine/musl@1.2.5-r0"
+    },
+    {
+      "id": "pkg2",
+      "name": "openssl",
+      "version": "3.3.2-r0",
+      "type": "apk",
+      "foundBy": "apkdb-cataloger",
+      "locations": [{"path": "lib/libssl.so.3"}],
+      "licenses": ["OpenSSL"],
+      "language": "",
+      "purl": "pkg:apk/alpine/openssl@3.3.2-r0"
+    },
+    {
+      "id": "pkg3",
+      "name": "requests",
+      "version": "2.28.0",
+      "type": "python",
+      "foundBy": "python-package-cataloger",
+      "locations": [{"path": "site-packages/requests-2.28.0.dist-info/METADATA"}],
+      "licenses": ["Apache-2.0"],
+      "language": "python",
+      "purl": "pkg:pypi/requests@2.28.0"
+    }
+  ],
+  "source": {"type": "image", "target": "myapp:latest"},
+  "descriptor": {"name": "syft", "version": "1.20.0"},
+  "schema": {"version": "1.1.0"}
+}

@@ -27,6 +27,9 @@ Connectors produce `EvidenceItem` objects. They never create `DebtFinding` objec
 |---|---|---|
 | SARIF v2.1.0 | `SarifConnector` | Foundation — minimal subset |
 | Semgrep JSON | `SemgrepConnector` | Foundation — fixture import |
+| Trivy JSON | `TrivyConnector` | Foundation — vulnerability scan import |
+| Grype JSON | `GrypeConnector` | Foundation — vulnerability match import |
+| Syft JSON (SBOM) | `SyftConnector` | Foundation — package inventory import |
 
 ### SARIF Support Level
 
@@ -125,21 +128,45 @@ Imported evidence is written to `.ai-debt/external-evidence/` as `EvidenceStore`
 ## Known Limitations
 
 - **No scanner execution** — connectors import fixture files, they do not run scanners
-- **No CodeQL, Trivy, Syft, Grype** — not implemented in v3.1.0
-- **No SBOM generation** — not in scope
+- **No CodeQL, Snyk, OSV** — not implemented
+- **No SBOM generation** — Syft connector imports SBOM, does not generate one
 - **No automatic analysis merge** — imported evidence is stored, not consumed by `analyze`
 - **No live API integration** — no GitHub Advanced Security, no ticket creation
 - **No autonomous remediation** — connectors never modify code
+- **No license compliance** — Syft licenses stored as metadata, not analyzed
+- **No vulnerability confirmation** — scanner output is evidence, not confirmed Pharabius findings
+- **No CVSS/EPSS scoring** — external severity stored as-is, not calculated
+
+## Confidence Models
+
+### Vulnerability Scanners (Trivy, Grype, SARIF, Semgrep)
+
+| Level | Condition | Reason |
+|---|---|---|
+| High | Package locator + vulnerability ID + message | `locator_vulnerability_id_and_message_present` |
+| Medium | Package locator or vulnerability ID | `locator_or_vulnerability_id_present` |
+| Low | Weak package/vulnerability metadata | `weak_vulnerability_metadata` |
+
+### SBOM Scanner (Syft)
+
+| Level | Condition | Reason |
+|---|---|---|
+| High | Package name + version/purl + real file location | `sbom_name_version_and_location_present` |
+| Medium | Package name or purl | `sbom_name_or_purl_present` |
+| Low | Weak package metadata | `weak_sbom_package_metadata` |
+
+SBOM evidence is not penalized for lacking vulnerability rule IDs.
 
 ## Future Connectors
 
 Potential future additions (not committed):
 
 - CodeQL SARIF ingestion
-- Trivy JSON import
-- Syft/Grype SBOM evidence
+- Snyk JSON import
+- OSV/OSV-scanner import
 - Coverage report ingestion (JUnit, Cobertura)
 - GitHub Advanced Security API integration
+- CycloneDX/SPDX SBOM import (in addition to Syft JSON)
 
 ## Evidence Intake (v3.2.0+)
 

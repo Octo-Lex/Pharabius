@@ -1,0 +1,39 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "alpine:3.20",
+  "ArtifactType": "container_image",
+  "Results": [
+    {
+      "Target": "alpine:3.20 (alpine 3.20.3)",
+      "Class": "os-pkgs",
+      "Type": "alpine",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-9143",
+          "PkgID": "libcrypto3@3.3.2-r0",
+          "PkgName": "libcrypto3",
+          "PkgIdentifier": {
+            "PURL": "pkg:apk/alpine/libcrypto3@3.3.2-r0?arch=x86_64&distro=3.20.3"
+          },
+          "InstalledVersion": "3.3.2-r0",
+          "FixedVersion": "3.3.2-r1",
+          "Status": "fixed",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-9143",
+          "Title": "openssl: Low-level invalid GF(2^m) parameters",
+          "Description": "Use of low-level GF(2^m) elliptic curve APIs with untrusted explicit values can lead to OOB reads.",
+          "Severity": "LOW",
+          "CweIDs": ["CWE-787"]
+        },
+        {
+          "VulnerabilityID": "CVE-2024-12797",
+          "PkgName": "libssl3",
+          "InstalledVersion": "3.3.2-r0",
+          "FixedVersion": "3.3.3-r0",
+          "Severity": "HIGH",
+          "Title": "openssl: RFC7250 handshakes with unauthenticated servers",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-12797"
+        }
+      ]
+    }
+  ]
+}

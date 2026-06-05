@@ -2,6 +2,43 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.3.0] - Unreleased
+
+### Dependency and Security Connector Family
+
+Adds three new connectors for importing dependency and security scanner output. External scanner output is evidence of an external tool observation, not automatically a confirmed Pharabius vulnerability finding.
+
+### Added
+
+- **Trivy connector** (`connectors/trivy.py`) — Trivy JSON vulnerability scan import
+- **Grype connector** (`connectors/grype.py`) — Grype JSON vulnerability match import
+- **Syft connector** (`connectors/syft.py`) — Syft JSON SBOM package inventory import
+- **Depsec helpers** (`connectors/depsec_helpers.py`) — shared confidence and coordinate builders
+- **SBOM-aware confidence model** — separate from vulnerability confidence, no rule ID penalty
+- **Package coordinates** in `metadata["package_coordinates"]` — pkg_name, version, purl, severity
+- **15 golden fixtures** — 5 per connector (valid, empty, missing-location, malformed, multi-target)
+- **63 new tests** covering all three connectors, provenance, confidence, coordinates, edge cases
+- **CLI registration** — `import-evidence` now supports `trivy`, `grype`, `syft` formats
+
+### Design Rules
+
+- Package name is a package coordinate, not a repository file location
+- Severity stored as metadata, not mapped to Pharabius confidence
+- SBOM confidence is SBOM-aware (no vulnerability rule IDs required)
+- Connector version (Pharabius implementation) separate from source tool version
+- EvidenceLocation populated only when a real file path exists
+- Trivy Target preserved in metadata, not overclaimed as repository file
+
+### Non-Scope
+
+- No scanner subprocess execution
+- No live API integration
+- No automatic vulnerability claims
+- No remediation or upgrade planning
+- No SBOM generation
+
+---
+
 ## [3.2.0] - Unreleased
 
 ### Evidence Intake and Analysis Merge Policy
