@@ -77,6 +77,8 @@ class TestProducerConsumerMapping:
                         "tickets",
                         "portfolio",
                         "claims",
+                        "combine-evidence",
+                        "import-evidence",
                     ]
                 ), f"Row lacks producer command: {row[:80]}"
 

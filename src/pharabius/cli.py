@@ -411,6 +411,13 @@ def analyze(
             help="Show projected scoring changes without mutating canonical artifacts.",
         ),
     ] = False,
+    evidence: Annotated[
+        Path | None,
+        typer.Option(
+            "--evidence",
+            help="Path to evidence store. Defaults to .ai-debt/evidence.json.",
+        ),
+    ] = None,
 ) -> None:
     """
     Convert normalized evidence into deterministic technical debt findings.
@@ -428,7 +435,7 @@ def analyze(
         _run_scoring_preview(resolved_root)
         return
 
-    register = write_debt_register(resolved_root)
+    register = write_debt_register(resolved_root, evidence_path=evidence)
 
     console.print("[bold green]Generated debt register[/bold green]")
     console.print(f"Repository: {resolved_root}")
@@ -1907,6 +1914,105 @@ def upload_cmd(
         missing = result.get("validation", {}).get("missing_required", [])
         if missing:
             console.print(f"  [yellow]Missing: {', '.join(missing)}[/yellow]")
+
+
+@app.command(name="combine-evidence")
+def combine_evidence_cmd(
+    repository_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--repository-root",
+            "-r",
+            help="Repository root (defaults to current directory).",
+        ),
+    ] = None,
+    native: Annotated[
+        Path | None,
+        typer.Option(
+            "--native",
+            help="Path to native evidence store. Defaults to .ai-debt/evidence.json.",
+        ),
+    ] = None,
+    external: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--external",
+            help="Path to external evidence file. Repeat for multiple.",
+        ),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output path for combined evidence.",
+        ),
+    ] = None,
+    manifest_output: Annotated[
+        Path | None,
+        typer.Option(
+            "--manifest-output",
+            help="Output path for combination manifest.",
+        ),
+    ] = None,
+) -> None:
+    """
+    Combine native and external evidence into a single evidence store.
+
+    External evidence from connectors is merged with native scan evidence
+    using a governed intake policy. No evidence is silently overwritten.
+    Native evidence remains canonical and unchanged.
+    """
+    from pharabius.core.connectors.intake import combine_evidence
+
+    resolved_root = (repository_root or Path.cwd()).resolve()
+    ai_debt = resolved_root / ".ai-debt"
+
+    # Resolve native path
+    native_path = native or (ai_debt / "evidence.json")
+
+    # Resolve external paths
+    ext_dir = ai_debt / "external-evidence"
+    if external:
+        external_paths = list(external)
+    elif ext_dir.exists():
+        external_paths = sorted(ext_dir.glob("*.json"))
+    else:
+        external_paths = []
+
+    result = combine_evidence(native_path, external_paths)
+
+    if not result.ok:
+        console.print("[bold red]Combine failed[/bold red]")
+        for w in result.warnings:
+            console.print(f"  Warning: {w}")
+        raise typer.Exit(code=1)
+
+    # Resolve output paths
+    combined_path = output or (ai_debt / "combined-evidence.json")
+    manifest_path = manifest_output or (ai_debt / "combined-evidence-manifest.json")
+
+    combined_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    combined_path.write_text(
+        result.combined.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+    manifest_path.write_text(
+        result.manifest.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    console.print("[bold green]Evidence combined[/bold green]")
+    console.print(f"  Native: {result.native_count} items")
+    console.print(f"  External: {result.external_count} items")
+    console.print(f"  Combined: {len(result.combined.evidence)} items")
+    console.print(f"  Deduplicated: {result.duplicate_count}")
+    console.print(f"  Combined evidence: {combined_path}")
+    console.print(f"  Manifest: {manifest_path}")
+    for w in result.warnings:
+        console.print(f"  [dim]Warning: {w}[/dim]")
 
 
 if __name__ == "__main__":
