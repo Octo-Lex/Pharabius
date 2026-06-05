@@ -1,0 +1,50 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-9143",
+        "severity": "Low",
+        "description": "Low-level invalid GF(2^m) parameters lead to OOB memory access"
+      },
+      "artifact": {
+        "name": "libcrypto3",
+        "version": "3.3.2-r0",
+        "type": "apk",
+        "purl": "pkg:apk/alpine/libcrypto3@3.3.2-r0?arch=x86_64"
+      },
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "apk-matcher"
+        }
+      ]
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-2024-12797",
+        "severity": "High",
+        "description": "RFC7250 handshakes with unauthenticated servers"
+      },
+      "artifact": {
+        "name": "libssl3",
+        "version": "3.3.2-r0",
+        "type": "apk",
+        "purl": "pkg:apk/alpine/libssl3@3.3.2-r0"
+      },
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "apk-matcher"
+        }
+      ]
+    }
+  ],
+  "source": {
+    "type": "image",
+    "target": "alpine:3.20"
+  },
+  "descriptor": {
+    "name": "grype",
+    "version": "0.80.0"
+  }
+}
