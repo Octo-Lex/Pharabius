@@ -799,11 +799,20 @@ def import_evidence(
     Imported evidence is stored separately from native scan evidence.
     It does not automatically feed into analysis.
     """
+    from pharabius.core.connectors.grype import GrypeConnector
     from pharabius.core.connectors.sarif import SarifConnector
     from pharabius.core.connectors.semgrep import SemgrepConnector
+    from pharabius.core.connectors.syft import SyftConnector
+    from pharabius.core.connectors.trivy import TrivyConnector
     from pharabius.schemas.evidence import EvidenceStore
 
-    connectors = {"sarif": SarifConnector, "semgrep": SemgrepConnector}
+    connectors = {
+        "sarif": SarifConnector,
+        "semgrep": SemgrepConnector,
+        "trivy": TrivyConnector,
+        "grype": GrypeConnector,
+        "syft": SyftConnector,
+    }
     if import_format not in connectors:
         console.print(
             f"[bold red]Error:[/bold red] Unknown format: {import_format}. "

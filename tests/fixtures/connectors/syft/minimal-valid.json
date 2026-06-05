@@ -1,0 +1,32 @@
+{
+  "artifacts": [
+    {
+      "id": "pkg1",
+      "name": "requests",
+      "version": "2.28.0",
+      "type": "python",
+      "foundBy": "python-package-cataloger",
+      "locations": [{"path": "requirements.txt"}],
+      "licenses": ["Apache-2.0"],
+      "language": "python",
+      "purl": "pkg:pypi/requests@2.28.0",
+      "cpes": ["cpe:2.3:a:python-requests:requests:2.28.0:*:*:*:*:*:*:*"],
+      "metadataType": "PythonPackageMetadata"
+    },
+    {
+      "id": "pkg2",
+      "name": "flask",
+      "version": "3.0.0",
+      "type": "python",
+      "foundBy": "python-package-cataloger",
+      "locations": [{"path": "requirements.txt"}],
+      "licenses": ["BSD-3-Clause"],
+      "language": "python",
+      "purl": "pkg:pypi/flask@3.0.0",
+      "metadataType": "PythonPackageMetadata"
+    }
+  ],
+  "source": {"type": "directory", "target": "/app"},
+  "descriptor": {"name": "syft", "version": "1.20.0"},
+  "schema": {"version": "1.1.0"}
+}

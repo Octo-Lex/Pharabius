@@ -1,0 +1,34 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-1111",
+        "severity": "Medium",
+        "description": "Buffer overflow in musl libc"
+      },
+      "artifact": {
+        "name": "musl",
+        "version": "1.2.5-r0",
+        "type": "apk",
+        "purl": "pkg:apk/alpine/musl@1.2.5-r0"
+      },
+      "matchDetails": [{"type": "exact-direct-match", "matcher": "apk-matcher"}]
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-2024-2222",
+        "severity": "High",
+        "description": "Certificate verification bypass in requests"
+      },
+      "artifact": {
+        "name": "requests",
+        "version": "2.28.0",
+        "type": "python",
+        "purl": "pkg:pypi/requests@2.28.0"
+      },
+      "matchDetails": [{"type": "exact-indirect-match", "matcher": "python-matcher"}]
+    }
+  ],
+  "source": {"type": "directory", "target": "/app"},
+  "descriptor": {"name": "grype", "version": "0.80.0"}
+}
