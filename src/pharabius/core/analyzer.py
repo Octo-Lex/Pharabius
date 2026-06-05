@@ -111,8 +111,11 @@ def _score(breakdown: dict[str, Any]) -> tuple[int, str]:
     return total, _priority_for_score(total)
 
 
-def _load_evidence_store(repository_root: Path) -> EvidenceStore:
-    path = repository_root.resolve() / ".ai-debt" / "evidence.json"
+def _load_evidence_store(repository_root: Path, evidence_path: Path | None = None) -> EvidenceStore:
+    if evidence_path is not None:
+        path = evidence_path.resolve()
+    else:
+        path = repository_root.resolve() / ".ai-debt" / "evidence.json"
 
     if not path.exists():
         return EvidenceStore(repository=str(repository_root.resolve()), evidence=[])
@@ -2588,9 +2591,9 @@ def _deduplicate_findings(findings: list[DebtFinding]) -> list[DebtFinding]:
     return merged
 
 
-def analyze_evidence(repository_root: Path) -> DebtRegister:
+def analyze_evidence(repository_root: Path, evidence_path: Path | None = None) -> DebtRegister:
     root = repository_root.resolve()
-    store = _load_evidence_store(root)
+    store = _load_evidence_store(root, evidence_path=evidence_path)
 
     builder = FindingBuilder()
 
@@ -2751,9 +2754,9 @@ def _attach_units_to_finding(finding: DebtFinding, unit_store: object) -> None:
     finding.analysis_unit_ids = sorted(set(unit_ids))
 
 
-def write_debt_register(repository_root: Path) -> DebtRegister:
+def write_debt_register(repository_root: Path, evidence_path: Path | None = None) -> DebtRegister:
     root = repository_root.resolve()
-    register = analyze_evidence(root)
+    register = analyze_evidence(root, evidence_path=evidence_path)
 
     json_output_path = root / ".ai-debt" / "debt-register.json"
     markdown_output_path = root / ".ai-debt" / "debt-register.md"

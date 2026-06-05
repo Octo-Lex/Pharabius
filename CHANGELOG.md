@@ -2,6 +2,46 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.2.0] - Unreleased
+
+### Evidence Intake and Analysis Merge Policy
+
+v3.1.0 imported external evidence. This release governs how external evidence is combined with native evidence and optionally used in analysis.
+
+### Added
+
+- **Intake policy model** (`src/pharabius/core/connectors/intake.py`) — `IntakePolicy`, `CombineResult`, `combine_evidence()`
+- **Combined evidence manifest** — `CombinedEvidenceManifest` tracking sources, counts, duplicates, warnings
+- **Deterministic ID namespacing** — external evidence IDs globally unique via `EXT-{CONNECTOR}-{HASH}-{SEQ}`
+- **Semantic duplicate detection** — fingerprint-based dedup across sources, first-occurrence wins
+- **Deterministic source ordering** — `sorted()` on external paths for reproducible output
+- **CLI command**: `ai-debt combine-evidence` with `--native`, `--external`, `--output`, `--manifest-output`
+- **CLI flag**: `ai-debt analyze --evidence PATH` reads specified evidence store instead of default
+- **Analyzer threading**: `analyze_evidence()` and `write_debt_register()` accept optional `evidence_path`
+- **Lineage metadata**: `intake.original_evidence_id`, `combined_evidence_id`, `source_file`, `deduplication_status`
+- **35 new tests** covering policy, combine, manifest, lineage, dedup, ordering, CLI
+
+### Design Rules
+
+- Native evidence remains canonical and unchanged
+- External evidence remains optional
+- Combined evidence is explicit and reproducible
+- No evidence is silently overwritten — duplicates are skipped, never overwritten
+- Provenance and confidence survive combination
+- Analyzer use of combined evidence is opt-in (`--evidence` flag)
+- `analyze` without `--evidence` reads `.ai-debt/evidence.json` (unchanged behavior)
+- `combine-evidence` never mutates `.ai-debt/evidence.json`
+- External scanner evidence does not create new findings unless future analyzer logic supports it
+
+### Non-Scope
+
+- No new finding categories for external evidence
+- No new connectors (CodeQL, Trivy, etc.)
+- No automatic analysis merge
+- No SBOM handling
+
+---
+
 ## [3.1.0] - Unreleased
 
 ### External Evidence Connector Foundation
