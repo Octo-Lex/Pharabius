@@ -15,18 +15,30 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import sys
+from pathlib import Path
 
 import pytest
-from tests.fixtures.signal_governance.governed_family_inventory import (
+
+# Add fixtures directory to path for cross-platform compatibility
+_fixtures_dir = str(Path(__file__).parent / "fixtures" / "signal_governance")
+if _fixtures_dir not in sys.path:
+    sys.path.insert(0, _fixtures_dir)
+
+from governed_family_inventory import (  # noqa: E402
     CATEGORY_FAMILY_EXPECTATIONS,
     FAMILY_METADATA_REQUIRED_KEYS,
     GOVERNED_FAMILY_INVENTORY,
 )
 
-from pharabius.core.signals.models import GovernedSignal, SignalDisposition, SignalFamily
-from pharabius.core.signals.policy import output_behavior
-from pharabius.core.signals.summary import build_signal_summary
-from pharabius.core.signals.validation import validate_governed_signal
+from pharabius.core.signals.models import (  # noqa: E402
+    GovernedSignal,
+    SignalDisposition,
+    SignalFamily,
+)
+from pharabius.core.signals.policy import output_behavior  # noqa: E402
+from pharabius.core.signals.summary import build_signal_summary  # noqa: E402
+from pharabius.core.signals.validation import validate_governed_signal  # noqa: E402
 
 # ═══════════════════════════════════════════════════════════════════════
 # S01 — Governance surface inventory
@@ -166,7 +178,7 @@ class TestDispositionConsistency:
         ]
         assert len(finding_families) > 0
         # All use the same output_behavior mapping
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         for family_name in finding_families:
             signals = _FAMILY_ADAPTER_FACTORIES[family_name]()
@@ -191,7 +203,7 @@ class TestDispositionConsistency:
 
     def test_advisory_never_creates_work_package(self) -> None:
         """All ADVISORY dispositions behave identically."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         advisory_families = [
             name
@@ -218,7 +230,7 @@ class TestDispositionConsistency:
 
     def test_informational_non_actionable(self) -> None:
         """All INFORMATIONAL dispositions behave identically."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         info_families = [
             name
@@ -273,7 +285,7 @@ class TestEvidenceTraceability:
 
     def test_all_finding_signals_have_evidence_ids(self) -> None:
         """INV_006: Every FINDING signal carries at least one evidence_id."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         for family_name, entry in GOVERNED_FAMILY_INVENTORY.items():
             if SignalDisposition.FINDING not in entry["dispositions"]:
@@ -287,7 +299,7 @@ class TestEvidenceTraceability:
 
     def test_all_finding_signals_validate(self) -> None:
         """Every FINDING signal passes validation."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         for family_name, entry in GOVERNED_FAMILY_INVENTORY.items():
             if SignalDisposition.FINDING not in entry["dispositions"]:
@@ -328,7 +340,7 @@ class TestSummaryConsistency:
 
     def test_summary_total_equals_sum_of_families(self) -> None:
         """Summary total = sum of all family counts."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         all_signals = []
         for family_name in GOVERNED_FAMILY_INVENTORY:
@@ -338,7 +350,7 @@ class TestSummaryConsistency:
 
     def test_summary_by_family_matches_signals(self) -> None:
         """Summary by_family counts match actual signal instances."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         all_signals = []
         for family_name in GOVERNED_FAMILY_INVENTORY:
@@ -416,7 +428,7 @@ class TestMetadataContract:
     @pytest.mark.parametrize("family_name", list(GOVERNED_FAMILY_INVENTORY.keys()))
     def test_metadata_is_dict(self, family_name: str) -> None:
         """Every governed signal metadata is a dict."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         signals = _FAMILY_ADAPTER_FACTORIES[family_name]()
         for sig in signals:
@@ -427,7 +439,7 @@ class TestMetadataContract:
     @pytest.mark.parametrize("family_name", list(GOVERNED_FAMILY_INVENTORY.keys()))
     def test_required_metadata_keys_present(self, family_name: str) -> None:
         """Family-specific required keys are present."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         entry = GOVERNED_FAMILY_INVENTORY[family_name]
         family = entry["family"]
@@ -445,7 +457,7 @@ class TestMetadataContract:
     @pytest.mark.parametrize("family_name", list(GOVERNED_FAMILY_INVENTORY.keys()))
     def test_no_empty_metadata_without_reason(self, family_name: str) -> None:
         """No adapter emits empty metadata without justification."""
-        from tests.test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
+        from test_v315_signal_governance_conformance import _FAMILY_ADAPTER_FACTORIES
 
         signals = _FAMILY_ADAPTER_FACTORIES[family_name]()
         for sig in signals:
