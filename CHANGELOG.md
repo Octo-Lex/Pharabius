@@ -2,6 +2,35 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.7.0] - Unreleased
+
+### Candidate Review and Promotion Workflow
+
+Adds governed review of candidate findings with explicit decision recording.
+Review decisions are append-only records. Candidate artifacts are NOT mutated.
+Candidate acceptance is review-level only — it does NOT create accepted DebtFindings.
+
+### Added
+
+- **Candidate review module** (`core/connectors/candidate_review.py`) — `review_candidate()` function
+- **Candidate-specific lifecycle outcomes** — CandidateAccepted, CandidateRejected, CandidateDeferred
+- **Decision-to-outcome mapping** — review decisions map to candidate lifecycle states
+- **Terminal decision guard** — one terminal decision per candidate (v3.7.0)
+- **Candidate review summary** — pending/accepted/rejected/deferred counts
+- **Status reader integration** — shows candidate review state
+- **56 new tests** covering review, lifecycle, exclusion, no-mutation
+
+### Design Rules
+
+- CandidateAccepted ≠ Acknowledged — distinct from accepted finding states
+- Candidate acceptance is review-level only, not debt-register promotion
+- Regular review rejects CAND-* IDs; candidate review rejects TD-* IDs
+- `needs-investigation` is not valid for candidates (candidates ARE pre-investigation)
+- One terminal decision per candidate; supersession not supported in v3.7.0
+- Candidate artifact NOT mutated by review decisions
+- Lifecycle history is append-only
+- Review decisions are append-only
+
 ## [3.6.0] - Unreleased
 
 ### Evidence-to-Finding Candidate Promotion

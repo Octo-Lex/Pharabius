@@ -204,13 +204,40 @@ def read_status(repository_root: Path) -> str:
     else:
         lines.append("Combined:     absent")
 
-    # Candidate findings (v3.6.0)
+    # Candidate findings and review (v3.6.0, v3.7.0)
     candidate_path = ai_debt / "candidate-findings.json"
     if candidate_path.exists():
         cand = _load_json_safe(candidate_path)
         if cand:
             total_cand = cand.get("summary", {}).get("total_candidates", 0)
             lines.append(f"Candidates:   {total_cand} (review required)")
+
+            # Show review state if decisions exist
+            review_path = ai_debt / "review" / "decisions.json"
+            if review_path.exists():
+                review = _load_json_safe(review_path)
+                if review:
+                    cand_decisions = [
+                        d
+                        for d in review.get("decisions", [])
+                        if isinstance(d, dict) and d.get("finding_id", "").startswith("CAND")
+                    ]
+                    if cand_decisions:
+                        accepted = sum(1 for d in cand_decisions if d.get("status") == "accepted")
+                        rejected = sum(
+                            1
+                            for d in cand_decisions
+                            if d.get("status")
+                            in ("rejected", "risk-accepted", "duplicate", "already-fixed")
+                        )
+                        deferred = sum(1 for d in cand_decisions if d.get("status") == "deferred")
+                        pending = total_cand - len(cand_decisions)
+                        lines.append(
+                            f"  Reviewed:   {len(cand_decisions)} "
+                            f"({accepted} accepted, {rejected} rejected, {deferred} deferred)"
+                        )
+                        if pending > 0:
+                            lines.append(f"  Pending:    {pending}")
         else:
             lines.append("Candidates:   unreadable")
     # No line if absent — candidates are optional

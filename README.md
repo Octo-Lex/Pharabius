@@ -103,6 +103,7 @@ Pharabius is a mature CLI engine with an early-stage platform. Current limitatio
   - _v3.4.0 adds **external evidence review**: imported and combined evidence visible in reports and status output. No finding creation._
   - _v3.5.0 adds **workflow lifecycle governance**: explicit state model for findings and work packages with transition validation. No auto-promotion._
   - _v3.6.0 adds **evidence-to-finding candidate promotion**: external evidence can propose reviewable candidate findings. Candidates are not accepted findings._
+  - _v3.7.0 adds **candidate review workflow**: governed review of candidates with explicit decisions. Acceptance is review-level only, not debt-register promotion._
 - **No live ticket sync** — No Jira, Linear, or GitHub Issues integration
 - **Platform frontend is prototype-grade** — 28 tests pass, build succeeds, but 5 pre-existing TypeScript errors in test mocks
 - **No portfolio governance** — Multi-repo governance workflows not implemented
