@@ -2,6 +2,29 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.5.0] - Unreleased
+
+### Workflow Lifecycle Governance
+
+Adds explicit lifecycle state model for findings and work packages with allowed transitions, validation, and audit history.
+
+### Added
+
+- **Lifecycle module** (`core/lifecycle.py`) — FindingStatus and WorkPackageStatus enums, compatibility mapping, transition validator
+- **Lifecycle history schema** (`schemas/lifecycle.py`) — optional, append-only audit artifact
+- **Report-only inference** — infers lifecycle state from review decisions and verification results for display
+- **Foundation report section** — "Finding Lifecycle Summary" with state distribution
+- **65 new tests** covering enums, compatibility, transitions, history, inference, and reporting
+
+### Design Rules
+
+- Lifecycle states preserve compatibility with existing persisted status values
+- Transition API is pure — validates but does not write
+- `lifecycle-history.json` is optional and append-only
+- Inferred lifecycle state is report-only unless explicitly persisted
+- No auto-promotion, no auto-approval, no historical artifact mutation
+- No new CLI commands
+
 ## [3.4.1] - Unreleased
 
 ### Platform Baseline Hardening

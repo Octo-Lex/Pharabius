@@ -794,6 +794,15 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
             "",
             "See `business-risk-proxy.md` for inferred business-risk signals.",
             "",
+        ]
+    )
+
+    # Lifecycle summary (v3.5.0)
+    _add_lifecycle_summary(lines, ctx)
+
+    lines.extend(
+        [
+            "",
             "## 12. Uncertainties and Limitations",
             "",
         ]
@@ -1225,3 +1234,53 @@ def _add_signal_governance_section(lines: list[str], ctx: ReportContext) -> None
                 "",
             ]
         )
+
+
+def _add_lifecycle_summary(lines: list[str], ctx: ReportContext) -> None:
+    """Add lifecycle state summary to the foundation report (v3.5.0).
+
+    Shows finding and work package lifecycle distribution.
+    Inferred from existing status fields — report-only, not persisted.
+    """
+    from pharabius.core.lifecycle import (
+        FindingStatus,
+        resolve_finding_status,
+    )
+
+    findings = ctx.debt_register.findings
+    if not findings:
+        return
+
+    # Finding lifecycle distribution
+    finding_dist: dict[str, int] = {}
+    unresolved = 0
+    for f in findings:
+        resolved = resolve_finding_status(f.status)
+        label = resolved.value if resolved else f.status
+        finding_dist[label] = finding_dist.get(label, 0) + 1
+        if resolved in (FindingStatus.DETECTED, FindingStatus.ACKNOWLEDGED, None):
+            unresolved += 1
+
+    lines.extend(
+        [
+            "",
+            "## 11b. Finding Lifecycle Summary",
+            "",
+            "> Lifecycle states are inferred from finding status and review decisions.",
+            "> They are report-only and not persisted unless explicitly transitioned.",
+            "",
+            "| State | Count |",
+            "|---|---:|",
+        ]
+    )
+    for state, count in sorted(finding_dist.items()):
+        lines.append(f"| {state} | {count} |")
+
+    if unresolved:
+        lines.extend(
+            [
+                "",
+                f"**{unresolved}** findings in active lifecycle (Detected or Acknowledged).",
+            ]
+        )
+    lines.append("")
