@@ -29,6 +29,7 @@ class FindingStatus(enum.StrEnum):
     - Review decision statuses map through compatibility table
     """
 
+    CANDIDATE = "Candidate"
     DETECTED = "Detected"
     ACKNOWLEDGED = "Acknowledged"
     IN_PROGRESS = "In Progress"
@@ -40,6 +41,9 @@ class FindingStatus(enum.StrEnum):
 
 # Compatibility mapping: existing free-text values → FindingStatus
 FINDING_STATUS_ALIASES: dict[str, FindingStatus] = {
+    # Candidate status (v3.6.0)
+    "Candidate": FindingStatus.CANDIDATE,
+    "candidate": FindingStatus.CANDIDATE,
     # Exact matches (DebtFinding default)
     "Detected": FindingStatus.DETECTED,
     "detected": FindingStatus.DETECTED,
@@ -62,6 +66,11 @@ FINDING_STATUS_ALIASES: dict[str, FindingStatus] = {
 
 # Allowed transitions: from → set of allowed to
 FINDING_TRANSITIONS: dict[FindingStatus, set[FindingStatus]] = {
+    FindingStatus.CANDIDATE: {
+        FindingStatus.ACKNOWLEDGED,  # Promote after review
+        FindingStatus.WONT_FIX,  # Reject after review
+        FindingStatus.DEFERRED,  # Defer review
+    },
     FindingStatus.DETECTED: {
         FindingStatus.ACKNOWLEDGED,
         FindingStatus.DEFERRED,

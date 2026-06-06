@@ -80,6 +80,7 @@ class TestProducerConsumerMapping:
                         "combine-evidence",
                         "import-evidence",
                         "lifecycle",
+                        "candidate",
                     ]
                 ), f"Row lacks producer command: {row[:80]}"
 

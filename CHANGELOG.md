@@ -2,6 +2,34 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.6.0] - Unreleased
+
+### Evidence-to-Finding Candidate Promotion
+
+Adds controlled bridge from external connector evidence to candidate findings.
+Candidates are review artifacts, NOT accepted debt findings.
+
+### Added
+
+- **Candidate proposal** (`core/connectors/candidate.py`) — `propose_candidates()` pure function
+- **Candidate schema** (`schemas/candidate.py`) — `CandidateFinding`, `CandidateProvenance`, `CandidateFindingsArtifact`
+- **Distinct lifecycle state** — `FindingStatus.CANDIDATE` (not mapped to DETECTED)
+- **Separate artifact** — `.ai-debt/candidate-findings.json` (not mixed into `debt-register.json`)
+- **Provenance helpers** — `get_candidate_provenance()` accessor function
+- **Report section** — "Candidate Findings" in foundation report with "review required" label
+- **Status reader** — shows candidate count when present
+- **55 new tests** covering creation, filtering, provenance, exclusion, no-auto-promotion
+
+### Design Rules
+
+- Candidates are pre-review artifacts, NOT detected findings
+- Candidates are stored in separate artifact from accepted findings
+- `total_findings` excludes candidates; `candidate_count` is separate
+- Candidates have `risk_score=0`, `priority="Unscored"` until promoted
+- Only governed review can promote candidates (Candidate → Acknowledged)
+- No auto-promotion, no scanner execution, no historical artifact mutation
+- Governance metrics, quality gates, exports, work packages exclude candidates
+
 ## [3.5.0] - Unreleased
 
 ### Workflow Lifecycle Governance

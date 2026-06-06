@@ -24,6 +24,7 @@ class ReportContext:
     profile: RepositoryProfile
     evidence_store: EvidenceStore
     debt_register: DebtRegister
+    candidate_artifact: Any = None  # CandidateFindingsArtifact, optional
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -85,11 +86,25 @@ def _load_units_if_exists(root: Path) -> AnalysisUnitStore | None:
 def _context(repository_root: Path) -> ReportContext:
     root = repository_root.resolve()
 
+    # Load candidate findings artifact (optional, v3.6.0)
+    candidate_artifact = None
+    candidate_path = root / ".ai-debt" / "candidate-findings.json"
+    if candidate_path.exists():
+        try:
+            from pharabius.schemas.candidate import CandidateFindingsArtifact
+
+            candidate_artifact = CandidateFindingsArtifact.model_validate_json(
+                candidate_path.read_text(encoding="utf-8")
+            )
+        except Exception:
+            candidate_artifact = None
+
     return ReportContext(
         repository_root=root,
         profile=_load_profile(root),
         evidence_store=_load_evidence_store(root),
         debt_register=_load_debt_register(root),
+        candidate_artifact=candidate_artifact,
     )
 
 
@@ -800,6 +815,9 @@ def render_foundation_audit_report(ctx: ReportContext) -> str:
     # Lifecycle summary (v3.5.0)
     _add_lifecycle_summary(lines, ctx)
 
+    # Candidate findings (v3.6.0)
+    _add_candidate_findings_section(lines, ctx)
+
     lines.extend(
         [
             "",
@@ -1283,4 +1301,60 @@ def _add_lifecycle_summary(lines: list[str], ctx: ReportContext) -> None:
                 f"**{unresolved}** findings in active lifecycle (Detected or Acknowledged).",
             ]
         )
+    lines.append("")
+
+
+def _add_candidate_findings_section(lines: list[str], ctx: ReportContext) -> None:
+    """Add candidate findings section to the foundation report (v3.6.0).
+
+    Candidate findings are review artifacts, NOT accepted findings.
+    This section makes them visible for review without affecting
+    severity/priority summaries or governance metrics.
+    """
+    artifact = ctx.candidate_artifact
+    if artifact is None or not artifact.candidates:
+        return
+
+    summary = artifact.summary
+
+    lines.extend(
+        [
+            "",
+            "## 11c. Candidate Findings",
+            "",
+            "> **Review required.** Candidates are pre-review artifacts from external scanners.",
+            "> They are NOT confirmed findings and do not affect",
+            "> severity/priority/governance metrics.",
+            "",
+            f"**{summary.total_candidates}** candidate findings proposed from external evidence.",
+            "",
+            "| Connector | Count |",
+            "|---|---:|",
+        ]
+    )
+    for connector, count in sorted(summary.by_connector.items()):
+        lines.append(f"| {connector} | {count} |")
+
+    if summary.by_category:
+        lines.extend(
+            [
+                "",
+                "| Category | Count |",
+                "|---|---:|",
+            ]
+        )
+        for category, count in sorted(summary.by_category.items()):
+            lines.append(f"| {category} | {count} |")
+
+    lines.extend(
+        [
+            "",
+            "### Candidate Details",
+            "",
+        ]
+    )
+    for c in artifact.candidates[:20]:  # Cap at 20 for report readability
+        lines.append(f"- **{c.id}**: {c.title} ({c.provenance.connector_name})")
+    if summary.total_candidates > 20:
+        lines.append(f"- ... and {summary.total_candidates - 20} more")
     lines.append("")
