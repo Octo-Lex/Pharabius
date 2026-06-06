@@ -25,6 +25,8 @@ class ReportContext:
     evidence_store: EvidenceStore
     debt_register: DebtRegister
     candidate_artifact: Any = None  # CandidateFindingsArtifact, optional
+    lifecycle_history: Any = None  # LifecycleHistory, optional
+    candidate_decisions: Any = None  # list[dict], optional
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -99,12 +101,41 @@ def _context(repository_root: Path) -> ReportContext:
         except Exception:
             candidate_artifact = None
 
+    # Load lifecycle history (optional, v3.8.0)
+    lifecycle_history = None
+    lh_path = root / ".ai-debt" / "lifecycle-history.json"
+    if lh_path.exists():
+        try:
+            from pharabius.schemas.lifecycle import LifecycleHistory
+
+            lifecycle_history = LifecycleHistory.model_validate_json(
+                lh_path.read_text(encoding="utf-8")
+            )
+        except Exception:
+            lifecycle_history = None
+
+    # Load candidate review decisions (optional, v3.8.0)
+    candidate_decisions = None
+    review_path = root / ".ai-debt" / "review" / "decisions.json"
+    if review_path.exists():
+        try:
+            review_data = json.loads(review_path.read_text(encoding="utf-8"))
+            candidate_decisions = [
+                d
+                for d in review_data.get("decisions", [])
+                if isinstance(d, dict) and d.get("finding_id", "").startswith("CAND")
+            ]
+        except Exception:
+            candidate_decisions = None
+
     return ReportContext(
         repository_root=root,
         profile=_load_profile(root),
         evidence_store=_load_evidence_store(root),
         debt_register=_load_debt_register(root),
         candidate_artifact=candidate_artifact,
+        lifecycle_history=lifecycle_history,
+        candidate_decisions=candidate_decisions,
     )
 
 
@@ -1305,17 +1336,38 @@ def _add_lifecycle_summary(lines: list[str], ctx: ReportContext) -> None:
 
 
 def _add_candidate_findings_section(lines: list[str], ctx: ReportContext) -> None:
-    """Add candidate findings section to the foundation report (v3.6.0).
+    """Add candidate findings section to the foundation report (v3.6.0, v3.8.0).
 
     Candidate findings are review artifacts, NOT accepted findings.
     This section makes them visible for review without affecting
     severity/priority summaries or governance metrics.
+    v3.8.0: Adds review decision audit trail and orphan warnings.
     """
     artifact = ctx.candidate_artifact
     if artifact is None or not artifact.candidates:
         return
 
     summary = artifact.summary
+    candidate_ids = {c.id for c in artifact.candidates}
+
+    # Build decision lookup
+    decided_ids: set[str] = set()
+    decision_map: dict[str, dict] = {}
+    if ctx.candidate_decisions:
+        for d in ctx.candidate_decisions:
+            fid = d.get("finding_id", "")
+            if fid in candidate_ids and fid not in decided_ids:
+                decided_ids.add(fid)
+                decision_map[fid] = d
+
+    pending_ids = sorted(candidate_ids - decided_ids)
+    accepted_count = sum(1 for d in decision_map.values() if d.get("status") == "accepted")
+    rejected_count = sum(
+        1
+        for d in decision_map.values()
+        if d.get("status") in ("rejected", "risk-accepted", "duplicate", "already-fixed")
+    )
+    deferred_count = sum(1 for d in decision_map.values() if d.get("status") == "deferred")
 
     lines.extend(
         [
@@ -1346,6 +1398,24 @@ def _add_candidate_findings_section(lines: list[str], ctx: ReportContext) -> Non
         for category, count in sorted(summary.by_category.items()):
             lines.append(f"| {category} | {count} |")
 
+    # Review decision summary (v3.8.0)
+    if decided_ids or pending_ids:
+        lines.extend(
+            [
+                "",
+                "### Review Decision Summary",
+                "",
+                "| Status | Count |",
+                "|---|---:|",
+                f"| CandidateAccepted | {accepted_count} |",
+                f"| CandidateRejected | {rejected_count} |",
+                f"| CandidateDeferred | {deferred_count} |",
+                f"| Pending review | {len(pending_ids)} |",
+                "",
+                "> CandidateAccepted is review-level only, not debt-register promotion.",
+            ]
+        )
+
     lines.extend(
         [
             "",
@@ -1354,7 +1424,54 @@ def _add_candidate_findings_section(lines: list[str], ctx: ReportContext) -> Non
         ]
     )
     for c in artifact.candidates[:20]:  # Cap at 20 for report readability
-        lines.append(f"- **{c.id}**: {c.title} ({c.provenance.connector_name})")
+        decision_info = ""
+        if c.id in decision_map:
+            d = decision_map[c.id]
+            status = d.get("status", "unknown")
+            reviewer = d.get("reviewer", "")
+            reviewer_str = f" by {reviewer}" if reviewer else ""
+            decision_info = f" → {status}{reviewer_str}"
+        lines.append(f"- **{c.id}**: {c.title} ({c.provenance.connector_name}){decision_info}")
     if summary.total_candidates > 20:
         lines.append(f"- ... and {summary.total_candidates - 20} more")
+
+    # Audit trail from lifecycle history (v3.8.0)
+    if ctx.lifecycle_history:
+        candidate_entries = [
+            e
+            for e in ctx.lifecycle_history.entries
+            if e.artifact_type == "candidate" and e.artifact_id in candidate_ids
+        ]
+        if candidate_entries:
+            lines.extend(
+                [
+                    "",
+                    "### Candidate Lifecycle Audit Trail",
+                    "",
+                    "| ID | From | To | Actor | Rationale |",
+                    "|---|---|---|---|---|",
+                ]
+            )
+            for entry in candidate_entries:
+                rationale = entry.rationale[:50] if entry.rationale else "-"
+                lines.append(
+                    f"| {entry.artifact_id} | {entry.from_status} "
+                    f"| {entry.to_status} | {entry.actor} | {rationale} |"
+                )
+
+    # Orphaned decision warnings (v3.8.0)
+    if ctx.candidate_decisions:
+        orphaned = [
+            d for d in ctx.candidate_decisions if d.get("finding_id", "") not in candidate_ids
+        ]
+        if orphaned:
+            orphan_ids = ", ".join(d.get("finding_id", "?") for d in orphaned[:5])
+            lines.extend(
+                [
+                    "",
+                    f"**Warning:** {len(orphaned)} review decision(s) reference ",
+                    f"unknown candidate IDs: {orphan_ids}",
+                ]
+            )
+
     lines.append("")

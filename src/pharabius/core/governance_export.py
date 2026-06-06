@@ -64,6 +64,7 @@ def build_governance_export(
     signal_summary: dict | None = None,
     governance_quality: GovernanceQualityMetrics | None = None,
     governance_trends: GovernanceTrendSummary | None = None,
+    candidate_decisions: dict | None = None,
     run_id: str | None = None,
     families_governed: int = 10,
 ) -> dict:
@@ -71,6 +72,7 @@ def build_governance_export(
 
     Stable schema: schema_version, export_type, and all governance data.
     Does not introduce policy interpretation.
+    v3.8.0: Adds optional candidate_decisions summary.
     """
     quality_dict = None
     if governance_quality is not None:
@@ -102,6 +104,10 @@ def build_governance_export(
             "source": "run_history",
         },
     }
+
+    # Candidate decisions summary (v3.8.0)
+    if candidate_decisions is not None:
+        export["candidate_decisions"] = candidate_decisions
 
     return export
 
@@ -139,3 +145,27 @@ def write_governance_export_jsonl(
         encoding="utf-8",
     )
     return output_path
+
+
+def build_candidate_decisions_summary(
+    *,
+    total_candidates: int = 0,
+    accepted: int = 0,
+    rejected: int = 0,
+    deferred: int = 0,
+    pending: int = 0,
+    by_connector: dict[str, int] | None = None,
+) -> dict:
+    """Build candidate decisions summary for governance export.
+
+    Additive-only: new fields may be added, existing fields never removed.
+    Does not include forbidden field names.
+    """
+    return {
+        "total_candidates": total_candidates,
+        "accepted": accepted,
+        "rejected": rejected,
+        "deferred": deferred,
+        "pending": pending,
+        "by_connector": by_connector or {},
+    }

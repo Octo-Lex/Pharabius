@@ -2,6 +2,28 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.8.0] - Unreleased
+
+### Candidate Decision Reporting and Audit Trail
+
+Makes candidate review decisions auditable and visible across reports, status, and governance export surfaces.
+
+### Added
+
+- **Report candidate decision summary** — Review Decision Summary table in foundation report
+- **Lifecycle audit trail** — Candidate Lifecycle Audit Trail section with transitions, actors, rationale
+- **Orphaned decision warnings** — Warns about review decisions for unknown candidate IDs
+- **Governance export candidate decisions** — `build_candidate_decisions_summary()` helper, `candidate_decisions` field
+- **Status reader review summary** — accepted/rejected/deferred/pending counts
+- **23 new tests** covering report, audit, export, orphan detection, no-mutation
+
+### Design Rules
+
+- Reporting is read-only — no mutation of any artifact
+- No debt-register promotion from candidate reporting
+- Governance export is additive-only (`candidate_decisions` added, no existing fields changed)
+- No forbidden field names in candidate export data
+
 ## [3.7.0] - Unreleased
 
 ### Candidate Review and Promotion Workflow
