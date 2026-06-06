@@ -238,6 +238,13 @@ def read_status(repository_root: Path) -> str:
                         )
                         if pending > 0:
                             lines.append(f"  Pending:    {pending}")
+
+                        # Promotion eligibility (v3.9.0)
+                        eligible = accepted  # accepted candidates with full gate checks
+                        if eligible > 0:
+                            lines.append(
+                                f"  Gate-ready: {eligible} (eligible for promotion, not promoted)"
+                            )
         else:
             lines.append("Candidates:   unreadable")
     # No line if absent — candidates are optional

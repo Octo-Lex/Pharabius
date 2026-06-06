@@ -2,6 +2,46 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.9.0] - Unreleased
+
+### Candidate Promotion Gate
+
+Defines eligibility rules for promoting candidate findings to accepted findings.
+Gate-only: checks eligibility without performing promotion.
+
+### Added
+
+- **Promotion gate module** (`core/connectors/candidate_gate.py`) — 9 gate checks
+- **Single candidate eligibility** — `check_promotion_eligibility()` returns `PromotionGateResult`
+- **Batch eligibility** — `check_all_promotion_eligibility()` for all candidates
+- **9 gate checks**: candidate_exists, has_accepted_decision, has_reviewer, has_rationale, has_evidence_ids, has_provenance, has_title, has_category, has_description
+- **Blocking reasons** — each failed check provides a specific reason
+- **Formatted reports** — `format_eligibility_report()` and `format_batch_eligibility_report()`
+- **Status reader** — shows gate-ready count for accepted candidates
+- **28 new tests** covering all checks, batch, formatting, no-mutation
+
+### Gate Checks
+
+| Check | Requirement |
+|---|---|
+| candidate_exists | Candidate found in candidate-findings.json |
+| has_accepted_decision | Review decision is 'accepted' |
+| has_reviewer | Reviewer field is non-empty |
+| has_rationale | Rationale field is non-empty |
+| has_evidence_ids | At least one evidence ID attached |
+| has_provenance | Provenance metadata present |
+| has_title | Title is non-empty |
+| has_category | Category is non-empty |
+| has_description | Description is non-empty |
+
+### Design Rules
+
+- Gate is read-only — no mutation of any artifact
+- No writing to debt-register.json
+- No creating accepted DebtFinding
+- No work package generation
+- No ticket creation
+
 ## [3.8.0] - Unreleased
 
 ### Candidate Decision Reporting and Audit Trail
