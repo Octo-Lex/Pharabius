@@ -13,7 +13,7 @@ if _scripts_dir not in sys.path:
 # ruff: noqa: E402
 from validate_release_consistency import validate_release_consistency
 
-EXPECTED = "3.8.0"
+EXPECTED = "3.9.0"
 
 
 class TestVersionSources:
