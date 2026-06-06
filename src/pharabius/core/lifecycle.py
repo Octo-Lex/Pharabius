@@ -29,7 +29,12 @@ class FindingStatus(enum.StrEnum):
     - Review decision statuses map through compatibility table
     """
 
+    # Candidate lifecycle (v3.6.0 proposal, v3.7.0 review)
     CANDIDATE = "Candidate"
+    CANDIDATE_ACCEPTED = "CandidateAccepted"
+    CANDIDATE_REJECTED = "CandidateRejected"
+    CANDIDATE_DEFERRED = "CandidateDeferred"
+    # Accepted finding lifecycle
     DETECTED = "Detected"
     ACKNOWLEDGED = "Acknowledged"
     IN_PROGRESS = "In Progress"
@@ -44,6 +49,13 @@ FINDING_STATUS_ALIASES: dict[str, FindingStatus] = {
     # Candidate status (v3.6.0)
     "Candidate": FindingStatus.CANDIDATE,
     "candidate": FindingStatus.CANDIDATE,
+    # Candidate review outcomes (v3.7.0)
+    "CandidateAccepted": FindingStatus.CANDIDATE_ACCEPTED,
+    "candidate_accepted": FindingStatus.CANDIDATE_ACCEPTED,
+    "CandidateRejected": FindingStatus.CANDIDATE_REJECTED,
+    "candidate_rejected": FindingStatus.CANDIDATE_REJECTED,
+    "CandidateDeferred": FindingStatus.CANDIDATE_DEFERRED,
+    "candidate_deferred": FindingStatus.CANDIDATE_DEFERRED,
     # Exact matches (DebtFinding default)
     "Detected": FindingStatus.DETECTED,
     "detected": FindingStatus.DETECTED,
@@ -67,10 +79,15 @@ FINDING_STATUS_ALIASES: dict[str, FindingStatus] = {
 # Allowed transitions: from → set of allowed to
 FINDING_TRANSITIONS: dict[FindingStatus, set[FindingStatus]] = {
     FindingStatus.CANDIDATE: {
-        FindingStatus.ACKNOWLEDGED,  # Promote after review
-        FindingStatus.WONT_FIX,  # Reject after review
-        FindingStatus.DEFERRED,  # Defer review
+        FindingStatus.CANDIDATE_ACCEPTED,  # Review-level acceptance
+        FindingStatus.CANDIDATE_REJECTED,  # Review-level rejection
+        FindingStatus.CANDIDATE_DEFERRED,  # Review-level deferral
     },
+    # Candidate outcome states are terminal in v3.7.0
+    # (no transitions out until supersession mechanism added)
+    FindingStatus.CANDIDATE_ACCEPTED: set(),
+    FindingStatus.CANDIDATE_REJECTED: set(),
+    FindingStatus.CANDIDATE_DEFERRED: set(),
     FindingStatus.DETECTED: {
         FindingStatus.ACKNOWLEDGED,
         FindingStatus.DEFERRED,

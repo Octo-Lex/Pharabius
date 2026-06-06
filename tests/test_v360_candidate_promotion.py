@@ -309,14 +309,14 @@ class TestCandidateLifecycleDistinction:
 
     def test_candidate_is_distinct_value(self) -> None:
         all_values = set(FindingStatus)
-        assert len(all_values) == 8  # 7 original + CANDIDATE
+        assert len(all_values) == 11  # 8 original + 3 candidate outcomes
         assert FindingStatus.CANDIDATE in all_values
 
     def test_candidate_has_own_transitions(self) -> None:
         assert FindingStatus.CANDIDATE in FINDING_TRANSITIONS
         transitions = FINDING_TRANSITIONS[FindingStatus.CANDIDATE]
-        assert FindingStatus.ACKNOWLEDGED in transitions  # Promote
-        assert FindingStatus.WONT_FIX in transitions  # Reject
+        assert FindingStatus.CANDIDATE_ACCEPTED in transitions
+        assert FindingStatus.CANDIDATE_REJECTED in transitions
 
     def test_candidate_cannot_transition_to_in_progress(self) -> None:
         """Candidate must go through review first."""
@@ -327,16 +327,16 @@ class TestCandidateLifecycleDistinction:
         result = validate_finding_transition("Candidate", "Verified")
         assert not result.valid
 
-    def test_candidate_to_acknowledged_is_promote(self) -> None:
-        result = validate_finding_transition("Candidate", "Acknowledged")
+    def test_candidate_to_candidate_accepted_is_review_accept(self) -> None:
+        result = validate_finding_transition("Candidate", "CandidateAccepted")
         assert result.valid
 
-    def test_candidate_to_wont_fix_is_reject(self) -> None:
-        result = validate_finding_transition("Candidate", "Won't Fix")
+    def test_candidate_to_candidate_rejected_is_review_reject(self) -> None:
+        result = validate_finding_transition("Candidate", "CandidateRejected")
         assert result.valid
 
-    def test_candidate_to_deferred(self) -> None:
-        result = validate_finding_transition("Candidate", "Deferred")
+    def test_candidate_to_candidate_deferred(self) -> None:
+        result = validate_finding_transition("Candidate", "CandidateDeferred")
         assert result.valid
 
 
@@ -650,13 +650,13 @@ class TestNoAutoPromotion:
         result = validate_finding_transition("Candidate", "In Progress")
         assert not result.valid
 
-    def test_candidate_can_only_promote_or_reject(self) -> None:
+    def test_candidate_can_only_transition_to_review_outcomes(self) -> None:
         """Only valid transitions from Candidate are review outcomes."""
         transitions = FINDING_TRANSITIONS[FindingStatus.CANDIDATE]
         assert transitions == {
-            FindingStatus.ACKNOWLEDGED,
-            FindingStatus.WONT_FIX,
-            FindingStatus.DEFERRED,
+            FindingStatus.CANDIDATE_ACCEPTED,
+            FindingStatus.CANDIDATE_REJECTED,
+            FindingStatus.CANDIDATE_DEFERRED,
         }
 
 
