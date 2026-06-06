@@ -38,8 +38,8 @@ from pharabius.schemas.lifecycle import LifecycleEntry, LifecycleHistory
 class TestFindingStatusEnum:
     """FindingStatus enum has correct values and compatibility."""
 
-    def test_enum_has_seven_states(self) -> None:
-        assert len(FindingStatus) == 7
+    def test_enum_has_eight_states(self) -> None:
+        assert len(FindingStatus) == 8
 
     def test_detected_is_default(self) -> None:
         assert FindingStatus.DETECTED.value == "Detected"

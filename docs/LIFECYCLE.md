@@ -4,6 +4,22 @@
 
 Pharabius defines explicit lifecycle states for findings and work packages. Lifecycle state machines govern which transitions are allowed, ensuring state changes follow a valid path.
 
+## Candidate Lifecycle (v3.6.0)
+
+External evidence can propose **candidate findings**. Candidates are pre-review artifacts that must be reviewed before becoming accepted findings.
+
+```text
+Candidate → Acknowledged  (promote after review)
+Candidate → Won't Fix      (reject after review)
+Candidate → Deferred       (defer review)
+```
+
+Candidates are:
+- Stored in `.ai-debt/candidate-findings.json` (separate from `debt-register.json`)
+- NOT counted in `total_findings`, severity, or priority summaries
+- NOT included in work packages, tickets, exports, governance metrics, or quality gates
+- `risk_score=0` and `priority="Unscored"` until promoted
+
 ## Finding Lifecycle
 
 ```text

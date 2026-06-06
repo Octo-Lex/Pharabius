@@ -204,4 +204,15 @@ def read_status(repository_root: Path) -> str:
     else:
         lines.append("Combined:     absent")
 
+    # Candidate findings (v3.6.0)
+    candidate_path = ai_debt / "candidate-findings.json"
+    if candidate_path.exists():
+        cand = _load_json_safe(candidate_path)
+        if cand:
+            total_cand = cand.get("summary", {}).get("total_candidates", 0)
+            lines.append(f"Candidates:   {total_cand} (review required)")
+        else:
+            lines.append("Candidates:   unreadable")
+    # No line if absent — candidates are optional
+
     return "\n".join(lines)
