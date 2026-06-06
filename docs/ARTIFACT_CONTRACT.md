@@ -28,6 +28,7 @@ These artifacts are produced by the core analysis pipeline and serve as the sour
 |---|---|---|---|---|
 | `.ai-debt/reports/foundation-audit-report.md` | Markdown | `report` | Regenerated | Stable |
 | `.ai-debt/reports/external-evidence-report.md` | Markdown | `report` | Regenerated | Stable |
+| `.ai-debt/lifecycle-history.json` | `LifecycleHistory` | `lifecycle` | Audit/traceability | Optional, append-only | Stable |
 | `.ai-debt/reports/scoring-preview.json` | JSON | `analyze --scoring-preview` | Regenerated | Stable |
 | `.ai-debt/reports/scoring-delta.md` | Markdown | `analyze --scoring-preview` | Regenerated | Stable |
 | `.ai-debt/reports/ticket-draft-summary.md` | Markdown | `tickets` | Regenerated | Stable |

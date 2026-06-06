@@ -101,6 +101,7 @@ Pharabius is a mature CLI engine with an early-stage platform. Current limitatio
 - **External scanner connectors** — SARIF, Semgrep, Trivy, Grype, Syft fixture import
   - _v3.3.0 adds **dependency/security connector family**: Trivy vulnerability, Grype vulnerability match, Syft SBOM. Scanner execution is not included._
   - _v3.4.0 adds **external evidence review**: imported and combined evidence visible in reports and status output. No finding creation._
+  - _v3.5.0 adds **workflow lifecycle governance**: explicit state model for findings and work packages with transition validation. No auto-promotion._
 - **No live ticket sync** — No Jira, Linear, or GitHub Issues integration
 - **Platform frontend is prototype-grade** — 28 tests pass, build succeeds, but 5 pre-existing TypeScript errors in test mocks
 - **No portfolio governance** — Multi-repo governance workflows not implemented
