@@ -7,6 +7,10 @@ import type {
   EvidenceReference,
   EvidenceRecord,
   UploadResult,
+  FindingDelta,
+  WorkPackageDelta,
+  TraceabilityDelta,
+  RunComparisonResponse,
 } from "../api/client";
 
 // --- Base factories ---

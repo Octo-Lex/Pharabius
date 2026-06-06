@@ -18,8 +18,8 @@ Pharabius is a repository-first technical debt intelligence platform with two pr
 | Dimension | Status | Notes |
 |---|---|---|
 | CLI engine | **Production-ready** | 2,970 tests, deterministic analysis |
-| Platform backend | **Functional** | 276 tests, 30 API endpoints, 6 migrations |
-| Platform frontend | **Functional** | 28 tests, 5 TS mock errors (pre-existing), build succeeds |
+| Platform backend | **Production-ready** | 276 tests, 30 API endpoints, 6 migrations |
+| Platform frontend | **Production-ready** | 28 tests, build clean (0 TS errors) |
 | External scanners | **Connectors implemented** | SARIF, Semgrep, Trivy, Grype, Syft connectors; external evidence review in reports |
 | Live ticket sync | **Not started** | No Jira/Linear integration |
 | Runtime governance | **Low** | `AIBudget` is context-assembly only |
@@ -28,10 +28,10 @@ Pharabius is a repository-first technical debt intelligence platform with two pr
 
 | Suite | Tests | Status |
 |---|---|---|
-| CLI engine (`src/pharabius/`) | 2,970 passed, 7 skipped | ✅ Validated |
+| CLI engine (`src/pharabius/`) | 3,148 passed, 7 skipped | ✅ Validated |
 | Platform backend (`platform/backend/`) | 276 passed, 5 skipped | ✅ Validated |
-| Platform frontend (`platform/frontend/`) | 28 passed, 5 TS mock errors | ✅ Validated |
-| **Total collected** | **3,274** | |
+| Platform frontend (`platform/frontend/`) | 28 passed, 0 TS errors | ✅ Validated |
+| **Total collected** | **3,452** | |
 
 ## Capabilities Since v2.5.0
 

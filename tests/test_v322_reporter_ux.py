@@ -149,11 +149,16 @@ class TestNoBehaviorChange:
     """v3.22.0 changes wording only — no behavioral changes."""
 
     def test_no_new_signal_adapters(self) -> None:
-        from tests.fixtures.signal_governance.governed_family_inventory import (
-            GOVERNED_FAMILY_INVENTORY,
-        )
+        import importlib
+        import sys
+        from pathlib import Path
 
-        total_adapters = sum(len(e["adapters"]) for e in GOVERNED_FAMILY_INVENTORY.values())
+        _fixtures_dir = str(Path(__file__).parent / "fixtures" / "signal_governance")
+        if _fixtures_dir not in sys.path:
+            sys.path.insert(0, _fixtures_dir)
+        _gfi = importlib.import_module("governed_family_inventory")
+
+        total_adapters = sum(len(e["adapters"]) for e in _gfi.GOVERNED_FAMILY_INVENTORY.values())
         assert total_adapters == 29
 
     def test_no_new_signal_families(self) -> None:

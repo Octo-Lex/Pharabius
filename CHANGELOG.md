@@ -2,6 +2,30 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.4.1] - Unreleased
+
+### Platform Baseline Hardening
+
+Resolves known platform quality issues without adding product capability.
+
+### Fixed
+
+- **Alembic tests now pass from repo root** — tests used CWD-relative paths that only
+  resolved when run from `platform/backend/`. Fixed with `__file__`-relative resolution.
+- **Frontend TypeScript build errors resolved** — `api-mocks.ts` used types
+  (`FindingDelta`, `WorkPackageDelta`, `TraceabilityDelta`, `RunComparisonResponse`)
+  without importing them from `client.ts`. Added missing imports.
+- **Test fixtures package structure** — added `__init__.py` to `tests/`, `tests/fixtures/`,
+  and `tests/fixtures/signal_governance/` for reliable module resolution on all platforms.
+
+### Results
+
+| Suite | Before | After |
+|---|---|---|
+| Backend tests | 269 passed, 7 failed | **276 passed, 0 failed** |
+| Frontend build | 5 TypeScript errors | **0 errors** |
+| CLI tests | 3,148 passed | 3,148 passed (unchanged) |
+
 ## [3.4.0] - Unreleased
 
 ### External Evidence Review and Reporting
