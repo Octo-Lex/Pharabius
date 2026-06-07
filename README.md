@@ -106,6 +106,7 @@ Pharabius is a mature CLI engine with an early-stage platform. Current limitatio
   - _v3.7.0 adds **candidate review workflow**: governed review of candidates with explicit decisions. Acceptance is review-level only, not debt-register promotion._
   - _v3.8.0 adds **candidate decision reporting**: audit trail, review summary in reports and governance export. Read-only — no mutation._
   - _v3.9.0 adds **candidate promotion gate**: eligibility rules for promotion without performing it. Gate-only — no writing to debt-register._
+  - _v3.10.0 adds **candidate promotion execution**: promotes eligible candidates to accepted findings with lineage. First mutation wave — requires gate pass, preserves source artifacts._
 - **No live ticket sync** — No Jira, Linear, or GitHub Issues integration
 - **Platform frontend is prototype-grade** — 28 tests pass, build succeeds, but 5 pre-existing TypeScript errors in test mocks
 - **No portfolio governance** — Multi-repo governance workflows not implemented

@@ -2,6 +2,51 @@
 
 All notable changes to Pharabius are documented in this file.
 
+## [3.10.0] - Unreleased
+
+### Candidate Promotion Execution
+
+First mutation wave: promotes eligible candidates to accepted DebtFindings.
+Requires v3.9.0 gate pass. Preserves candidate lineage. Append-only audit.
+
+### Added
+
+- **Promotion execution** (`core/connectors/candidate_promotion.py`) — `promote_candidate()` function
+- **Gate requirement** — promotion fails if gate checks don't pass
+- **Candidate lineage** — `_promotion_lineage` metadata in `risk_breakdown`
+- **Duplicate promotion guard** — each candidate can only be promoted once
+- **Existing register preserved** — promotion appends, doesn't overwrite
+- **Lifecycle history** — promotion appends `candidate_promotion` entry
+- **Summary recalculation** — register summary updated after promotion
+- **25 new tests** covering promotion, gate, lineage, guard, non-mutation
+
+### Promotion Flow
+
+```text
+1. Check v3.9.0 gate (9 checks) — must all pass
+2. Verify not already promoted (duplicate guard)
+3. Convert CandidateFinding → DebtFinding with lineage
+4. Append to existing debt-register.json
+5. Recalculate register summary
+6. Append lifecycle entry (CandidateAccepted → Detected)
+```
+
+### Lineage Metadata
+
+Every promoted finding carries `_promotion_lineage` in `risk_breakdown`:
+- candidate_id, connector_name, source_format
+- original_evidence_ids, promoted_at
+- reviewer, review_rationale, reviewed_at
+
+### Design Rules
+
+- Promotion is explicit — no auto-promotion
+- Promotion requires gate pass — all 9 checks must pass
+- Candidate-findings.json is NOT deleted or rewritten
+- Review decisions are NOT rewritten
+- No auto-generated work packages, tickets, or remediation plans
+- One promotion per candidate
+
 ## [3.9.0] - Unreleased
 
 ### Candidate Promotion Gate
